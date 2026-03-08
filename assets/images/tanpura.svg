@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="600" viewBox="0 0 800 600">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#1a1511"/>
+      <stop offset="100%" stop-color="#5f3b1f"/>
+    </linearGradient>
+  </defs>
+  <rect width="800" height="600" fill="url(#bg)"/>
+  <ellipse cx="270" cy="430" rx="125" ry="120" fill="#d3a66b"/>
+  <rect x="250" y="80" width="26" height="340" rx="12" fill="#e0ba84"/>
+  <circle cx="262" cy="76" r="26" fill="#e0ba84"/>
+  <g stroke="#ffe7bc" stroke-width="2">
+    <line x1="258" y1="86" x2="258" y2="410"/>
+    <line x1="264" y1="86" x2="264" y2="410"/>
+    <line x1="270" y1="86" x2="270" y2="410"/>
+    <line x1="276" y1="86" x2="276" y2="410"/>
+  </g>
+  <text x="40" y="80" fill="#ffd4a3" font-size="56" font-family="serif">AI Art • Tanpura</text>
+</svg>

@@ -1,0 +1,29 @@
+# macOS
+.DS_Store
+
+# Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Env
+.env
+
+# Logs / runtime data
+data/
+*.log
+
+# Build artifacts
+bin/
+dist/
+*.out
+swayamvani
+sursangam
+.cache/
+
+# Go
+vendor/
+
+# Docker overrides
+docker-compose.override.yml

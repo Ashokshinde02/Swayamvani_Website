@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="600" viewBox="0 0 800 600">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#201611"/>
+      <stop offset="100%" stop-color="#6e2b22"/>
+    </linearGradient>
+  </defs>
+  <rect width="800" height="600" fill="url(#bg)"/>
+  <circle cx="190" cy="430" r="110" fill="#d4a35f"/>
+  <rect x="170" y="120" width="460" height="26" rx="13" fill="#e6bf7f"/>
+  <rect x="300" y="136" width="20" height="250" rx="10" fill="#e6bf7f"/>
+  <g stroke="#ffe8bf" stroke-width="2">
+    <line x1="200" y1="130" x2="620" y2="130"/>
+    <line x1="200" y1="138" x2="620" y2="138"/>
+    <line x1="200" y1="146" x2="620" y2="146"/>
+  </g>
+  <text x="40" y="80" fill="#ffcc8d" font-size="56" font-family="serif">AI Art • Sitar</text>
+</svg>

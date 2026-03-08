@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>स्वयंवाणी Instruments | Indian Classical Instruments</title>
+    <meta
+      name="description"
+      content="Buy authentic Indian classical instruments: sitar, tabla, tanpura, flute and more."
+    />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;700&family=Manrope:wght@400;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <header class="site-header">
+      <div class="container nav-wrap">
+        <a href="#" class="brand" aria-label="स्वयंवाणी Home">
+          <img src="logo.jpeg" alt="स्वयंवाणी logo" class="brand-logo" onerror="this.style.display='none'" />
+          <span class="brand-text">स्वयंवाणी</span>
+        </a>
+        <nav class="main-nav" aria-label="Main navigation">
+          <a href="#products" data-i18n="navProducts">Products</a>
+          <a href="/about.html" data-i18n="navAbout">About</a>
+          <a href="#contact" data-i18n="navContact">Contact</a>
+          <a href="/admin" data-i18n="navAdmin">Admin</a>
+        </nav>
+        <div class="header-actions">
+          <label for="langSwitcher" class="sr-only">Language</label>
+          <select id="langSwitcher" class="lang-switcher" aria-label="Language">
+            <option value="en">English</option>
+            <option value="mr">मराठी</option>
+            <option value="hi">हिन्दी</option>
+          </select>
+          <button id="cartBtn" class="cart-btn" aria-label="Open cart">
+            <span id="cartBtnLabel" data-i18n="cart">Cart</span> <span id="cartCount">0</span>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <main>
+      <section class="hero">
+        <div class="container hero-grid">
+          <div>
+            <p class="eyebrow" data-i18n="heroEyebrow">Handcrafted in India</p>
+            <h1 data-i18n="heroTitle">Indian Classical Instruments for Every Riyaaz</h1>
+            <p data-i18n="heroDesc">
+              Discover concert-grade sitars, tablas, tanpuras, harmoniums, and flutes crafted by trusted artisans.
+            </p>
+            <a class="cta" href="#products" data-i18n="shopInstruments">Shop Instruments</a>
+          </div>
+          <div class="hero-card">
+            <h2 data-i18n="heroCardTitle">Free Tuning + Setup</h2>
+            <p data-i18n="heroCardDesc">Every order includes pre-delivery quality check and tuning guidance from our experts.</p>
+          </div>
+        </div>
+      </section>
+
+      <section id="products" class="products-section">
+        <div class="container">
+          <div class="section-head">
+            <h2 data-i18n="featuredInstruments">Featured Instruments</h2>
+            <div class="filters" role="group" aria-label="Product filters">
+              <button class="filter-btn active" data-filter="all" data-i18n="filter_all">All</button>
+              <button class="filter-btn" data-filter="string" data-i18n="filter_string">String</button>
+              <button class="filter-btn" data-filter="percussion" data-i18n="filter_percussion">Percussion</button>
+              <button class="filter-btn" data-filter="wind" data-i18n="filter_wind">Wind</button>
+              <button class="filter-btn" data-filter="keyboard" data-i18n="filter_keyboard">Keyboard</button>
+            </div>
+          </div>
+          <div id="productGrid" class="product-grid"></div>
+        </div>
+      </section>
+
+      <section id="about" class="about-section">
+        <div class="container about-grid">
+          <div>
+            <h2 data-i18n="aboutTitle">Why Musicians Choose स्वयंवाणी</h2>
+            <ul>
+              <li data-i18n="aboutPoint1">Verified artisan network across Kolkata, Miraj, and Varanasi</li>
+              <li data-i18n="aboutPoint2">Careful climate-safe packaging for domestic and international shipping</li>
+              <li data-i18n="aboutPoint3">Video quality checks before dispatch</li>
+              <li data-i18n="aboutPoint4">Dedicated support for beginners and professional performers</li>
+            </ul>
+          </div>
+          <div class="about-note">
+            <h3 data-i18n="aboutHelpTitle">Need help choosing?</h3>
+            <p data-i18n="aboutHelpDesc">
+              Share your level, budget, and style. We’ll recommend the right instrument and setup within 24 hours.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <section id="videos" class="videos-section">
+        <div class="container">
+          <div class="section-head">
+            <h2 data-i18n="videosTitle">Instrument Making Videos</h2>
+          </div>
+          <p class="videos-intro" data-i18n="videosDesc">Watch how our artisans shape, tune, and finish each instrument.</p>
+          <div class="video-grid">
+            <article class="video-card">
+              <video controls preload="metadata" playsinline>
+                <source src="assets/videos/sitar-making.mp4" type="video/mp4" />
+              </video>
+              <p data-i18n="videoSitar">Sitar Making Process</p>
+            </article>
+            <article class="video-card">
+              <video controls preload="metadata" playsinline>
+                <source src="assets/videos/tabla-making.mp4" type="video/mp4" />
+              </video>
+              <p data-i18n="videoTabla">Tabla Skin & Tuning Craft</p>
+            </article>
+            <article class="video-card">
+              <video controls preload="metadata" playsinline>
+                <source src="assets/videos/harmonium-making.mp4" type="video/mp4" />
+              </video>
+              <p data-i18n="videoHarmonium">Harmonium Reed Setup</p>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <section id="contact" class="contact-section">
+        <div class="container contact-grid">
+          <div>
+            <h2 data-i18n="contactTitle">Contact Us</h2>
+            <p>Email: shindeashok944@gmail.com</p>
+            <p>Phone/WhatsApp: 9922317125</p>
+            <p>Location: Bengaluru, India</p>
+          </div>
+          <form id="inquiryForm" class="inquiry-form">
+            <label>
+              <span data-i18n="labelName">Name</span>
+              <input type="text" id="name" required />
+            </label>
+            <label>
+              <span data-i18n="labelEmail">Email</span>
+              <input type="email" id="email" required />
+            </label>
+            <label>
+              <span data-i18n="labelMessage">Message</span>
+              <textarea id="message" rows="4" required></textarea>
+            </label>
+            <button type="submit" data-i18n="sendInquiry">Send Inquiry</button>
+            <p id="formStatus" class="form-status" aria-live="polite"></p>
+          </form>
+        </div>
+      </section>
+    </main>
+
+    <aside id="cartPanel" class="cart-panel" aria-hidden="true">
+      <div class="cart-header">
+        <h2 data-i18n="yourCart">Your Cart</h2>
+        <button id="closeCart" class="close-cart-icon" aria-label="Close cart">×</button>
+      </div>
+      <div id="cartItems" class="cart-items"></div>
+      <div class="cart-footer">
+        <p><span data-i18n="total">Total</span>: ₹<span id="cartTotal">0</span></p>
+        <div class="cart-actions">
+          <button id="checkoutBtn" data-i18n="checkout">Proceed to Checkout</button>
+          <button id="closeCartFooter" class="close-cart-btn" data-i18n="closeCart">Close Cart</button>
+        </div>
+      </div>
+    </aside>
+
+    <footer class="site-footer">
+      <div class="container footer-grid">
+        <div>
+          <p class="footer-brand">स्वयंवाणी</p>
+          <p class="footer-copy">Handcrafted Indian classical instruments for every riyaaz.</p>
+        </div>
+        <div>
+          <p class="footer-title">Quick Links</p>
+          <p><a href="#products">Products</a> · <a href="/about.html">About</a> · <a href="#contact">Contact</a></p>
+        </div>
+        <div>
+          <p class="footer-title">Support</p>
+          <p>Email: shindeashok944@gmail.com</p>
+          <p>Phone/WhatsApp: 9922317125</p>
+        </div>
+        <div>
+          <p class="footer-title">Social</p>
+          <p><a href="https://instagram.com/swayamvani_instruments" target="_blank" rel="noopener noreferrer">Instagram</a></p>
+          <p><a href="https://youtube.com/@swayamvani" target="_blank" rel="noopener noreferrer">YouTube</a></p>
+          <p><a href="https://facebook.com/swayamvani" target="_blank" rel="noopener noreferrer">Facebook</a></p>
+          <p><a href="https://wa.me/919922317125" target="_blank" rel="noopener noreferrer">WhatsApp</a></p>
+        </div>
+      </div>
+      <div class="container footer-bottom">© 2026 स्वयंवाणी. All rights reserved.</div>
+    </footer>
+
+    <script src="demo.js"></script>
+  </body>
+</html>

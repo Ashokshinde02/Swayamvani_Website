@@ -1,0 +1,25 @@
+<svg width="240" height="240" viewBox="0 0 240 240" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <radialGradient id="bg" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(72 58) rotate(48) scale(224)">
+      <stop offset="0" stop-color="#FFF3E2"/>
+      <stop offset="1" stop-color="#E8C99E"/>
+    </radialGradient>
+    <linearGradient id="ring" x1="24" y1="20" x2="216" y2="220" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#D79A45"/>
+      <stop offset="1" stop-color="#8A4410"/>
+    </linearGradient>
+    <linearGradient id="mark" x1="120" y1="62" x2="120" y2="182" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#C96A1B"/>
+      <stop offset="1" stop-color="#6E3510"/>
+    </linearGradient>
+  </defs>
+  <circle cx="120" cy="120" r="108" fill="url(#bg)"/>
+  <circle cx="120" cy="120" r="102" stroke="url(#ring)" stroke-width="8"/>
+  <circle cx="120" cy="120" r="88" stroke="#F7E4CB" stroke-width="3"/>
+  <path d="M120 66C108 66 98 76 98 88C98 104 112 108 120 112C128 108 142 104 142 88C142 76 132 66 120 66Z" fill="url(#mark)"/>
+  <path d="M120 108V178" stroke="#8A4410" stroke-width="10" stroke-linecap="round"/>
+  <ellipse cx="120" cy="186" rx="26" ry="14" fill="#C96A1B"/>
+  <ellipse cx="120" cy="186" rx="16" ry="8" fill="#F6D8B1"/>
+  <path d="M82 120C96 110 108 106 120 106C132 106 144 110 158 120" stroke="#8A4410" stroke-width="6" stroke-linecap="round"/>
+  <path d="M89 134C100 126 109 122 120 122C131 122 140 126 151 134" stroke="#8A4410" stroke-width="4" stroke-linecap="round"/>
+</svg>

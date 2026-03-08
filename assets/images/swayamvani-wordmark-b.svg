@@ -1,0 +1,20 @@
+<svg width="1200" height="320" viewBox="0 0 1200 320" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="titleB descB">
+  <title id="titleB">Swayamvani Wordmark B</title>
+  <desc id="descB">Devanagari wordmark with circular naad emblem and clean text.</desc>
+  <defs>
+    <linearGradient id="ringB" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#D79A45"/>
+      <stop offset="1" stop-color="#8A4410"/>
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="320" fill="none"/>
+  <g transform="translate(120 64)">
+    <circle cx="86" cy="96" r="74" fill="none" stroke="url(#ringB)" stroke-width="10"/>
+    <circle cx="86" cy="96" r="46" fill="none" stroke="#C96A1B" stroke-width="6" opacity="0.9"/>
+    <circle cx="86" cy="96" r="7" fill="#8A4410"/>
+  </g>
+  <text x="280" y="195" fill="#8A4410" font-size="136" font-weight="700"
+    font-family="'Noto Serif Devanagari','Tiro Devanagari Hindi','Kohinoor Devanagari',serif"
+    letter-spacing="1.5">स्वयंवाणी</text>
+  <path d="M284 226 H 1038" stroke="#D79A45" stroke-width="5" stroke-linecap="round"/>
+</svg>

@@ -1,0 +1,17 @@
+<svg width="1200" height="320" viewBox="0 0 1200 320" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="titleA descA">
+  <title id="titleA">Swayamvani Wordmark A</title>
+  <desc id="descA">Devanagari wordmark with subtle sitar string underline.</desc>
+  <defs>
+    <linearGradient id="inkA" x1="120" y1="70" x2="1080" y2="250" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#8A4410"/>
+      <stop offset="1" stop-color="#C96A1B"/>
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="320" fill="none"/>
+  <text x="120" y="195" fill="url(#inkA)" font-size="140" font-weight="700"
+    font-family="'Noto Serif Devanagari','Tiro Devanagari Hindi','Kohinoor Devanagari',serif"
+    letter-spacing="2">स्वयंवाणी</text>
+  <path d="M128 230 C 360 276, 760 276, 1028 230" fill="none" stroke="#8A4410" stroke-width="8" stroke-linecap="round"/>
+  <circle cx="1038" cy="229" r="8" fill="#D79A45"/>
+  <circle cx="1062" cy="229" r="6" fill="#D79A45"/>
+</svg>

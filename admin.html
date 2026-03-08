@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>स्वयंवाणी Admin</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <header class="site-header">
+      <div class="container nav-wrap">
+        <a href="/" class="brand" aria-label="स्वयंवाणी Home">
+          <img src="logo.jpeg" alt="स्वयंवाणी logo" class="brand-logo" onerror="this.style.display='none'" />
+          <span class="brand-text">स्वयंवाणी</span>
+        </a>
+        <nav class="main-nav" aria-label="Admin navigation">
+          <a href="/">Storefront</a>
+        </nav>
+      </div>
+    </header>
+
+    <main class="products-section">
+      <div class="container">
+        <h1>Admin Panel</h1>
+        <p>Login to manage products and review inquiries.</p>
+
+        <section id="loginSection" class="about-note" style="margin-top: 1rem">
+          <h3>Admin Login</h3>
+          <form id="loginForm" class="inquiry-form">
+            <label>Username <input id="username" value="admin" required /></label>
+            <label>
+              Password
+              <span class="password-field">
+                <input id="password" type="password" required />
+                <button type="button" class="password-toggle" data-target="password" onclick="togglePasswordById('password', this)" aria-label="Show password" aria-pressed="false">
+                  <svg class="password-eye" viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6-10-6-10-6z" fill="none" stroke="currentColor" stroke-width="2"/>
+                    <circle cx="12" cy="12" r="3" fill="none" stroke="currentColor" stroke-width="2"/>
+                    <path class="password-eye-slash" d="M4 20L20 4" fill="none" stroke="currentColor" stroke-width="2"/>
+                  </svg>
+                </button>
+              </span>
+            </label>
+            <button type="submit">Login</button>
+          </form>
+        </section>
+
+        <section id="adminSection" style="display: none; margin-top: 1rem">
+          <div class="about-note" style="margin-bottom: 1rem">
+            <h3>Session</h3>
+            <button id="logoutBtn">Logout</button>
+            <p id="adminStatus" class="form-status" aria-live="polite"></p>
+          </div>
+
+          <section class="contact-section" style="padding-top: 1.2rem">
+            <div class="contact-grid">
+              <form id="productForm" class="inquiry-form">
+                <h3>Add Product</h3>
+                <label>Name <input id="pName" required /></label>
+                <label>Category <input id="pCategory" placeholder="string/percussion/wind/keyboard" required /></label>
+                <label>Price (INR) <input id="pPrice" type="number" min="1" required /></label>
+                <label>Details <textarea id="pDetails" rows="3" required></textarea></label>
+                <label>Photo URL 1 <input id="pImage1" placeholder="assets/images/sitar.svg" required /></label>
+                <label>Photo URL 2 <input id="pImage2" placeholder="assets/images/tabla.svg" required /></label>
+                <label>Photo URL 3 <input id="pImage3" placeholder="assets/images/tanpura.svg" required /></label>
+                <label>Photo URL 4 <input id="pImage4" placeholder="assets/images/bansuri.svg" required /></label>
+                <label>Photo URL 5 <input id="pImage5" placeholder="assets/images/harmonium.svg" required /></label>
+                <label>Making Video URL <input id="pVideoUrl" placeholder="assets/videos/sitar-making.mp4" required /></label>
+                <button type="submit">Create Product</button>
+              </form>
+
+              <div class="about-note">
+                <h3>Products</h3>
+                <div id="adminProducts"></div>
+              </div>
+            </div>
+          </section>
+
+          <section class="about-note" style="margin-bottom: 1rem">
+            <h3>Making Videos</h3>
+            <form id="videoForm" class="video-form">
+              <label>Video Title <input id="vTitle" required /></label>
+              <label>Video URL <input id="vUrl" placeholder="assets/videos/my-video.mp4" required /></label>
+              <button type="submit">Add Video</button>
+            </form>
+            <div id="adminVideos" class="video-grid" style="margin-top: 0.8rem"></div>
+          </section>
+
+          <section class="about-note">
+            <h3>Recent Inquiries</h3>
+            <div id="adminInquiries"></div>
+          </section>
+        </section>
+      </div>
+    </main>
+
+    <footer class="site-footer">
+      <div class="container footer-grid">
+        <div>
+          <p class="footer-brand">स्वयंवाणी</p>
+          <p class="footer-copy">Handcrafted Indian classical instruments for every riyaaz.</p>
+        </div>
+        <div>
+          <p class="footer-title">Quick Links</p>
+          <p><a href="/">Storefront</a> · <a href="/about.html">About</a></p>
+        </div>
+        <div>
+          <p class="footer-title">Support</p>
+          <p>Email: shindeashok944@gmail.com</p>
+          <p>Phone/WhatsApp: 9922317125</p>
+        </div>
+        <div>
+          <p class="footer-title">Social</p>
+          <p><a href="https://instagram.com/swayamvani_instruments" target="_blank" rel="noopener noreferrer">Instagram</a></p>
+          <p><a href="https://youtube.com/@swayamvani" target="_blank" rel="noopener noreferrer">YouTube</a></p>
+          <p><a href="https://facebook.com/swayamvani" target="_blank" rel="noopener noreferrer">Facebook</a></p>
+          <p><a href="https://wa.me/919922317125" target="_blank" rel="noopener noreferrer">WhatsApp</a></p>
+        </div>
+      </div>
+      <div class="container footer-bottom">© 2026 स्वयंवाणी. All rights reserved.</div>
+    </footer>
+
+    <script src="admin.js"></script>
+  </body>
+</html>

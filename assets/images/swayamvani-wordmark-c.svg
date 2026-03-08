@@ -1,0 +1,11 @@
+<svg width="1200" height="320" viewBox="0 0 1200 320" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="titleC descC">
+  <title id="titleC">Swayamvani Wordmark C</title>
+  <desc id="descC">Bold Devanagari wordmark with instrument-inspired stem accents.</desc>
+  <rect width="1200" height="320" fill="none"/>
+  <text x="118" y="194" fill="#8A4410" font-size="142" font-weight="700"
+    font-family="'Noto Serif Devanagari','Tiro Devanagari Hindi','Kohinoor Devanagari',serif"
+    letter-spacing="2">स्वयंवाणी</text>
+  <path d="M116 74 H 1060" stroke="#C96A1B" stroke-width="7" stroke-linecap="round"/>
+  <path d="M192 62 V 88 M244 62 V 88 M296 62 V 88" stroke="#D79A45" stroke-width="6" stroke-linecap="round"/>
+  <path d="M1042 62 V 88 M1094 62 V 88" stroke="#D79A45" stroke-width="6" stroke-linecap="round"/>
+</svg>

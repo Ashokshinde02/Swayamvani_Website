@@ -1,0 +1,43 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="1000" viewBox="0 0 1600 1000">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#f9f0df"/>
+      <stop offset="100%" stop-color="#efd8b2"/>
+    </linearGradient>
+  </defs>
+  <rect width="1600" height="1000" fill="url(#bg)"/>
+
+  <g opacity="0.14" fill="none" stroke="#8e3b2f" stroke-width="8">
+    <circle cx="250" cy="760" r="120"/>
+    <rect x="230" y="430" width="40" height="310" rx="20"/>
+    <line x1="250" y1="430" x2="250" y2="310"/>
+  </g>
+
+  <g opacity="0.13">
+    <ellipse cx="1220" cy="730" rx="130" ry="110" fill="#8e3b2f"/>
+    <ellipse cx="1040" cy="740" rx="95" ry="85" fill="#8e3b2f"/>
+    <ellipse cx="1220" cy="710" rx="70" ry="52" fill="#f7e7c7"/>
+    <ellipse cx="1040" cy="720" rx="52" ry="40" fill="#f7e7c7"/>
+  </g>
+
+  <g opacity="0.12" stroke="#8e3b2f" stroke-width="7" fill="none" transform="translate(450,220) rotate(-8)">
+    <rect x="0" y="0" width="760" height="36" rx="18"/>
+    <circle cx="45" cy="18" r="16" fill="#8e3b2f"/>
+    <circle cx="160" cy="18" r="8" fill="#8e3b2f"/>
+    <circle cx="250" cy="18" r="8" fill="#8e3b2f"/>
+    <circle cx="340" cy="18" r="8" fill="#8e3b2f"/>
+    <circle cx="430" cy="18" r="8" fill="#8e3b2f"/>
+    <circle cx="520" cy="18" r="8" fill="#8e3b2f"/>
+  </g>
+
+  <g opacity="0.1" fill="#8e3b2f" transform="translate(520,550)">
+    <rect x="0" y="0" width="430" height="180" rx="16"/>
+    <rect x="40" y="30" width="350" height="56" rx="8" fill="#f3dfbc"/>
+    <rect x="80" y="30" width="14" height="56"/>
+    <rect x="130" y="30" width="14" height="56"/>
+    <rect x="180" y="30" width="14" height="56"/>
+    <rect x="230" y="30" width="14" height="56"/>
+    <rect x="280" y="30" width="14" height="56"/>
+    <rect x="330" y="30" width="14" height="56"/>
+  </g>
+</svg>
