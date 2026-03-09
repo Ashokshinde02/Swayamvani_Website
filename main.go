@@ -969,7 +969,7 @@ func (s *Server) handleCheckout(w http.ResponseWriter, r *http.Request) {
 	}
 
 	message := fmt.Sprintf("Hello स्वयंवाणी, I want to order: %s. Total: Rs %d.", strings.Join(parts, ", "), total)
-	waURL := "https://wa.me/919876543210?text=" + url.QueryEscape(message)
+	waURL := "https://wa.me/919922317125?text=" + url.QueryEscape(message)
 	writeJSON(w, http.StatusOK, map[string]string{"whatsapp_url": waURL})
 }
 

@@ -162,6 +162,8 @@ const closeCartFooter = document.getElementById("closeCartFooter");
 const inquiryForm = document.getElementById("inquiryForm");
 const formStatus = document.getElementById("formStatus");
 const langSwitcher = document.getElementById("langSwitcher");
+const brandText = document.getElementById("brandText");
+const brandLink = document.querySelector(".brand");
 
 function t(key) {
   const group = translations[state.language] || translations.en;
@@ -172,6 +174,13 @@ function applyLanguage(lang) {
   state.language = translations[lang] ? lang : "en";
   localStorage.setItem("svayavaniLang", state.language);
   document.documentElement.lang = state.language;
+  const brandName = state.language === "en" ? "Swayamvani" : "स्वयंवाणी";
+  if (brandText) {
+    brandText.textContent = brandName;
+  }
+  if (brandLink) {
+    brandLink.setAttribute("aria-label", `${brandName} Home`);
+  }
 
   document.querySelectorAll("[data-i18n]").forEach((element) => {
     element.textContent = t(element.dataset.i18n);
