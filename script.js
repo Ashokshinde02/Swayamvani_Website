@@ -1,18 +1,59 @@
 let products = [];
-const defaultMedia = [
-  "assets/images/sitar.svg",
-  "assets/images/tabla.svg",
-  "assets/images/tanpura.svg",
-  "assets/images/bansuri.svg",
-  "assets/images/harmonium.svg"
-];
 const fallbackProducts = [
-  { id: 1, name: "Ravi Style Sitar", category: "string", price: 45999, details: "Teak wood, hand-carved jawari", images: defaultMedia, video_url: "assets/videos/sitar-making.mp4" },
-  { id: 2, name: "Concert Tabla Set", category: "percussion", price: 28999, details: "Sheesham dayan + copper bayan", images: defaultMedia, video_url: "assets/videos/tabla-making.mp4" },
-  { id: 3, name: "Miraj Tanpura", category: "string", price: 37999, details: "Female pitch, polished toor wood", images: defaultMedia, video_url: "assets/videos/harmonium-making.mp4" },
-  { id: 4, name: "Bansuri Pro C", category: "wind", price: 3499, details: "Seasoned bamboo, concert tuning", images: defaultMedia, video_url: "assets/videos/sitar-making.mp4" },
-  { id: 5, name: "Portable Harmonium", category: "keyboard", price: 21999, details: "9 stopper, coupler, scale changer", images: defaultMedia, video_url: "assets/videos/harmonium-making.mp4" },
-  { id: 6, name: "Pakhawaj Heritage", category: "percussion", price: 31999, details: "Hand-laced barrel, rich bass", images: defaultMedia, video_url: "assets/videos/tabla-making.mp4" }
+  {
+    id: 1,
+    name: "Ravi Style Sitar",
+    category: "string",
+    price: 45999,
+    details: "Teak wood, hand-carved jawari",
+    images: ["assets/images/sitar.svg"],
+    video_url: "assets/videos/sitar-making.mp4"
+  },
+  {
+    id: 2,
+    name: "Concert Tabla Set",
+    category: "percussion",
+    price: 28999,
+    details: "Sheesham dayan + copper bayan",
+    images: ["assets/Tabla/tabla_1.jpg"],
+    video_url: "assets/videos/tabla-making.mp4"
+  },
+  {
+    id: 3,
+    name: "Miraj Tanpura",
+    category: "string",
+    price: 37999,
+    details: "Female pitch, polished toor wood",
+    images: ["assets/images/tanpura.svg"],
+    video_url: "assets/videos/harmonium-making.mp4"
+  },
+  {
+    id: 4,
+    name: "Bansuri Pro C",
+    category: "wind",
+    price: 3499,
+    details: "Seasoned bamboo, concert tuning",
+    images: ["assets/images/bansuri.svg"],
+    video_url: "assets/videos/sitar-making.mp4"
+  },
+  {
+    id: 5,
+    name: "Portable Harmonium",
+    category: "keyboard",
+    price: 21999,
+    details: "9 stopper, coupler, scale changer",
+    images: ["assets/images/harmonium.svg"],
+    video_url: "assets/videos/harmonium-making.mp4"
+  },
+  {
+    id: 6,
+    name: "Pakhawaj Heritage",
+    category: "percussion",
+    price: 31999,
+    details: "Hand-laced barrel, rich bass",
+    images: ["assets/images/pakhawaj.svg"],
+    video_url: "assets/videos/tabla-making.mp4"
+  }
 ];
 
 const defaultVideos = [
@@ -311,6 +352,7 @@ const offerDiscountTitleText = document.getElementById("offerDiscountTitleText")
 const offerDiscountDescText = document.getElementById("offerDiscountDescText");
 const offerLessonsTitleText = document.getElementById("offerLessonsTitleText");
 const offerLessonsDescText = document.getElementById("offerLessonsDescText");
+const offersSection = document.querySelector(".offers-section");
 let offerOverrides = {};
 const LOYALTY_DISCOUNT_RATE = 0.1;
 
@@ -371,7 +413,7 @@ function getCartItemSavings(item) {
 function resolveImage(product) {
   const key = product.name.toLowerCase();
   if (key.includes("sitar")) return "assets/images/sitar.svg";
-  if (key.includes("tabla")) return "assets/images/tabla.svg";
+  if (key.includes("tabla")) return "assets/Tabla/tabla_1.jpg";
   if (key.includes("tanpura")) return "assets/images/tanpura.svg";
   if (key.includes("bansuri") || key.includes("flute")) return "assets/images/bansuri.svg";
   if (key.includes("harmonium")) return "assets/images/harmonium.svg";
@@ -637,6 +679,7 @@ function renderCustomerState() {
   }
   renderCustomerProfile();
   renderCart();
+  updateOfferVisibility();
 }
 
 function renderCustomerProfile() {
@@ -711,6 +754,11 @@ function togglePasswordById(targetId, button) {
     button.setAttribute("aria-pressed", String(shouldShow));
     button.setAttribute("aria-label", shouldShow ? "Hide password" : "Show password");
   }
+}
+
+function updateOfferVisibility() {
+  if (!offersSection) return;
+  offersSection.classList.toggle("offers-visible", !!state.customer);
 }
 window.togglePasswordById = togglePasswordById;
 

@@ -299,20 +299,61 @@ func dbDriver(vendor string) string {
 }
 
 func defaultProducts() []Product {
-	defaultMedia := []string{
-		"assets/images/sitar.svg",
-		"assets/images/tabla.svg",
-		"assets/images/tanpura.svg",
-		"assets/images/bansuri.svg",
-		"assets/images/harmonium.svg",
-	}
 	return []Product{
-		{ID: 1, Name: "Ravi Style Sitar", Category: "string", Price: 45999, Details: "Teak wood, hand-carved jawari", Images: defaultMedia, VideoURL: "assets/videos/sitar-making.mp4"},
-		{ID: 2, Name: "Concert Tabla Set", Category: "percussion", Price: 28999, Details: "Sheesham dayan + copper bayan", Images: defaultMedia, VideoURL: "assets/videos/tabla-making.mp4"},
-		{ID: 3, Name: "Miraj Tanpura", Category: "string", Price: 37999, Details: "Female pitch, polished toor wood", Images: defaultMedia, VideoURL: "assets/videos/harmonium-making.mp4"},
-		{ID: 4, Name: "Bansuri Pro C", Category: "wind", Price: 3499, Details: "Seasoned bamboo, concert tuning", Images: defaultMedia, VideoURL: "assets/videos/sitar-making.mp4"},
-		{ID: 5, Name: "Portable Harmonium", Category: "keyboard", Price: 21999, Details: "9 stopper, coupler, scale changer", Images: defaultMedia, VideoURL: "assets/videos/harmonium-making.mp4"},
-		{ID: 6, Name: "Pakhawaj Heritage", Category: "percussion", Price: 31999, Details: "Hand-laced barrel, rich bass", Images: defaultMedia, VideoURL: "assets/videos/tabla-making.mp4"},
+		{
+			ID:       1,
+			Name:     "Ravi Style Sitar",
+			Category: "string",
+			Price:    45999,
+			Details:  "Teak wood, hand-carved jawari",
+			Images:   []string{"assets/images/sitar.svg"},
+			VideoURL: "assets/videos/sitar-making.mp4",
+		},
+		{
+			ID:       2,
+			Name:     "Concert Tabla Set",
+			Category: "percussion",
+			Price:    28999,
+			Details:  "Sheesham dayan + copper bayan",
+			Images:   []string{"assets/Tabla/tabla_1.jpg"},
+			VideoURL: "assets/videos/tabla-making.mp4",
+		},
+		{
+			ID:       3,
+			Name:     "Miraj Tanpura",
+			Category: "string",
+			Price:    37999,
+			Details:  "Female pitch, polished toor wood",
+			Images:   []string{"assets/images/tanpura.svg"},
+			VideoURL: "assets/videos/harmonium-making.mp4",
+		},
+		{
+			ID:       4,
+			Name:     "Bansuri Pro C",
+			Category: "wind",
+			Price:    3499,
+			Details:  "Seasoned bamboo, concert tuning",
+			Images:   []string{"assets/images/bansuri.svg"},
+			VideoURL: "assets/videos/sitar-making.mp4",
+		},
+		{
+			ID:       5,
+			Name:     "Portable Harmonium",
+			Category: "keyboard",
+			Price:    21999,
+			Details:  "9 stopper, coupler, scale changer",
+			Images:   []string{"assets/images/harmonium.svg"},
+			VideoURL: "assets/videos/harmonium-making.mp4",
+		},
+		{
+			ID:       6,
+			Name:     "Pakhawaj Heritage",
+			Category: "percussion",
+			Price:    31999,
+			Details:  "Hand-laced barrel, rich bass",
+			Images:   []string{"assets/images/pakhawaj.svg"},
+			VideoURL: "assets/videos/tabla-making.mp4",
+		},
 	}
 }
 
