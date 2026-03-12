@@ -34,6 +34,9 @@ const translations = {
     shopInstruments: "Shop Instruments",
     heroCardTitle: "Free Tuning + Setup",
     heroCardDesc: "Every order includes pre-delivery quality check and tuning guidance from our experts.",
+    profileTitle: "Your Profile",
+    profileGreeting: "Welcome back,",
+    profileSince: "Member since",
     featuredInstruments: "Featured Instruments",
     filter_all: "All",
     filter_string: "String",
@@ -89,13 +92,19 @@ const translations = {
     customerPassword: "Password",
     customerLogout: "Logout",
     customerAuthSuccess: "You are logged in.",
-    customerAuthFailed: "Customer authentication failed."
+    customerAuthFailed: "Customer authentication failed.",
+    offerTitle: "Exclusive Customer Offers",
+    offerDesc: "Login now to unlock instant savings and complimentary guidance from our master craftsmen.",
+    offerDiscountTitle: "10% off every instrument",
+    offerDiscountDesc: "Logged-in shoppers receive automatic 10% savings on each instrument in their cart.",
+    offerLessonsTitle: "First 4 lessons free",
+    offerLessonsDesc: "After purchase, unlock four complimentary one-on-one learning sessions with our expert musicians."
   },
   mr: {
     navProducts: "उत्पादने",
-    navAbout: "आमच्याबद्दल",
+    navAbout: "आमच्या बद्दल",
     navContact: "संपर्क",
-    navAdmin: "अॅडमिन",
+    navAdmin: "ॲडमिन",
     cart: "कार्ट",
     heroEyebrow: "भारतामध्ये हस्तनिर्मित",
     heroTitle: "प्रत्येक रियाजसाठी भारतीय शास्त्रीय वाद्ये",
@@ -103,6 +112,9 @@ const translations = {
     shopInstruments: "वाद्ये खरेदी करा",
     heroCardTitle: "मोफत ट्यूनिंग + सेटअप",
     heroCardDesc: "प्रत्येक ऑर्डरमध्ये डिलिव्हरीपूर्व गुणवत्ता तपासणी आणि तज्ज्ञांचे ट्यूनिंग मार्गदर्शन समाविष्ट आहे.",
+    profileTitle: "तुमचे प्रोफाइल",
+    profileGreeting: "पुन्हा स्वागत आहे,",
+    profileSince: "सदस्यत्वाची सुरुवात",
     featuredInstruments: "प्रमुख वाद्ये",
     filter_all: "सर्व",
     filter_string: "तंतुवाद्य",
@@ -139,8 +151,8 @@ const translations = {
     yourCart: "तुमचे कार्ट",
     total: "एकूण",
     closeCart: "कार्ट बंद करा",
-    checkout: "चेकआउटकडे जा",
-    addToCart: "कार्टमध्ये जोडा",
+    checkout: "चेकआउट कडे जा",
+    addToCart: "कार्ट मध्ये जोडा",
     remove: "काढा",
     cartEmpty: "तुमचे कार्ट रिकामे आहे.",
     cartEmptyAlert: "तुमचे कार्ट रिकामे आहे.",
@@ -158,7 +170,13 @@ const translations = {
     customerPassword: "पासवर्ड",
     customerLogout: "लॉगआउट",
     customerAuthSuccess: "तुम्ही लॉगिन आहात.",
-    customerAuthFailed: "ग्राहक प्रमाणीकरण अयशस्वी."
+    customerAuthFailed: "ग्राहक प्रमाणीकरण अयशस्वी.",
+    offerTitle: "ग्राहकांसाठी खास ऑफर्स",
+    offerDesc: "लॉगिन करून तत्काळ सूट आणि आमच्या मास्टर कारीगरांच्या मार्गदर्शनाचा लाभ घ्या.",
+    offerDiscountTitle: "प्रत्येक वाद्यावर 10% सूट",
+    offerDiscountDesc: "लॉगिन केलेल्या खरेदीदारांना प्रत्येक वाद्यावर 10% सूट आपोआप लागू होते.",
+    offerLessonsTitle: "पहिले 4 धडे मोफत",
+    offerLessonsDesc: "खरेदी केल्यानंतर चार मार्गदर्शित धडे आपल्याला मोफत मिळतात."
   },
   hi: {
     navProducts: "उत्पाद",
@@ -172,6 +190,9 @@ const translations = {
     shopInstruments: "वाद्य खरीदें",
     heroCardTitle: "मुफ्त ट्यूनिंग + सेटअप",
     heroCardDesc: "हर ऑर्डर में डिलीवरी से पहले गुणवत्ता जांच और विशेषज्ञ ट्यूनिंग मार्गदर्शन शामिल है।",
+    profileTitle: "आपकी प्रोफ़ाइल",
+    profileGreeting: "फिर से स्वागत है,",
+    profileSince: "सदस्यता प्रारंभ",
     featuredInstruments: "विशेष वाद्य",
     filter_all: "सभी",
     filter_string: "तार वाद्य",
@@ -227,7 +248,13 @@ const translations = {
     customerPassword: "पासवर्ड",
     customerLogout: "लॉगआउट",
     customerAuthSuccess: "आप लॉगिन हैं।",
-    customerAuthFailed: "ग्राहक प्रमाणीकरण विफल।"
+    customerAuthFailed: "ग्राहक प्रमाणीकरण विफल।",
+    offerTitle: "ग्राहक ऑफ़र",
+    offerDesc: "अब लॉगिन करें और तुरंत बचत व हमारे मास्टर संगीतकारों की मार्गदर्शित सहायता पाएं।",
+    offerDiscountTitle: "हर वाद्य पर 10% छूट",
+    offerDiscountDesc: "लॉगइन करने वाले हर ग्राहक को हर ऑर्डर पर 10% छूट मिलती है।",
+    offerLessonsTitle: "पहले 4 पाठ मुफ्त",
+    offerLessonsDesc: "खरीद के बाद विशेषज्ञ संगीतकारों से चार मार्गदर्शित पाठ मुफ्त मिलेंगे।"
   }
 };
 
@@ -268,6 +295,22 @@ const productModalMeta = document.getElementById("productModalMeta");
 const productMediaList = document.getElementById("productMediaList");
 const productModalAddToCart = document.getElementById("productModalAddToCart");
 const hasBackend = window.location.protocol === "http:" || window.location.protocol === "https:";
+const productDropdownButton = document.getElementById("productDropdownButton");
+const productDropdownMenu = document.getElementById("productDropdownMenu");
+let isProductDropdownOpen = false;
+const customerProfileSection = document.getElementById("customerProfile");
+const customerProfileName = document.getElementById("customerProfileName");
+const customerProfileEmail = document.getElementById("customerProfileEmail");
+const customerProfileSince = document.getElementById("customerProfileSince");
+const customerProfileToggle = document.getElementById("customerProfileToggle");
+let isCustomerProfileVisible = false;
+const offerTitleText = document.getElementById("offerTitleText");
+const offerDescText = document.getElementById("offerDescText");
+const offerDiscountTitleText = document.getElementById("offerDiscountTitleText");
+const offerDiscountDescText = document.getElementById("offerDiscountDescText");
+const offerLessonsTitleText = document.getElementById("offerLessonsTitleText");
+const offerLessonsDescText = document.getElementById("offerLessonsDescText");
+let offerOverrides = {};
 
 function requireBackendPath(path) {
   if (!hasBackend) {
@@ -305,6 +348,7 @@ function applyLanguage(lang) {
   renderCart();
   renderCustomerState();
   renderVideos();
+  applyOfferOverrides();
 }
 
 function formatINR(value) {
@@ -394,11 +438,48 @@ function renderCart() {
     state.cart.forEach((item, index) => {
       const row = document.createElement("div");
       row.className = "cart-item";
-      row.innerHTML = `
-        <strong>${item.name}</strong>
-        <p>Rs ${formatINR(item.price)}</p>
-        <button data-remove="${index}">${t("remove")}</button>
-      `;
+      const imageSrc = item.images && item.images.length ? item.images[0] : resolveImage(item);
+      const description = item.details || item.description || "";
+
+      const image = document.createElement("img");
+      image.src = imageSrc;
+      image.alt = item.name;
+      image.onerror = () => {
+        image.src = "assets/images/sitar.svg";
+      };
+
+      const details = document.createElement("div");
+      details.className = "cart-item-details";
+
+      const title = document.createElement("strong");
+      title.textContent = item.name;
+      details.appendChild(title);
+
+      if (description) {
+        const descriptionEl = document.createElement("p");
+        descriptionEl.className = "cart-item-description";
+        descriptionEl.textContent = description;
+        details.appendChild(descriptionEl);
+      }
+
+      const meta = document.createElement("div");
+      meta.className = "cart-item-meta";
+
+      const price = document.createElement("span");
+      price.className = "cart-item-price";
+      price.textContent = `Rs ${formatINR(item.price)}`;
+
+      const removeButton = document.createElement("button");
+      removeButton.type = "button";
+      removeButton.dataset.remove = String(index);
+      removeButton.textContent = t("remove");
+
+      meta.appendChild(price);
+      meta.appendChild(removeButton);
+      details.appendChild(meta);
+
+      row.appendChild(image);
+      row.appendChild(details);
       cartItems.appendChild(row);
     });
   }
@@ -406,6 +487,45 @@ function renderCart() {
   const total = state.cart.reduce((sum, item) => sum + item.price, 0);
   cartTotal.textContent = formatINR(total);
   cartCount.textContent = state.cart.length;
+}
+
+function applyOfferOverrides(overrides = null) {
+  if (overrides) {
+    offerOverrides = { ...offerOverrides, ...overrides };
+  }
+  const resolved = {
+    title: offerOverrides.title || t("offerTitle"),
+    desc: offerOverrides.desc || t("offerDesc"),
+    discountTitle: offerOverrides.discountTitle || t("offerDiscountTitle"),
+    discountDesc: offerOverrides.discountDesc || t("offerDiscountDesc"),
+    lessonsTitle: offerOverrides.lessonsTitle || t("offerLessonsTitle"),
+    lessonsDesc: offerOverrides.lessonsDesc || t("offerLessonsDesc")
+  };
+  if (offerTitleText) offerTitleText.textContent = resolved.title;
+  if (offerDescText) offerDescText.textContent = resolved.desc;
+  if (offerDiscountTitleText) offerDiscountTitleText.textContent = resolved.discountTitle;
+  if (offerDiscountDescText) offerDiscountDescText.textContent = resolved.discountDesc;
+  if (offerLessonsTitleText) offerLessonsTitleText.textContent = resolved.lessonsTitle;
+  if (offerLessonsDescText) offerLessonsDescText.textContent = resolved.lessonsDesc;
+}
+
+async function loadOffers() {
+  if (!hasBackend) return;
+  try {
+    const response = await fetch("/api/offers", { credentials: "same-origin" });
+    const data = await response.json();
+    const config = data.offers || {};
+    applyOfferOverrides({
+      title: config.title,
+      desc: config.desc,
+      discountTitle: config.discountTitle,
+      discountDesc: config.discountDesc,
+      lessonsTitle: config.lessonsTitle,
+      lessonsDesc: config.lessonsDesc
+    });
+  } catch (error) {
+    console.warn("Failed to load offers", error);
+  }
 }
 
 async function loadVideos() {
@@ -470,14 +590,51 @@ function closeCustomerAuthModal() {
 }
 
 function renderCustomerState() {
-  if (!customerAuthBtn) return;
-  if (state.customer) {
-    customerAuthBtn.textContent = t("customerLogout");
-    if (customerGreeting) customerGreeting.textContent = `Hi, ${state.customer.name}`;
+  if (customerAuthBtn) {
+    if (state.customer) {
+      customerAuthBtn.textContent = t("customerLogout");
+      if (customerGreeting) customerGreeting.textContent = `Hi, ${state.customer.name}`;
+    } else {
+      customerAuthBtn.textContent = t("customerLogin");
+      if (customerGreeting) customerGreeting.textContent = "";
+    }
+  }
+  renderCustomerProfile();
+}
+
+function renderCustomerProfile() {
+  if (customerProfileToggle) {
+    customerProfileToggle.hidden = !state.customer;
+    customerProfileToggle.setAttribute("aria-expanded", String(!!state.customer && isCustomerProfileVisible));
+  }
+  if (!customerProfileSection) return;
+  if (!state.customer) {
+    isCustomerProfileVisible = false;
+  }
+  if (!state.customer || !isCustomerProfileVisible) {
+    customerProfileSection.hidden = true;
     return;
   }
-  customerAuthBtn.textContent = t("customerLogin");
-  if (customerGreeting) customerGreeting.textContent = "";
+  const { name, email, created_at: createdAt } = state.customer;
+  customerProfileName.textContent = name || "";
+  customerProfileEmail.textContent = email || "";
+  if (customerProfileSince) {
+    if (createdAt) {
+      const date = new Date(createdAt);
+      if (!Number.isNaN(date.valueOf())) {
+        customerProfileSince.textContent = formatINRDate(date);
+      } else {
+        customerProfileSince.textContent = createdAt;
+      }
+    } else {
+      customerProfileSince.textContent = "";
+    }
+  }
+  customerProfileSection.hidden = false;
+}
+
+function formatINRDate(date) {
+  return date.toLocaleDateString("en-IN", { year: "numeric", month: "long", day: "numeric" });
 }
 
 async function apiJSON(path, options = {}) {
@@ -584,6 +741,12 @@ document.addEventListener("click", async (event) => {
     renderCart();
   }
 
+});
+
+customerProfileToggle?.addEventListener("click", () => {
+  if (!state.customer) return;
+  isCustomerProfileVisible = !isCustomerProfileVisible;
+  renderCustomerProfile();
 });
 
 cartBtn.addEventListener("click", () => {
@@ -736,15 +899,15 @@ checkoutBtn.addEventListener("click", async () => {
     return;
   }
 
-  try {
-    await tryRazorpayCheckout();
-  } catch {
+ // try {
+   // await tryRazorpayCheckout();
+ // } catch {
     try {
       await fallbackWhatsAppCheckout();
     } catch (error) {
       alert(error.message || t("checkoutFailed"));
     }
-  }
+  //}
 });
 
 inquiryForm.addEventListener("submit", async (event) => {
@@ -805,6 +968,7 @@ const initialLanguage = localStorage.getItem("svayavaniLang") || "en";
 applyLanguage(initialLanguage);
 loadProducts();
 loadVideos();
+loadOffers();
 renderCart();
 checkCustomerSession();
 initPasswordToggles();

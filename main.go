@@ -65,6 +65,15 @@ type CheckoutRequest struct {
 	Items []CheckoutItem `json:"items"`
 }
 
+type OfferConfig struct {
+	Title         string `json:"title"`
+	Desc          string `json:"desc"`
+	DiscountTitle string `json:"discountTitle"`
+	DiscountDesc  string `json:"discountDesc"`
+	LessonsTitle  string `json:"lessonsTitle"`
+	LessonsDesc   string `json:"lessonsDesc"`
+}
+
 type ProductInput struct {
 	Name     string   `json:"name"`
 	Category string   `json:"category"`
@@ -157,6 +166,9 @@ type Server struct {
 	customerMu        sync.RWMutex
 	customers         map[string]CustomerAccount
 	customerDataPath  string
+	offerConfig       OfferConfig
+	offerMu           sync.RWMutex
+	offerConfigPath   string
 	razorpayKeyID     string
 	razorpayKeySecret string
 }
@@ -187,11 +199,15 @@ func main() {
 		customerSessionTo: make(map[string]string),
 		customers:         make(map[string]CustomerAccount),
 		customerDataPath:  filepath.Join("data", "customers.json"),
+		offerConfigPath:   filepath.Join("data", "offers.json"),
 		razorpayKeyID:     strings.TrimSpace(os.Getenv("RAZORPAY_KEY_ID")),
 		razorpayKeySecret: strings.TrimSpace(os.Getenv("RAZORPAY_KEY_SECRET")),
 	}
 	if err := s.loadCustomers(); err != nil {
 		log.Printf("warning: failed to load customers file: %v", err)
+	}
+	if err := s.loadOffers(); err != nil {
+		log.Printf("warning: failed to load offers file: %v", err)
 	}
 
 	mux := http.NewServeMux()
@@ -208,11 +224,14 @@ func main() {
 	mux.HandleFunc("/api/customer/login", s.handleCustomerLogin)
 	mux.HandleFunc("/api/customer/logout", s.handleCustomerLogout)
 	mux.HandleFunc("/api/customer/me", s.handleCustomerMe)
+	mux.HandleFunc("/api/offers", s.handleGetOffers)
+	mux.HandleFunc("/api/admin/offers", s.handleAdminOffers)
 	mux.HandleFunc("/api/admin/products", s.handleAdminProducts)
 	mux.HandleFunc("/api/admin/products/", s.handleAdminProductByID)
 	mux.HandleFunc("/api/admin/videos", s.handleAdminVideos)
 	mux.HandleFunc("/api/admin/videos/", s.handleAdminVideoByID)
 	mux.HandleFunc("/api/admin/inquiries", s.handleAdminInquiries)
+	mux.HandleFunc("/api/admin/customers", s.handleAdminCustomers)
 	mux.HandleFunc("/admin", s.handleAdminPage)
 	mux.HandleFunc("/", s.handleHome)
 	mux.Handle("/styles.css", http.FileServer(http.Dir(".")))
@@ -1175,8 +1194,9 @@ func (s *Server) handleCustomerRegister(w http.ResponseWriter, r *http.Request) 
 	writeJSON(w, http.StatusCreated, map[string]any{
 		"status": "ok",
 		"customer": map[string]string{
-			"name":  account.Name,
-			"email": account.Email,
+			"name":       account.Name,
+			"email":      account.Email,
+			"created_at": account.CreatedAt.Format(time.RFC3339),
 		},
 	})
 }
@@ -1216,8 +1236,9 @@ func (s *Server) handleCustomerLogin(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]any{
 		"status": "ok",
 		"customer": map[string]string{
-			"name":  account.Name,
-			"email": account.Email,
+			"name":       account.Name,
+			"email":      account.Email,
+			"created_at": account.CreatedAt.Format(time.RFC3339),
 		},
 	})
 }
@@ -1256,8 +1277,9 @@ func (s *Server) handleCustomerMe(w http.ResponseWriter, r *http.Request) {
 	}
 	writeJSON(w, http.StatusOK, map[string]any{
 		"customer": map[string]string{
-			"name":  account.Name,
-			"email": account.Email,
+			"name":       account.Name,
+			"email":      account.Email,
+			"created_at": account.CreatedAt.Format(time.RFC3339),
 		},
 	})
 }
@@ -1363,6 +1385,63 @@ func (s *Server) handleAdminInquiries(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]any{"inquiries": inquiries})
 }
 
+func (s *Server) handleAdminCustomers(w http.ResponseWriter, r *http.Request) {
+	if !s.isAdmin(r) {
+		writeJSONError(w, http.StatusUnauthorized, "unauthorized")
+		return
+	}
+	if r.Method != http.MethodGet {
+		writeJSONError(w, http.StatusMethodNotAllowed, "method not allowed")
+		return
+	}
+	s.customerMu.RLock()
+	customers := make([]map[string]string, 0, len(s.customers))
+	for _, account := range s.customers {
+		customers = append(customers, map[string]string{
+			"name":       account.Name,
+			"email":      account.Email,
+			"created_at": account.CreatedAt.Format(time.RFC3339),
+		})
+	}
+	s.customerMu.RUnlock()
+	writeJSON(w, http.StatusOK, map[string]any{"customers": customers})
+}
+
+func (s *Server) handleGetOffers(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		writeJSONError(w, http.StatusMethodNotAllowed, "method not allowed")
+		return
+	}
+	s.offerMu.RLock()
+	config := s.offerConfig
+	s.offerMu.RUnlock()
+	writeJSON(w, http.StatusOK, map[string]any{"offers": config})
+}
+
+func (s *Server) handleAdminOffers(w http.ResponseWriter, r *http.Request) {
+	if !s.isAdmin(r) {
+		writeJSONError(w, http.StatusUnauthorized, "unauthorized")
+		return
+	}
+	if r.Method != http.MethodPost {
+		writeJSONError(w, http.StatusMethodNotAllowed, "method not allowed")
+		return
+	}
+	var config OfferConfig
+	if err := json.NewDecoder(r.Body).Decode(&config); err != nil {
+		writeJSONError(w, http.StatusBadRequest, "invalid JSON payload")
+		return
+	}
+	s.offerMu.Lock()
+	s.offerConfig = config
+	s.offerMu.Unlock()
+	if err := saveOfferConfig(s.offerConfigPath, config); err != nil {
+		writeJSONError(w, http.StatusInternalServerError, "failed to save offers")
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]string{"status": "ok"})
+}
+
 func parseIDFromPath(path, prefix string) (int, error) {
 	idStr := strings.TrimPrefix(path, prefix)
 	if idStr == "" || strings.Contains(idStr, "/") {
@@ -1459,6 +1538,47 @@ func saveCustomerSnapshot(path string, accounts []CustomerAccount) error {
 		return err
 	}
 	body, err := json.MarshalIndent(accounts, "", "  ")
+	if err != nil {
+		return err
+	}
+	tmp := path + ".tmp"
+	if err := os.WriteFile(tmp, body, 0o600); err != nil {
+		return err
+	}
+	return os.Rename(tmp, path)
+}
+
+func (s *Server) loadOffers() error {
+	config, err := loadOfferConfig(s.offerConfigPath)
+	if err != nil {
+		return err
+	}
+	s.offerMu.Lock()
+	s.offerConfig = config
+	s.offerMu.Unlock()
+	return nil
+}
+
+func loadOfferConfig(path string) (OfferConfig, error) {
+	var config OfferConfig
+	data, err := os.ReadFile(path)
+	if errors.Is(err, os.ErrNotExist) {
+		return config, nil
+	}
+	if err != nil {
+		return config, err
+	}
+	if err := json.Unmarshal(data, &config); err != nil {
+		return config, err
+	}
+	return config, nil
+}
+
+func saveOfferConfig(path string, config OfferConfig) error {
+	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+		return err
+	}
+	body, err := json.MarshalIndent(config, "", "  ")
 	if err != nil {
 		return err
 	}

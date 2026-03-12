@@ -36,8 +36,16 @@
             <option value="mr">मराठी</option>
             <option value="hi">हिन्दी</option>
           </select>
-          <span id="customerGreeting" class="customer-greeting" aria-live="polite"></span>
-          <button id="customerAuthBtn" class="auth-btn" data-i18n="customerLogin">Customer Login</button>
+          <div class="auth-group">
+            <span id="customerGreeting" class="customer-greeting" aria-live="polite"></span>
+            <button id="customerProfileToggle" class="profile-icon" aria-label="Show profile" aria-expanded="false" hidden>
+              <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                <circle cx="12" cy="8" r="3.2" />
+                <path d="M6 19c0-2 2-3.5 6-3.5s6 1.5 6 3.5" fill="none" stroke-width="1.5" />
+              </svg>
+            </button>
+            <button id="customerAuthBtn" class="auth-btn" data-i18n="customerLogin">Customer Login</button>
+          </div>
           <button id="cartBtn" class="cart-btn" aria-label="Open cart">
             <span id="cartBtnLabel" data-i18n="cart">Cart</span> <span id="cartCount">0</span>
           </button>
@@ -45,23 +53,73 @@
       </div>
     </header>
 
-    <main>
-      <section class="hero">
-        <div class="container hero-grid">
-          <div>
-            <p class="eyebrow" data-i18n="heroEyebrow">Handcrafted in India</p>
-            <h1 data-i18n="heroTitle">Indian Classical Instruments for Every Riyaaz</h1>
-            <p data-i18n="heroDesc">
-              Discover concert-grade sitars, tablas, tanpuras, harmoniums, and flutes crafted by trusted artisans.
-            </p>
-            <a class="cta" href="#products" data-i18n="shopInstruments">Shop Instruments</a>
+      <main>
+        <section class="hero">
+          <div class="container hero-grid">
+            <div>
+              <p class="eyebrow" data-i18n="heroEyebrow">Handcrafted in India</p>
+              <h1 data-i18n="heroTitle">Indian Classical Instruments for Every Riyaaz</h1>
+              <p data-i18n="heroDesc">
+                Discover concert-grade sitars, tablas, tanpuras, harmoniums, and flutes crafted by trusted artisans.
+              </p>
+              <a class="cta" href="#products" data-i18n="shopInstruments">Shop Instruments</a>
+            </div>
+            <div class="hero-card">
+              <h2 data-i18n="heroCardTitle">Free Tuning + Setup</h2>
+              <p data-i18n="heroCardDesc">Every order includes pre-delivery quality check and tuning guidance from our experts.</p>
+            </div>
           </div>
-          <div class="hero-card">
-            <h2 data-i18n="heroCardTitle">Free Tuning + Setup</h2>
-            <p data-i18n="heroCardDesc">Every order includes pre-delivery quality check and tuning guidance from our experts.</p>
+        </section>
+
+        <section id="customerProfile" class="customer-profile" hidden>
+          <div class="container">
+            <div class="profile-card">
+              <div class="profile-text">
+                <h2 data-i18n="profileTitle">Your Profile</h2>
+                <p data-i18n="profileGreeting">Welcome back,</p>
+              </div>
+              <div class="profile-details">
+                <p id="customerProfileName" class="profile-name"></p>
+                <p id="customerProfileEmail" class="profile-email"></p>
+                <p>
+                  <span data-i18n="profileSince">Member since</span>
+                  <span id="customerProfileSince" class="profile-since"></span>
+                </p>
+              </div>
+            </div>
           </div>
-        </div>
-      </section>
+        </section>
+
+        <section class="offers-section">
+          <div class="container">
+            <div class="section-head">
+              <h2 id="offerTitleText" data-i18n="offerTitle">Exclusive Customer Offers</h2>
+              <p id="offerDescText" data-i18n="offerDesc">
+                Login now to unlock instant savings and complimentary guidance from our master craftsmen.
+              </p>
+            </div>
+            <div class="offer-grid">
+              <article class="offer-card">
+                <div class="offer-icon" aria-hidden="true">10%</div>
+                <div>
+                  <h3 id="offerDiscountTitleText" data-i18n="offerDiscountTitle">10% off every instrument</h3>
+                  <p id="offerDiscountDescText" data-i18n="offerDiscountDesc">
+                    Logged-in shoppers receive automatic 10% savings on each instrument in their cart.
+                  </p>
+                </div>
+              </article>
+              <article class="offer-card">
+                <div class="offer-icon" aria-hidden="true">4</div>
+                <div>
+                  <h3 id="offerLessonsTitleText" data-i18n="offerLessonsTitle">First 4 lessons free</h3>
+                  <p id="offerLessonsDescText" data-i18n="offerLessonsDesc">
+                    After purchase, unlock four complimentary one-on-one learning sessions with our expert musicians.
+                  </p>
+                </div>
+              </article>
+            </div>
+          </div>
+        </section>
 
       <section id="products" class="products-section">
         <div class="container">
@@ -241,10 +299,42 @@
         </div>
         <div>
           <p class="footer-title">Social</p>
-          <p><a href="https://instagram.com/swayamvani_instruments" target="_blank" rel="noopener noreferrer">Instagram</a></p>
-          <p><a href="https://youtube.com/@swayamvani" target="_blank" rel="noopener noreferrer">YouTube</a></p>
-          <p><a href="https://facebook.com/swayamvani" target="_blank" rel="noopener noreferrer">Facebook</a></p>
-          <p><a href="https://wa.me/919922317125" target="_blank" rel="noopener noreferrer">WhatsApp</a></p>
+          <p>
+            <a class="social-link" href="https://instagram.com/swayamvani_instruments" target="_blank" rel="noopener noreferrer">
+              <svg class="social-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                <rect x="4" y="4" width="16" height="16" rx="5" stroke-width="1.5" />
+                <circle cx="12" cy="12" r="4" stroke-width="1.5" />
+                <circle cx="17" cy="7" r="1.2" fill="currentColor" stroke="none" />
+              </svg>
+              Instagram
+            </a>
+          </p>
+          <p>
+            <a class="social-link" href="https://youtube.com/@swayamvani" target="_blank" rel="noopener noreferrer">
+              <svg class="social-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                <rect x="3.5" y="6.5" width="17" height="11" rx="3" stroke-width="1.5" />
+                <polygon points="11,8 16,12 11,16" fill="currentColor" stroke="none" />
+              </svg>
+              YouTube
+            </a>
+          </p>
+          <p>
+            <a class="social-link" href="https://facebook.com/swayamvani" target="_blank" rel="noopener noreferrer">
+              <svg class="social-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                <path d="M10 8h2V6h2.5v2H16v2h-1.5v6H11V10H9V8z" fill="currentColor" stroke="none" />
+              </svg>
+              Facebook
+            </a>
+          </p>
+          <p>
+            <a class="social-link" href="https://wa.me/919922317125" target="_blank" rel="noopener noreferrer">
+              <svg class="social-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                <circle cx="12" cy="12" r="8" stroke-width="1.5" />
+                <path d="M15.2 10.8c-.2-.1-1-.3-1.3-.3-.4 0-.9.3-1.1.5-.2.2-.5.2-.8.1-.3-.1-.9-.5-1.3-.9-.4-.4-.6-.8-.5-1.1.1-.3.2-.4 0-.6-.1-.2-.6-1.1-.9-1.5-.3-.4-.6-.3-.9-.3H8c-.2 0-.5.1-.7.3-.2.2-.8.7-.8 1.8 0 1 .8 2.6 1 2.9.2.3 1.6 2.4 4.2 3.4.6.3 1.2.5 1.7.4.5-.1 1.4-.5 1.8-.9.4-.4.4-.8.3-.9-.1-.1-.3-.2-.5-.3z" fill="currentColor" stroke="none" />
+              </svg>
+              WhatsApp
+            </a>
+          </p>
         </div>
       </div>
       <div class="container footer-bottom">© 2026 स्वयंवाणी. All rights reserved.</div>

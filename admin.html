@@ -13,9 +13,17 @@
           <img src="logo.jpeg" alt="स्वयंवाणी logo" class="brand-logo" onerror="this.style.display='none'" />
           <span class="brand-text">स्वयंवाणी</span>
         </a>
-        <nav class="main-nav" aria-label="Admin navigation">
-          <a href="/">Storefront</a>
-        </nav>
+          <div class="header-actions">
+            <nav class="main-nav" aria-label="Admin navigation">
+              <a href="/">Storefront</a>
+            </nav>
+            <div class="admin-header-actions" aria-hidden="true">
+              <button type="button" id="refreshInquiriesBtn" class="filter-btn">Inquiry Customers</button>
+              <button type="button" id="refreshCustomersBtn" class="filter-btn">Login Customers</button>
+              <button type="button" id="editOffersBtn" class="auth-btn">Edit Offers</button>
+            </div>
+            <button id="logoutBtn" type="button" class="auth-btn logout-hidden">Logout</button>
+          </div>
       </div>
     </header>
 
@@ -45,12 +53,11 @@
           </form>
         </section>
 
-        <section id="adminSection" style="display: none; margin-top: 1rem">
-          <div class="about-note" style="margin-bottom: 1rem">
-            <h3>Session</h3>
-            <button id="logoutBtn">Logout</button>
-            <p id="adminStatus" class="form-status" aria-live="polite"></p>
-          </div>
+          <section id="adminSection" style="display: none; margin-top: 1rem">
+            <div class="about-note" style="margin-bottom: 1rem">
+              <h3>Session</h3>
+              <p id="adminStatus" class="form-status" aria-live="polite"></p>
+            </div>
 
           <section class="contact-section" style="padding-top: 1.2rem">
             <div class="contact-grid">
@@ -90,6 +97,11 @@
             <h3>Recent Inquiries</h3>
             <div id="adminInquiries"></div>
           </section>
+
+          <section class="about-note">
+            <h3>Customers</h3>
+            <div id="adminCustomers" class="customer-card-grid"></div>
+          </section>
         </section>
       </div>
     </main>
@@ -111,15 +123,56 @@
         </div>
         <div>
           <p class="footer-title">Social</p>
-          <p><a href="https://instagram.com/swayamvani_instruments" target="_blank" rel="noopener noreferrer">Instagram</a></p>
-          <p><a href="https://youtube.com/@swayamvani" target="_blank" rel="noopener noreferrer">YouTube</a></p>
-          <p><a href="https://facebook.com/swayamvani" target="_blank" rel="noopener noreferrer">Facebook</a></p>
-          <p><a href="https://wa.me/919922317125" target="_blank" rel="noopener noreferrer">WhatsApp</a></p>
+          <p>
+            <a class="social-link" href="https://instagram.com/swayamvani_instruments" target="_blank" rel="noopener noreferrer">
+              <svg class="social-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                <rect x="4" y="4" width="16" height="16" rx="5" stroke-width="1.5" />
+                <circle cx="12" cy="12" r="4" stroke-width="1.5" />
+                <circle cx="17" cy="7" r="1.2" fill="currentColor" stroke="none" />
+              </svg>
+              Instagram
+            </a>
+          </p>
+          <p>
+            <a class="social-link" href="https://youtube.com/@swayamvani" target="_blank" rel="noopener noreferrer">
+              <svg class="social-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                <rect x="3.5" y="6.5" width="17" height="11" rx="3" stroke-width="1.5" />
+                <polygon points="11,8 16,12 11,16" fill="currentColor" stroke="none" />
+              </svg>
+              YouTube
+            </a>
+          </p>
+          <p>
+            <a class="social-link" href="https://facebook.com/swayamvani" target="_blank" rel="noopener noreferrer">
+              <svg class="social-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                <path d="M10 8h2V6h2.5v2H16v2h-1.5v6H11V10H9V8z" fill="currentColor" stroke="none" />
+              </svg>
+              Facebook
+            </a>
+          </p>
+          <p>
+            <a class="social-link" href="https://wa.me/919922317125" target="_blank" rel="noopener noreferrer">
+              <svg class="social-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                <circle cx="12" cy="12" r="8" stroke-width="1.5" />
+                <path d="M15.2 10.8c-.2-.1-1-.3-1.3-.3-.4 0-.9.3-1.1.5-.2.2-.5.2-.8.1-.3-.1-.9-.5-1.3-.9-.4-.4-.6-.8-.5-1.1.1-.3.2-.4 0-.6-.1-.2-.6-1.1-.9-1.5-.3-.4-.6-.3-.9-.3H8c-.2 0-.5.1-.7.3-.2.2-.8.7-.8 1.8 0 1 .8 2.6 1 2.9.2.3 1.6 2.4 4.2 3.4.6.3 1.2.5 1.7.4.5-.1 1.4-.5 1.8-.9.4-.4.4-.8.3-.9-.1-.1-.3-.2-.5-.3z" fill="currentColor" stroke="none" />
+              </svg>
+              WhatsApp
+            </a>
+          </p>
         </div>
       </div>
       <div class="container footer-bottom">© 2026 स्वयंवाणी. All rights reserved.</div>
     </footer>
 
+    <div id="adminModalOverlay" class="admin-modal-overlay" hidden>
+      <div id="adminModal" class="admin-modal" role="dialog" aria-modal="true" aria-labelledby="adminModalTitle" tabindex="-1">
+        <header class="admin-modal-head">
+          <h3 id="adminModalTitle"></h3>
+          <button id="adminModalClose" class="admin-modal-close" type="button" aria-label="Close panel">&times;</button>
+        </header>
+        <div id="adminModalBody" class="admin-modal-body"></div>
+      </div>
+    </div>
     <script src="admin.js"></script>
   </body>
 </html>
