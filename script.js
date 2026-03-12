@@ -272,6 +272,7 @@ const cartPanel = document.getElementById("cartPanel");
 const closeCart = document.getElementById("closeCart");
 const cartItems = document.getElementById("cartItems");
 const cartTotal = document.getElementById("cartTotal");
+const cartSavingsEl = document.getElementById("cartSavings");
 const cartCount = document.getElementById("cartCount");
 const checkoutBtn = document.getElementById("checkoutBtn");
 const closeCartFooter = document.getElementById("closeCartFooter");
@@ -311,6 +312,7 @@ const offerDiscountDescText = document.getElementById("offerDiscountDescText");
 const offerLessonsTitleText = document.getElementById("offerLessonsTitleText");
 const offerLessonsDescText = document.getElementById("offerLessonsDescText");
 let offerOverrides = {};
+const LOYALTY_DISCOUNT_RATE = 0.1;
 
 function requireBackendPath(path) {
   if (!hasBackend) {
@@ -353,6 +355,17 @@ function applyLanguage(lang) {
 
 function formatINR(value) {
   return new Intl.NumberFormat("en-IN").format(value);
+}
+
+function getCartItemFinalPrice(item) {
+  const basePrice = item?.price || 0;
+  if (!state.customer) return basePrice;
+  const discounted = Math.round(basePrice * (1 - LOYALTY_DISCOUNT_RATE));
+  return Math.max(0, discounted);
+}
+
+function getCartItemSavings(item) {
+  return Math.max(0, (item?.price || 0) - getCartItemFinalPrice(item));
 }
 
 function resolveImage(product) {
@@ -465,16 +478,35 @@ function renderCart() {
       const meta = document.createElement("div");
       meta.className = "cart-item-meta";
 
+      const discountedPrice = getCartItemFinalPrice(item);
       const price = document.createElement("span");
       price.className = "cart-item-price";
-      price.textContent = `Rs ${formatINR(item.price)}`;
+      price.textContent = `Rs ${formatINR(discountedPrice)}`;
+
+      const priceWrap = document.createElement("div");
+      priceWrap.className = "cart-item-price-wrap";
+      priceWrap.appendChild(price);
+
+      const savings = getCartItemSavings(item);
+      if (state.customer && savings > 0) {
+        const original = document.createElement("span");
+        original.className = "cart-item-price-original";
+        original.textContent = `Rs ${formatINR(item.price)}`;
+        priceWrap.appendChild(original);
+
+        const discountNote = document.createElement("span");
+        discountNote.className = "cart-item-discount";
+        discountNote.textContent = `${t("offerDiscountTitle")} • Saved ₹${formatINR(savings)}`;
+        discountNote.title = t("offerDiscountDesc");
+        priceWrap.appendChild(discountNote);
+      }
 
       const removeButton = document.createElement("button");
       removeButton.type = "button";
       removeButton.dataset.remove = String(index);
       removeButton.textContent = t("remove");
 
-      meta.appendChild(price);
+      meta.appendChild(priceWrap);
       meta.appendChild(removeButton);
       details.appendChild(meta);
 
@@ -484,9 +516,13 @@ function renderCart() {
     });
   }
 
-  const total = state.cart.reduce((sum, item) => sum + item.price, 0);
+  const total = state.cart.reduce((sum, item) => sum + getCartItemFinalPrice(item), 0);
   cartTotal.textContent = formatINR(total);
   cartCount.textContent = state.cart.length;
+  if (cartSavingsEl) {
+    const totalSavings = state.cart.reduce((sum, item) => sum + getCartItemSavings(item), 0);
+    cartSavingsEl.textContent = totalSavings > 0 ? `${t("offerDiscountTitle")} applied · You saved ₹${formatINR(totalSavings)}` : "";
+  }
 }
 
 function applyOfferOverrides(overrides = null) {
@@ -600,6 +636,7 @@ function renderCustomerState() {
     }
   }
   renderCustomerProfile();
+  renderCart();
 }
 
 function renderCustomerProfile() {
@@ -848,7 +885,7 @@ async function tryRazorpayCheckout() {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
-      items: state.cart.map((item) => ({ name: item.name, price: item.price }))
+      items: state.cart.map((item) => ({ name: item.name, price: getCartItemFinalPrice(item) }))
     })
   });
 
@@ -882,7 +919,7 @@ async function fallbackWhatsAppCheckout() {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
-      items: state.cart.map((item) => ({ name: item.name, price: item.price }))
+      items: state.cart.map((item) => ({ name: item.name, price: getCartItemFinalPrice(item) }))
     })
   });
 
