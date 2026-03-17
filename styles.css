@@ -8,10 +8,15 @@
   --accent-dark: #8a4410;
   --gold: #d79a45;
   --line: #e6d9c8;
+  --success: #1d6d32;
 }
 
 * {
   box-sizing: border-box;
+}
+
+html {
+  font-size: 16px;
 }
 
 body {
@@ -204,15 +209,60 @@ h3 {
   background: var(--accent);
   color: #fff;
   font-family: "Manrope", sans-serif;
-  font-size: 0.95rem;
+  font-size: 1rem;
   font-weight: 700;
-  padding: 0.6rem 1rem;
+  padding: 0.68rem 1.1rem;
   cursor: pointer;
-  transition: transform 0.2s ease, background 0.2s ease;
+  transition: background 0.2s ease, box-shadow 0.2s ease;
+}
+
+.product-card button,
+.product-modal-actions button,
+#productModalAddToCart {
+  font-size: 1.02rem;
+  padding: 0.78rem 1.25rem;
+  min-width: 0;
+  line-height: 1.2;
+  letter-spacing: 0.01em;
+  background: #c96a1b;
+  border: 1px solid #c96a1b;
+  box-shadow: 0 6px 14px rgba(201, 106, 27, 0.3);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.cart-item button {
+  font-size: 0.9rem;
+  padding: 0.5rem 0.85rem;
+  min-width: auto;
+  box-shadow: none;
 }
 
 .filter-btn {
   padding: 0.45rem 0.9rem;
+}
+
+.product-card button:hover,
+.product-modal-actions button:hover,
+#productModalAddToCart:hover {
+  background: #b35d17;
+  border-color: #b35d17;
+  box-shadow: 0 6px 14px rgba(179, 93, 23, 0.3);
+}
+
+.product-card button:active,
+.product-modal-actions button:active,
+#productModalAddToCart:active {
+  background: #9d5314;
+  border-color: #9d5314;
+  box-shadow: 0 4px 10px rgba(157, 83, 20, 0.28);
+}
+
+.product-savings-line {
+  font-weight: 700;
+  color: var(--accent-dark);
+  margin: 0.2rem 0 0.35rem;
 }
 
 .cart-btn span {
@@ -256,7 +306,7 @@ h3 {
 }
 
 .hero h1 {
-  font-size: clamp(2rem, 4vw, 3.3rem);
+  font-size: 2.6rem;
   line-height: 1.05;
 }
 
@@ -303,7 +353,7 @@ h3 {
 
 .profile-text h2 {
   margin: 0;
-  font-size: clamp(1.6rem, 3vw, 2rem);
+  font-size: 1.8rem;
 }
 
 .profile-text p {
@@ -351,9 +401,17 @@ h3 {
 
 .offer-grid {
   margin-top: 1.5rem;
-  display: grid;
+  display: none;
   grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
   gap: 1rem;
+}
+
+.offers-section.offers-visible .offer-grid {
+  display: grid;
+}
+
+.offers-section.offers-visible .offer-grid {
+  display: grid;
 }
 
 .offer-card {
@@ -510,15 +568,63 @@ h3 {
 
 .product-bottom {
   margin-top: auto;
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.75rem;
+}
+
+.price-stack {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.6rem;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.price-row,
+.price-subrow {
+  display: flex;
+  align-items: baseline;
+  gap: 0.35rem;
+}
+
+.price-label {
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: #7a6047;
+}
+
+.price-label.muted {
+  letter-spacing: 0.08em;
+  text-transform: none;
 }
 
 .price {
   font-weight: 700;
   color: var(--accent);
+}
+
+.price.deal {
+  color: var(--success);
+}
+
+.price-original {
+  color: #6d4c2d;
+  text-decoration: line-through;
+  text-decoration-style: dashed;
+  text-decoration-color: var(--accent);
+  text-decoration-thickness: 1.6px;
+}
+
+.price-pct {
+  color: var(--success);
+  font-weight: 700;
+}
+
+.price-savings {
+  font-size: 0.95rem;
+  color: var(--success);
+  font-weight: 600;
 }
 
 .about-grid,
@@ -810,6 +916,110 @@ h3 {
   border-bottom: 1px solid var(--line);
 }
 
+.cart-footer p {
+  margin: 0 0 0.35rem;
+  font-size: 1.05rem;
+}
+
+.cart-savings {
+  margin-top: 0.4rem;
+  padding: 0.65rem 0.75rem;
+  border-radius: 12px;
+  border: 1px solid rgba(29, 109, 50, 0.25);
+  background: rgba(29, 109, 50, 0.08);
+  color: var(--success);
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  flex-wrap: wrap;
+  line-height: 1.4;
+}
+
+.cart-savings-label {
+  font-weight: 700;
+}
+
+.cart-savings-dot {
+  color: rgba(29, 109, 50, 0.6);
+}
+
+.cart-savings-amount {
+  font-weight: 700;
+}
+
+.cart-savings-note {
+  color: rgba(29, 109, 50, 0.8);
+  font-weight: 600;
+}
+
+#cartSavings {
+  display: none;
+}
+
+.coupon-box {
+  border: 1px dashed #e0c9aa;
+  border-radius: 12px;
+  padding: 0.75rem;
+  margin-bottom: 0.8rem;
+  background: #fffaf3;
+}
+
+#couponStatus.error {
+  color: #b3261e;
+  font-weight: 600;
+  margin-top: 0.35rem;
+}
+
+.coupon-box label {
+  font-weight: 700;
+  display: block;
+  margin-bottom: 0.35rem;
+}
+
+.coupon-row {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.coupon-row input {
+  flex: 1;
+  border-radius: 999px;
+  border: 1px solid #d9c7b4;
+  padding: 0.6rem 0.9rem;
+  font-family: "Manrope", sans-serif;
+  font-size: 0.95rem;
+}
+
+.coupon-row .filter-btn {
+  white-space: nowrap;
+}
+
+.form-grid-2 {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 0.65rem;
+}
+
+.coupon-fieldset {
+  border: 1px solid #e6d4c4;
+  border-radius: 12px;
+  padding: 0.75rem 0.85rem 0.6rem;
+  background: #fffdf9;
+}
+
+.coupon-fieldset legend {
+  font-weight: 700;
+  padding: 0 0.35rem;
+}
+
+.form-hint {
+  margin: 0.3rem 0 0;
+  font-size: 0.9rem;
+  color: #6f5442;
+}
+
 .cart-header {
   display: flex;
   align-items: center;
@@ -897,7 +1107,84 @@ h3 {
 
 .cart-item-price {
   font-weight: 700;
-  color: var(--accent);
+  color: var(--success);
+  font-family: "Manrope", sans-serif;
+}
+
+.cart-item-price-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  align-items: flex-start;
+  min-width: 160px;
+  padding: 0.5rem 0.85rem;
+  border-radius: 14px;
+  border: 1px solid rgba(29, 109, 50, 0.25);
+  background: rgba(29, 109, 50, 0.08);
+  box-shadow: 0 2px 8px rgba(29, 109, 50, 0.15);
+  align-self: flex-start;
+}
+
+.cart-price-row {
+  display: flex;
+  align-items: baseline;
+  gap: 0.4rem;
+}
+
+.cart-price-subrow {
+  display: flex;
+  align-items: baseline;
+  gap: 0.35rem;
+}
+
+.cart-item-price-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: rgba(29, 109, 50, 0.9);
+}
+
+.cart-item-price-label.muted {
+  letter-spacing: 0.08em;
+  color: #7a6047;
+  text-transform: none;
+}
+
+.cart-item-price-original {
+  font-size: 0.95rem;
+  color: #6d4c2d;
+  text-decoration: line-through;
+  font-family: "Manrope", sans-serif;
+  margin-top: -0.05rem;
+  display: block;
+  position: relative;
+  text-decoration-color: var(--success);
+  text-decoration-style: dashed;
+  text-decoration-thickness: 2px;
+  padding-left: 0.4rem;
+  margin-left: 0.2rem;
+}
+
+.cart-item-discount-pct {
+  font-size: 0.9rem;
+  color: var(--success);
+  font-weight: 700;
+}
+
+.cart-item-discount {
+  font-size: 0.9rem;
+  color: var(--success);
+  font-family: "Manrope", sans-serif;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  display: block;
+  line-height: 1.35;
+  margin-top: -0.05rem;
+  padding: 0.18rem 0.4rem;
+  background: rgba(29, 109, 50, 0.15);
+  border-radius: 8px;
+  width: 100%;
 }
 
 .cart-actions {
@@ -910,6 +1197,13 @@ h3 {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
   gap: 0.75rem;
+}
+
+/* Admin: make product list scrollable */
+#adminProducts {
+  max-height: 420px;
+  overflow-y: auto;
+  padding-right: 0.5rem;
 }
 
 .customer-card {
@@ -1116,7 +1410,8 @@ h3 {
 }
 
 .admin-modal-form input,
-.admin-modal-form textarea {
+.admin-modal-form textarea,
+.admin-modal-form select {
   border-radius: 0.65rem;
   border: 1px solid #d9c7b4;
   padding: 0.5rem 0.75rem;
@@ -1205,11 +1500,15 @@ h3 {
   .cart-btn {
     padding: 0 0.8rem;
     height: 2.25rem;
-    font-size: 0.92rem;
+    font-size: 0.95rem;
   }
 
   .hero {
     padding: 2.8rem 0;
+  }
+
+  .hero h1 {
+    font-size: 2.3rem;
   }
 
   .products-section,
@@ -1217,6 +1516,10 @@ h3 {
   .contact-section,
   .videos-section {
     padding: 2.4rem 0;
+  }
+
+  .profile-text h2 {
+    font-size: 1.55rem;
   }
 
   .footer-grid {
@@ -1237,7 +1540,7 @@ h3 {
   .lang-switcher,
   .auth-btn,
   .cart-btn {
-    font-size: 0.86rem;
+    font-size: 0.9rem;
     padding: 0 0.7rem;
     height: 2.1rem;
   }
@@ -1245,6 +1548,14 @@ h3 {
   .lang-switcher {
     font-size: 0.84rem;
     line-height: 1.2;
+  }
+
+  .hero h1 {
+    font-size: 2rem;
+  }
+
+  .profile-text h2 {
+    font-size: 1.4rem;
   }
 
   .section-head {

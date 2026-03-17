@@ -6,7 +6,7 @@ const fallbackProducts = [
     category: "string",
     price: 45999,
     details: "Teak wood, hand-carved jawari",
-    images: ["assets/images/sitar.svg"],
+    images: ["assets/images/sitar_1.jpg"],
     video_url: "assets/videos/sitar-making.mp4"
   },
   {
@@ -42,7 +42,7 @@ const fallbackProducts = [
     category: "keyboard",
     price: 21999,
     details: "9 stopper, coupler, scale changer",
-    images: ["assets/images/harmonium.svg"],
+    images: ["assets/images/indian-scale-changer-harmonium.jpg"],
     video_url: "assets/videos/harmonium-making.mp4"
   },
   {
@@ -139,7 +139,16 @@ const translations = {
     offerDiscountTitle: "10% off every instrument",
     offerDiscountDesc: "Logged-in shoppers receive automatic 10% savings on each instrument in their cart.",
     offerLessonsTitle: "First 4 lessons free",
-    offerLessonsDesc: "After purchase, unlock four complimentary one-on-one learning sessions with our expert musicians."
+    offerLessonsDesc: "After purchase, unlock four complimentary one-on-one learning sessions with our expert musicians.",
+    discountedPriceLabel: "Discounted price",
+    youSavedLabel: "You saved",
+    couponLabel: "Coupon",
+    applyCoupon: "Apply",
+    couponPlaceholder: "Enter code",
+    couponApplied: "Coupon applied.",
+    couponInvalid: "Invalid coupon.",
+    couponHint: "Use the admin coupon to save more.",
+    couponUnavailable: "No coupon available right now."
   },
   mr: {
     navProducts: "उत्पादने",
@@ -217,7 +226,16 @@ const translations = {
     offerDiscountTitle: "प्रत्येक वाद्यावर 10% सूट",
     offerDiscountDesc: "लॉगिन केलेल्या खरेदीदारांना प्रत्येक वाद्यावर 10% सूट आपोआप लागू होते.",
     offerLessonsTitle: "पहिले 4 धडे मोफत",
-    offerLessonsDesc: "खरेदी केल्यानंतर चार मार्गदर्शित धडे आपल्याला मोफत मिळतात."
+    offerLessonsDesc: "खरेदी केल्यानंतर चार मार्गदर्शित धडे आपल्याला मोफत मिळतात.",
+    discountedPriceLabel: "सुट केलेली किंमत",
+    youSavedLabel: "तुम्ही वाचवले",
+    couponLabel: "कूपन",
+    applyCoupon: "लागू करा",
+    couponPlaceholder: "कोड टाका",
+    couponApplied: "कूपन लागू झाले.",
+    couponInvalid: "कूपन चुकीचे आहे.",
+    couponHint: "अधिक सवलतीसाठी कूपन वापरा.",
+    couponUnavailable: "सध्या कोणतेही कूपन नाही."
   },
   hi: {
     navProducts: "उत्पाद",
@@ -295,7 +313,16 @@ const translations = {
     offerDiscountTitle: "हर वाद्य पर 10% छूट",
     offerDiscountDesc: "लॉगइन करने वाले हर ग्राहक को हर ऑर्डर पर 10% छूट मिलती है।",
     offerLessonsTitle: "पहले 4 पाठ मुफ्त",
-    offerLessonsDesc: "खरीद के बाद विशेषज्ञ संगीतकारों से चार मार्गदर्शित पाठ मुफ्त मिलेंगे।"
+    offerLessonsDesc: "खरीद के बाद विशेषज्ञ संगीतकारों से चार मार्गदर्शित पाठ मुफ्त मिलेंगे।",
+    discountedPriceLabel: "छूट वाली कीमत",
+    youSavedLabel: "आपने बचाए",
+    couponLabel: "कूपन",
+    applyCoupon: "लागू करें",
+    couponPlaceholder: "कोड दर्ज करें",
+    couponApplied: "कूपन लागू हो गया।",
+    couponInvalid: "कूपन मान्य नहीं है।",
+    couponHint: "अधिक छूट के लिए कूपन लगाएं।",
+    couponUnavailable: "इस समय कोई कूपन उपलब्ध नहीं है।"
   }
 };
 
@@ -304,7 +331,9 @@ const state = {
   filter: "all",
   language: "en",
   customer: null,
-  videos: []
+  videos: [],
+  couponConfig: { code: null, percent: 0 },
+  coupon: { applied: false, code: null, percent: 0 }
 };
 
 const productGrid = document.getElementById("productGrid");
@@ -317,6 +346,9 @@ const cartSavingsEl = document.getElementById("cartSavings");
 const cartCount = document.getElementById("cartCount");
 const checkoutBtn = document.getElementById("checkoutBtn");
 const closeCartFooter = document.getElementById("closeCartFooter");
+const couponCodeInput = document.getElementById("couponCodeInput");
+const couponStatusEl = document.getElementById("couponStatus");
+const couponApplyBtn = document.getElementById("couponApplyBtn");
 const inquiryForm = document.getElementById("inquiryForm");
 const formStatus = document.getElementById("formStatus");
 const langSwitcher = document.getElementById("langSwitcher");
@@ -346,6 +378,54 @@ const customerProfileEmail = document.getElementById("customerProfileEmail");
 const customerProfileSince = document.getElementById("customerProfileSince");
 const customerProfileToggle = document.getElementById("customerProfileToggle");
 let isCustomerProfileVisible = false;
+
+// Cart persistence helpers (per customer or guest)
+const CART_KEY_PREFIX = "sv_cart_v1";
+let pendingCartIds = null;
+let cartHydrated = false;
+
+function cartStorageKey() {
+  const email = state.customer?.email ? state.customer.email.trim().toLowerCase() : null;
+  return email ? `${CART_KEY_PREFIX}_${email}` : `${CART_KEY_PREFIX}_guest`;
+}
+
+function readStoredCartIds() {
+  try {
+    const raw = localStorage.getItem(cartStorageKey());
+    if (!raw) return [];
+    const ids = JSON.parse(raw);
+    return Array.isArray(ids) ? ids : [];
+  } catch (_) {
+    return [];
+  }
+}
+
+function saveCart() {
+  if (!cartHydrated) return; // avoid wiping saved cart before we load it
+  try {
+    const ids = state.cart.map((item) => item.id);
+    localStorage.setItem(cartStorageKey(), JSON.stringify(ids));
+  } catch (_) {
+    // ignore storage errors
+  }
+}
+
+function loadCartFromStorage() {
+  cartHydrated = false;
+  pendingCartIds = readStoredCartIds();
+  hydrateCartWithProducts();
+}
+
+function hydrateCartWithProducts() {
+  if (!Array.isArray(pendingCartIds)) return;
+  if (!products || !products.length) return; // wait until products loaded
+  state.cart = pendingCartIds
+    .map((id) => products.find((p) => p.id === id))
+    .filter(Boolean);
+  cartHydrated = true;
+  saveCart(); // ensure cleaned list persisted (drops missing products)
+  renderCart();
+}
 const offerTitleText = document.getElementById("offerTitleText");
 const offerDescText = document.getElementById("offerDescText");
 const offerDiscountTitleText = document.getElementById("offerDiscountTitleText");
@@ -361,6 +441,117 @@ function requireBackendPath(path) {
     throw new Error("Backend API unavailable. Open this site via http://localhost:8080");
   }
   return path;
+}
+
+function getCookieValue(name) {
+  const match = document.cookie.match(new RegExp(`(^|;)\\s*${name}=([^;]*)`));
+  return match ? decodeURIComponent(match[2]) : null;
+}
+
+function getActiveDiscountPercent() {
+  if (state.coupon?.applied) {
+    return Math.min(90, Math.max(0, Number(state.coupon.percent) || 0));
+  }
+  if (state.customer) {
+    return Math.round(LOYALTY_DISCOUNT_RATE * 100);
+  }
+  return 0;
+}
+
+function getActiveDiscountLabel() {
+  if (state.coupon?.applied && state.coupon.code) {
+    return `${state.coupon.code} coupon`;
+  }
+  if (state.customer) return t("offerDiscountTitle");
+  return "";
+}
+
+function setCouponStatus(message, isError = false, lock = false) {
+  if (couponStatusEl) {
+    couponStatusEl.textContent = message || "";
+    couponStatusEl.classList.toggle("error", !!isError);
+    if (lock) {
+      couponStatusEl.dataset.lock = "1";
+    } else {
+      delete couponStatusEl.dataset.lock;
+    }
+  }
+}
+
+function syncCouponUIAvailability() {
+  if (couponStatusEl && couponStatusEl.dataset.lock === "1") {
+    return; // preserve last explicit message (e.g., duplicate use)
+  }
+  const hasConfig = !!(
+    state.couponConfig?.enabled !== false &&
+    state.couponConfig?.code &&
+    state.couponConfig.percent > 0
+  );
+  if (couponCodeInput) {
+    couponCodeInput.disabled = !hasConfig;
+    couponCodeInput.placeholder = hasConfig ? t("couponPlaceholder") : "";
+  }
+  if (couponApplyBtn) {
+    couponApplyBtn.disabled = !hasConfig;
+  }
+  if (!hasConfig) {
+    state.coupon = { applied: false, code: null, percent: 0 };
+    setCouponStatus(t("couponUnavailable"));
+  } else if (!state.coupon.applied) {
+    setCouponStatus(`${t("couponHint")} (${state.couponConfig.code} - ${state.couponConfig.percent}% off)`);
+  }
+}
+
+function applyCoupon(codeInput) {
+  const config = state.couponConfig;
+  const code = (codeInput || "").trim().toUpperCase();
+  if (!config?.enabled || !config.code || !config.percent) {
+    setCouponStatus(t("couponUnavailable"), true, true);
+    return;
+  }
+  if (code !== config.code.toUpperCase()) {
+    state.coupon = { applied: false, code: null, percent: 0 };
+    setCouponStatus(t("couponInvalid"), true, true);
+    renderCart();
+    return;
+  }
+  logCouponUsage(code)
+    .then((result) => {
+      if (!result.ok) {
+        state.coupon = { applied: false, code: null, percent: 0 };
+        setCouponStatus(result.message || t("couponInvalid"), true, true);
+        renderCart();
+        return;
+      }
+      state.coupon = { applied: true, code: config.code, percent: Number(config.percent) };
+      setCouponStatus(`${t("couponApplied")} ${config.percent}% off`, false, false);
+      renderProducts();
+      renderCart();
+    })
+    .catch(() => {
+      state.coupon = { applied: false, code: null, percent: 0 };
+      setCouponStatus(t("couponInvalid"), true, true);
+      renderCart();
+    });
+}
+
+async function logCouponUsage(code) {
+  if (!hasBackend || !code) return { ok: true };
+  try {
+    const resp = await fetch("/api/coupon/use", {
+      method: "POST",
+      credentials: "same-origin",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ code, email: state.customer?.email || "" })
+    });
+    if (!resp.ok) {
+      const data = await resp.json().catch(() => ({}));
+      return { ok: false, message: data.error || t("couponInvalid") };
+    }
+    return { ok: true };
+  } catch (_) {
+    return { ok: false, message: t("couponInvalid") };
+  }
 }
 
 function t(key) {
@@ -401,9 +592,9 @@ function formatINR(value) {
 
 function getCartItemFinalPrice(item) {
   const basePrice = item?.price || 0;
-  if (!state.customer) return basePrice;
-  const discounted = Math.round(basePrice * (1 - LOYALTY_DISCOUNT_RATE));
-  return Math.max(0, discounted);
+  const pct = getActiveDiscountPercent();
+  const price = Math.round(basePrice * (1 - pct / 100));
+  return Math.max(0, price);
 }
 
 function getCartItemSavings(item) {
@@ -435,14 +626,34 @@ function renderProducts() {
     card.setAttribute("data-product-id", String(product.id));
     const image = product.images && product.images.length ? product.images[0] : resolveImage(product);
     const videoLink = product.video_url ? `<a href="${product.video_url}" target="_blank" rel="noopener noreferrer">${t("watchMakingVideo")}</a>` : "";
+    const discountPct = getActiveDiscountPercent();
+    const dealPrice = discountPct > 0 ? getCartItemFinalPrice(product) : product.price;
+    const savings = discountPct > 0 ? product.price - dealPrice : 0;
     card.innerHTML = `
       <img src="${image}" alt="${product.name}" class="product-image" onerror="this.src='assets/images/sitar.svg'" />
       <h3>${product.name}</h3>
       <p class="product-meta">${product.details}</p>
       <p class="product-meta">${videoLink}</p>
       <div class="product-bottom">
-        <span class="price">Rs ${formatINR(product.price)}</span>
-        <button data-id="${product.id}">${t("addToCart")}</button>
+        <div class="price-stack">
+          <div class="price-row">
+            <span class="price-label">${discountPct > 0 ? t("discountedPriceLabel") : "Price"}</span>
+            <span class="price deal">₹${formatINR(dealPrice)}</span>
+          </div>
+          ${
+            discountPct > 0
+              ? `<div class="price-subrow">
+                  <span class="price-label muted">M.R.P:</span>
+                  <span class="price-original">₹${formatINR(product.price)}</span>
+                  <span class="price-pct">(${discountPct}% off)</span>
+                </div>
+                <span class="price-savings">You save ₹${formatINR(savings)}</span>`
+              : ""
+          }
+        </div>
+        <button data-id="${product.id}">
+          <span>${t("addToCart")}</span>
+        </button>
       </div>
     `;
     productGrid.appendChild(card);
@@ -452,7 +663,15 @@ function renderProducts() {
 function openProductModal(product) {
   if (!productModal || !productModalTitle || !productMediaList) return;
   productModalTitle.textContent = product.name;
-  productModalMeta.textContent = `${product.category} | Rs ${formatINR(product.price)}`;
+  const discountPct = getActiveDiscountPercent();
+  const dealPrice = discountPct > 0 ? getCartItemFinalPrice(product) : product.price;
+  const savings = discountPct > 0 ? product.price - dealPrice : 0;
+  productModalMeta.innerHTML =
+    discountPct > 0
+      ? `${product.category} | Rs ${formatINR(dealPrice)} <span class="price-original">Rs ${formatINR(
+          product.price
+        )}</span> <span class="price-pct">(${discountPct}% off)</span>`
+      : `${product.category} | Rs ${formatINR(product.price)}`;
   productMediaList.innerHTML = "";
 
   const images = product.images && product.images.length ? product.images : [resolveImage(product)];
@@ -474,6 +693,7 @@ function openProductModal(product) {
   }
 
   productModalAddToCart.dataset.productId = String(product.id);
+  productModalAddToCart.innerHTML = `<span>${t("addToCart")}</span>`;
   productModal.classList.add("open");
   productModal.setAttribute("aria-hidden", "false");
 }
@@ -521,24 +741,44 @@ function renderCart() {
       meta.className = "cart-item-meta";
 
       const discountedPrice = getCartItemFinalPrice(item);
-      const price = document.createElement("span");
-      price.className = "cart-item-price";
-      price.textContent = `Rs ${formatINR(discountedPrice)}`;
+      const savings = getCartItemSavings(item);
+      const discountPct = item.price > 0 ? Math.round((savings / item.price) * 100) : 0;
 
       const priceWrap = document.createElement("div");
       priceWrap.className = "cart-item-price-wrap";
-      priceWrap.appendChild(price);
 
-      const savings = getCartItemSavings(item);
-      if (state.customer && savings > 0) {
+      const dealRow = document.createElement("div");
+      dealRow.className = "cart-price-row";
+      const dealLabel = document.createElement("span");
+      dealLabel.className = "cart-item-price-label";
+      dealLabel.textContent = t("discountedPriceLabel");
+      const dealPrice = document.createElement("span");
+      dealPrice.className = "cart-item-price";
+      dealPrice.textContent = `₹${formatINR(discountedPrice)}`;
+      dealRow.appendChild(dealLabel);
+      dealRow.appendChild(dealPrice);
+      priceWrap.appendChild(dealRow);
+
+      if (savings > 0) {
+        const mrpRow = document.createElement("div");
+        mrpRow.className = "cart-price-subrow";
+        const mrpLabel = document.createElement("span");
+        mrpLabel.className = "cart-item-price-label muted";
+        mrpLabel.textContent = "M.R.P:";
         const original = document.createElement("span");
         original.className = "cart-item-price-original";
-        original.textContent = `Rs ${formatINR(item.price)}`;
-        priceWrap.appendChild(original);
+        original.textContent = `₹${formatINR(item.price)}`;
+        const pct = document.createElement("span");
+        pct.className = "cart-item-discount-pct";
+        pct.textContent = `(${discountPct}% off)`;
+        mrpRow.appendChild(mrpLabel);
+        mrpRow.appendChild(original);
+        mrpRow.appendChild(pct);
+        priceWrap.appendChild(mrpRow);
 
         const discountNote = document.createElement("span");
         discountNote.className = "cart-item-discount";
-        discountNote.textContent = `${t("offerDiscountTitle")} • Saved ₹${formatINR(savings)}`;
+        discountNote.textContent = `You save ₹${formatINR(savings)}`;
         discountNote.title = t("offerDiscountDesc");
         priceWrap.appendChild(discountNote);
       }
@@ -559,11 +799,31 @@ function renderCart() {
   }
 
   const total = state.cart.reduce((sum, item) => sum + getCartItemFinalPrice(item), 0);
+  const mrpTotal = state.cart.reduce((sum, item) => sum + (item?.price || 0), 0);
   cartTotal.textContent = formatINR(total);
   cartCount.textContent = state.cart.length;
+  saveCart();
   if (cartSavingsEl) {
     const totalSavings = state.cart.reduce((sum, item) => sum + getCartItemSavings(item), 0);
-    cartSavingsEl.textContent = totalSavings > 0 ? `${t("offerDiscountTitle")} applied · You saved ₹${formatINR(totalSavings)}` : "";
+    if (totalSavings > 0) {
+      const discountLabel = getActiveDiscountLabel();
+      cartSavingsEl.style.display = "inline-flex";
+      cartSavingsEl.innerHTML = `
+        <span class="cart-savings-label">${discountLabel ? `${discountLabel} applied` : t("offerDiscountTitle")}</span>
+        <span class="cart-savings-dot">•</span>
+        <span class="cart-savings-amount">${t("youSavedLabel")} ₹${formatINR(totalSavings)}</span>
+        <span class="cart-savings-dot">•</span>
+        <span class="cart-savings-note">M.R.P ₹${formatINR(mrpTotal)}</span>
+      `;
+    } else {
+      cartSavingsEl.style.display = "none";
+      cartSavingsEl.textContent = "";
+    }
+  }
+
+  syncCouponUIAvailability();
+  if (state.coupon.applied && state.coupon.code) {
+    setCouponStatus(`${t("couponApplied")} ${state.coupon.code} (${state.coupon.percent}% off)`);
   }
 }
 
@@ -577,7 +837,10 @@ function applyOfferOverrides(overrides = null) {
     discountTitle: offerOverrides.discountTitle || t("offerDiscountTitle"),
     discountDesc: offerOverrides.discountDesc || t("offerDiscountDesc"),
     lessonsTitle: offerOverrides.lessonsTitle || t("offerLessonsTitle"),
-    lessonsDesc: offerOverrides.lessonsDesc || t("offerLessonsDesc")
+    lessonsDesc: offerOverrides.lessonsDesc || t("offerLessonsDesc"),
+    couponCode: offerOverrides.couponCode || "",
+    couponPercent: Number(offerOverrides.couponPercent || 0),
+    couponEnabled: offerOverrides.couponEnabled !== false
   };
   if (offerTitleText) offerTitleText.textContent = resolved.title;
   if (offerDescText) offerDescText.textContent = resolved.desc;
@@ -585,6 +848,11 @@ function applyOfferOverrides(overrides = null) {
   if (offerDiscountDescText) offerDiscountDescText.textContent = resolved.discountDesc;
   if (offerLessonsTitleText) offerLessonsTitleText.textContent = resolved.lessonsTitle;
   if (offerLessonsDescText) offerLessonsDescText.textContent = resolved.lessonsDesc;
+  state.couponConfig = { code: resolved.couponCode, percent: resolved.couponPercent, enabled: resolved.couponEnabled };
+  if (!state.coupon.applied) {
+    state.coupon = { applied: false, code: null, percent: 0 };
+  }
+  syncCouponUIAvailability();
 }
 
 async function loadOffers() {
@@ -599,7 +867,10 @@ async function loadOffers() {
       discountTitle: config.discountTitle,
       discountDesc: config.discountDesc,
       lessonsTitle: config.lessonsTitle,
-      lessonsDesc: config.lessonsDesc
+      lessonsDesc: config.lessonsDesc,
+      couponCode: config.couponCode,
+      couponPercent: config.couponPercent,
+      couponEnabled: config.couponEnabled
     });
   } catch (error) {
     console.warn("Failed to load offers", error);
@@ -678,7 +949,9 @@ function renderCustomerState() {
     }
   }
   renderCustomerProfile();
+  loadCartFromStorage();
   renderCart();
+  renderProducts();
   updateOfferVisibility();
 }
 
@@ -742,6 +1015,8 @@ async function checkCustomerSession() {
     state.customer = null;
   }
   renderCustomerState();
+  renderProducts();
+  renderCart();
 }
 
 function togglePasswordById(targetId, button) {
@@ -844,6 +1119,16 @@ closeCartFooter?.addEventListener("click", closeCartPanel);
 closeProductModal?.addEventListener("click", closeProductDetailsModal);
 productModal?.addEventListener("click", (event) => {
   if (event.target === productModal) closeProductDetailsModal();
+});
+couponApplyBtn?.addEventListener("click", () => applyCoupon(couponCodeInput?.value || ""));
+couponCodeInput?.addEventListener("keydown", (event) => {
+  if (event.key === "Enter") {
+    event.preventDefault();
+    applyCoupon(couponCodeInput.value);
+  }
+});
+couponCodeInput?.addEventListener("input", () => {
+  setCouponStatus("", false, false);
 });
 productModalAddToCart?.addEventListener("click", () => {
   const id = Number(productModalAddToCart.dataset.productId || "0");
@@ -1041,9 +1326,11 @@ async function loadProducts() {
       throw new Error(data.error || t("loadFailed"));
     }
     products = data.products || [];
+    hydrateCartWithProducts();
     renderProducts();
   } catch (error) {
     products = [...fallbackProducts];
+    hydrateCartWithProducts();
     renderProducts();
     productGrid.insertAdjacentHTML("beforeend", `<p>${error.message || t("loadFailed")}</p>`);
   }
@@ -1051,6 +1338,7 @@ async function loadProducts() {
 
 const initialLanguage = localStorage.getItem("svayavaniLang") || "en";
 applyLanguage(initialLanguage);
+loadCartFromStorage();
 loadProducts();
 loadVideos();
 loadOffers();

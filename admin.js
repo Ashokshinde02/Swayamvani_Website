@@ -12,6 +12,7 @@ const customersEl = document.getElementById("adminCustomers");
 const refreshInquiriesBtn = document.getElementById("refreshInquiriesBtn");
 const refreshCustomersBtn = document.getElementById("refreshCustomersBtn");
 const editOffersBtn = document.getElementById("editOffersBtn");
+const OfferService = window.OfferService;
 const adminHeaderActions = document.querySelector(".admin-header-actions");
 const hasBackend = window.location.protocol === "http:" || window.location.protocol === "https:";
 const adminModalOverlay = document.getElementById("adminModalOverlay");
@@ -71,73 +72,232 @@ function buildCustomerCardsHtml(customers = []) {
     .join("");
 }
 
-function createOffersFormHtml(offers = {}, errorMessage = "") {
+function createOffersFormHtml(current = {}, list = [], errorMessage = "") {
   const errorBlock = errorMessage
     ? `<p class="form-status" aria-live="assertive">${escapeHtml(errorMessage)}</p>`
     : "";
   return `
+    <div class="admin-modal-scroll">
     ${errorBlock}
     <form id="adminOffersForm" class="admin-modal-form">
       <label>
+        Existing offers
+        <select id="offerSelect"></select>
+      </label>
+      <label>
+        Offer type
+        <select name="offerType" id="offerTypeSelect">
+          <option value="discount" ${current.offerType === "lessons" || current.offerType === "coupon" ? "" : "selected"}>Discount</option>
+          <option value="lessons" ${current.offerType === "lessons" ? "selected" : ""}>Free lessons</option>
+          <option value="coupon" ${current.offerType === "coupon" ? "selected" : ""}>Coupon code</option>
+        </select>
+      </label>
+      <label>
         Heading
-        <input name="title" type="text" maxlength="120" required value="${escapeHtml(offers.title || "")}" />
+        <input name="title" type="text" maxlength="120" required value="${escapeHtml(current.title || "")}" />
       </label>
       <label>
         Description
-        <textarea name="desc" rows="3" required>${escapeHtml(offers.desc || "")}</textarea>
+        <textarea name="desc" rows="3" required>${escapeHtml(current.desc || "")}</textarea>
       </label>
-      <label>
+      <label data-offer-section="discount">
         Discount title
-        <input name="discountTitle" type="text" maxlength="120" required value="${escapeHtml(offers.discountTitle || "")}" />
+        <input name="discountTitle" type="text" maxlength="120" required value="${escapeHtml(current.discountTitle || "")}" />
       </label>
-      <label>
+      <label data-offer-section="discount">
         Discount description
-        <textarea name="discountDesc" rows="3" required>${escapeHtml(offers.discountDesc || "")}</textarea>
+        <textarea name="discountDesc" rows="3" required>${escapeHtml(current.discountDesc || "")}</textarea>
       </label>
-      <label>
+      <fieldset class="coupon-fieldset" data-offer-section="coupon">
+        <legend>Coupon (optional)</legend>
+        <div class="form-grid-2">
+          <label>
+            Code
+            <input name="couponCode" type="text" maxlength="40" placeholder="e.g. RIYAAZ10" value="${escapeHtml(
+              current.couponCode || ""
+            )}" />
+          </label>
+          <label>
+            % off
+            <input name="couponPercent" type="number" min="1" max="90" step="1" value="${escapeHtml(
+              current.couponPercent ?? ""
+            )}" />
+          </label>
+        </div>
+        <p class="form-hint">Shown in cart; leave blank to disable coupon.</p>
+        <label class="toggle-line">
+          <input name="couponEnabled" type="checkbox" ${current.couponEnabled === false ? "" : "checked"} />
+          <span>Enable coupon for customers</span>
+        </label>
+      </fieldset>
+      <label data-offer-section="lessons">
         Lessons title
-        <input name="lessonsTitle" type="text" maxlength="120" required value="${escapeHtml(offers.lessonsTitle || "")}" />
+        <input name="lessonsTitle" type="text" maxlength="120" required value="${escapeHtml(current.lessonsTitle || "")}" />
       </label>
-      <label>
+      <label data-offer-section="lessons">
         Lessons description
-        <textarea name="lessonsDesc" rows="3" required>${escapeHtml(offers.lessonsDesc || "")}</textarea>
+        <textarea name="lessonsDesc" rows="3" required>${escapeHtml(current.lessonsDesc || "")}</textarea>
       </label>
       <div class="admin-modal-actions">
+        <button type="button" id="removeOfferBtn" class="video-delete">Remove</button>
+        <button type="button" id="activateOfferBtn" class="filter-btn">Set Active</button>
         <button type="submit">Save</button>
         <button type="button" class="filter-btn" data-modal-close>Cancel</button>
       </div>
     </form>
+    </div>
   `;
 }
 
 function bindOffersForm(form) {
   if (!form) return;
+  const offerSelect = form.querySelector("#offerSelect");
+  let currentOffers = [];
+  let currentActiveId = null;
+
+  const offerTypeSelect = form.querySelector("#offerTypeSelect");
+  const sections = form.querySelectorAll("[data-offer-section]");
+  const toggleSections = () => {
+    const selected = offerTypeSelect?.value || "discount";
+    sections.forEach((section) => {
+      section.style.display = section.dataset.offerSection === selected ? "block" : "none";
+    });
+    // Toggle required fields based on visible section (remove attribute when hidden to avoid validity errors)
+    const setRequired = (name, isRequired) => {
+      const el = form.elements[name];
+      if (!el) return;
+      el.required = isRequired;
+      if (isRequired) {
+        el.setAttribute("required", "required");
+      } else {
+        el.removeAttribute("required");
+      }
+    };
+    setRequired("discountTitle", selected === "discount");
+    setRequired("discountDesc", selected === "discount");
+    setRequired("lessonsTitle", selected === "lessons");
+    setRequired("lessonsDesc", selected === "lessons");
+    setRequired("couponCode", selected === "coupon");
+    setRequired("couponPercent", selected === "coupon");
+  };
+  offerTypeSelect?.addEventListener("change", toggleSections);
+  toggleSections();
+
+  const fillForm = (offer = {}) => {
+    form.elements.offerType.value = offer.offerType || "discount";
+    form.elements.title.value = offer.title || "";
+    form.elements.desc.value = offer.desc || "";
+    form.elements.discountTitle.value = offer.discountTitle || "";
+    form.elements.discountDesc.value = offer.discountDesc || "";
+    form.elements.lessonsTitle.value = offer.lessonsTitle || "";
+    form.elements.lessonsDesc.value = offer.lessonsDesc || "";
+    form.elements.couponCode.value = offer.couponCode || "";
+    form.elements.couponPercent.value = offer.couponPercent || "";
+    if (form.elements.couponEnabled) {
+      form.elements.couponEnabled.checked = offer.couponEnabled !== false;
+    }
+    toggleSections();
+  };
+
+  const loadOffers = async () => {
+    let data = { offers: {}, list: [] };
+    try {
+      const resp = await OfferService.list();
+      if (resp && typeof resp === "object") {
+        data = resp;
+      }
+    } catch (err) {
+      if (adminStatus) adminStatus.textContent = err.message || "Failed to load offers (are you logged in?).";
+    }
+    currentOffers = Array.isArray(data.list) ? data.list : [];
+    const active = data.offers || {};
+    currentActiveId = (currentOffers.find((o) => o.active) || {}).id || null;
+    OfferService.populateSelect(offerSelect, currentOffers);
+    if (offerSelect && currentActiveId) {
+      offerSelect.value = String(currentActiveId);
+    }
+    fillForm(active);
+    if (!currentOffers.length && adminStatus) {
+      adminStatus.textContent = "No offers found or not logged in.";
+    }
+  };
+
+  offerSelect?.addEventListener("change", () => {
+    const val = offerSelect.value;
+    if (val === "new") {
+      fillForm({});
+      return;
+    }
+    const selected = currentOffers.find((o) => String(o.id) === val);
+    if (selected) {
+      fillForm(selected.config || {});
+    }
+  });
+
   form.addEventListener("submit", async (event) => {
     event.preventDefault();
+    const selectedId = offerSelect?.value === "new" ? 0 : Number(offerSelect?.value || 0);
     const payload = {
+      offerType: form.elements.offerType?.value || "discount",
       title: (form.elements.title?.value || "").trim(),
       desc: (form.elements.desc?.value || "").trim(),
       discountTitle: (form.elements.discountTitle?.value || "").trim(),
       discountDesc: (form.elements.discountDesc?.value || "").trim(),
       lessonsTitle: (form.elements.lessonsTitle?.value || "").trim(),
-      lessonsDesc: (form.elements.lessonsDesc?.value || "").trim()
+      lessonsDesc: (form.elements.lessonsDesc?.value || "").trim(),
+      couponCode: (form.elements.couponCode?.value || "").trim(),
+      couponPercent: Number(form.elements.couponPercent?.value || 0),
+      couponEnabled: form.elements.couponEnabled ? form.elements.couponEnabled.checked : true
     };
     try {
-      await api("/api/admin/offers", {
-        method: "POST",
-        body: JSON.stringify(payload)
-      });
-      if (adminStatus) adminStatus.textContent = "Offers updated.";
-      closeAdminModal();
+      await OfferService.save(selectedId, payload);
+      if (adminStatus) adminStatus.textContent = "Offer saved.";
+      await loadOffers();
     } catch (submitError) {
-      if (adminStatus) adminStatus.textContent = submitError.message || "Failed to update offers.";
+      if (adminStatus) adminStatus.textContent = submitError.message || "Failed to save offer.";
       const alert = document.createElement("p");
       alert.className = "form-status";
-      alert.textContent = submitError.message || "Failed to update offers.";
+      alert.textContent = submitError.message || "Failed to save offer.";
       form.prepend(alert);
     }
   });
+
   form.querySelector("[data-modal-close]")?.addEventListener("click", closeAdminModal);
+
+  const removeBtn = form.querySelector("#removeOfferBtn");
+  removeBtn?.addEventListener("click", async () => {
+    const val = offerSelect?.value;
+    if (!val || val === "new") {
+      if (adminStatus) adminStatus.textContent = "Select an offer to remove.";
+      return;
+    }
+    try {
+      await OfferService.remove(Number(val));
+      if (adminStatus) adminStatus.textContent = "Offer removed.";
+      await loadOffers();
+      fillForm({});
+    } catch (err) {
+      if (adminStatus) adminStatus.textContent = err.message || "Failed to remove offer.";
+    }
+  });
+
+  const activateBtn = form.querySelector("#activateOfferBtn");
+  activateBtn?.addEventListener("click", async () => {
+    const val = offerSelect?.value;
+    if (!val || val === "new") {
+      if (adminStatus) adminStatus.textContent = "Select an offer to activate.";
+      return;
+    }
+    try {
+      await OfferService.activate(Number(val));
+      if (adminStatus) adminStatus.textContent = "Offer activated.";
+      await loadOffers();
+    } catch (err) {
+      if (adminStatus) adminStatus.textContent = err.message || "Failed to activate offer.";
+    }
+  });
+
+  loadOffers();
 }
 
 function openAdminModal(title, content) {
@@ -253,15 +413,16 @@ async function refreshCustomers() {
 async function openOffersModal() {
   openAdminModal("Edit Offers", "<p class=\"form-status\">Loading offers…</p>");
   try {
-    const data = await api("/api/offers");
+    const data = await OfferService.list();
     const offers = data.offers || {};
+    const list = data.list || [];
     if (adminModalBody) {
-      adminModalBody.innerHTML = createOffersFormHtml(offers);
+      adminModalBody.innerHTML = createOffersFormHtml(offers, list);
       bindOffersForm(document.getElementById("adminOffersForm"));
     }
   } catch (error) {
     if (adminModalBody) {
-      adminModalBody.innerHTML = createOffersFormHtml({}, error.message || "Could not load offers.");
+      adminModalBody.innerHTML = createOffersFormHtml({}, [], error.message || "Could not load offers.");
       bindOffersForm(document.getElementById("adminOffersForm"));
     }
     if (adminStatus) adminStatus.textContent = error.message || "Failed to load offers.";

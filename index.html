@@ -14,7 +14,7 @@
       href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;700&family=Manrope:wght@400;600;700&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="styles.css?v=20260309b" />
+    <link rel="stylesheet" href="styles.css?v=20260318f" />
   </head>
   <body>
     <header class="site-header">
@@ -202,6 +202,14 @@
       </div>
       <div id="cartItems" class="cart-items"></div>
       <div class="cart-footer">
+        <div class="coupon-box">
+          <label for="couponCodeInput" data-i18n="couponLabel">Coupon</label>
+          <div class="coupon-row">
+            <input id="couponCodeInput" type="text" placeholder="Enter code" autocomplete="off" />
+            <button id="couponApplyBtn" type="button" class="filter-btn" data-i18n="applyCoupon">Apply</button>
+          </div>
+          <p id="couponStatus" class="form-status" aria-live="polite"></p>
+        </div>
         <p><span data-i18n="total">Total</span>: ₹<span id="cartTotal">0</span></p>
         <p id="cartSavings" class="cart-savings" aria-live="polite"></p>
         <div class="cart-actions">
@@ -342,6 +350,6 @@
     </footer>
 
     <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
-    <script src="script.js?v=20260309b"></script>
+    <script src="script.js?v=20260313a"></script>
   </body>
 </html>

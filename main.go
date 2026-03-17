@@ -2,7 +2,6 @@ package main
 
 import (
 	"bytes"
-	"crypto/rand"
 	"crypto/sha256"
 	"crypto/subtle"
 	"database/sql"
@@ -72,6 +71,20 @@ type OfferConfig struct {
 	DiscountDesc  string `json:"discountDesc"`
 	LessonsTitle  string `json:"lessonsTitle"`
 	LessonsDesc   string `json:"lessonsDesc"`
+	CouponCode    string `json:"couponCode"`
+	CouponPercent int    `json:"couponPercent"`
+	OfferType     string `json:"offerType"`
+	CouponEnabled bool   `json:"couponEnabled"`
+}
+
+type OfferEntry struct {
+	ID     int         `json:"id"`
+	Active bool        `json:"active"`
+	Config OfferConfig `json:"config"`
+}
+
+type OffersFile struct {
+	Offers []OfferEntry `json:"offers"`
 }
 
 type ProductInput struct {
@@ -148,33 +161,28 @@ type SQLStorage struct {
 	vendor string
 }
 
-type SessionManager struct {
-	mu       sync.Mutex
-	sessions map[string]time.Time
-	ttl      time.Duration
-}
-
 type Server struct {
 	store             Storage
+	sqlStore          *SQLStorage
 	emailRegex        *regexp.Regexp
 	adminUser         string
 	adminPass         string
 	sessions          *SessionManager
 	customerSessions  *SessionManager
-	customerSessionMu sync.RWMutex
-	customerSessionTo map[string]string
 	customerMu        sync.RWMutex
 	customers         map[string]CustomerAccount
 	customerDataPath  string
 	offerConfig       OfferConfig
+	offerList         OffersFile
 	offerMu           sync.RWMutex
 	offerConfigPath   string
 	razorpayKeyID     string
 	razorpayKeySecret string
+	sessionSecret     []byte
 }
 
 func main() {
-	store, mode, err := createStorage()
+	store, sqlStore, mode, err := createStorage()
 	if err != nil {
 		log.Fatalf("storage setup failed: %v", err)
 	}
@@ -191,23 +199,27 @@ func main() {
 
 	s := &Server{
 		store:             store,
+		sqlStore:          sqlStore,
 		emailRegex:        regexp.MustCompile(`^[^\s@]+@[^\s@]+\.[^\s@]+$`),
 		adminUser:         adminUser,
 		adminPass:         adminPass,
 		sessions:          newSessionManager(12 * time.Hour),
 		customerSessions:  newSessionManager(12 * time.Hour),
-		customerSessionTo: make(map[string]string),
 		customers:         make(map[string]CustomerAccount),
 		customerDataPath:  filepath.Join("data", "customers.json"),
 		offerConfigPath:   filepath.Join("data", "offers.json"),
 		razorpayKeyID:     strings.TrimSpace(os.Getenv("RAZORPAY_KEY_ID")),
 		razorpayKeySecret: strings.TrimSpace(os.Getenv("RAZORPAY_KEY_SECRET")),
+		sessionSecret:     loadSessionSecret(),
 	}
 	if err := s.loadCustomers(); err != nil {
 		log.Printf("warning: failed to load customers file: %v", err)
 	}
 	if err := s.loadOffers(); err != nil {
 		log.Printf("warning: failed to load offers file: %v", err)
+	}
+	if err := s.loadCustomers(); err != nil {
+		log.Printf("warning: failed to load customers: %v", err)
 	}
 
 	mux := http.NewServeMux()
@@ -238,6 +250,7 @@ func main() {
 	mux.Handle("/script.js", http.FileServer(http.Dir(".")))
 	mux.Handle("/demo.js", http.FileServer(http.Dir(".")))
 	mux.Handle("/admin.js", http.FileServer(http.Dir(".")))
+	mux.Handle("/offer/", http.StripPrefix("/", http.FileServer(http.Dir("."))))
 	mux.Handle("/about.html", http.FileServer(http.Dir(".")))
 	mux.Handle("/demo.html", http.FileServer(http.Dir(".")))
 	mux.Handle("/logo.jpeg", http.FileServer(http.Dir(".")))
@@ -261,34 +274,34 @@ func main() {
 	}
 }
 
-func createStorage() (Storage, string, error) {
+func createStorage() (Storage, *SQLStorage, string, error) {
 	vendor := strings.ToLower(strings.TrimSpace(os.Getenv("DB_VENDOR")))
 	dsn := strings.TrimSpace(os.Getenv("DB_DSN"))
 
 	if vendor == "" || dsn == "" {
 		m := newMemoryStorage(defaultProducts())
-		return m, "memory", nil
+		return m, nil, "memory", nil
 	}
 	if vendor != "postgres" && vendor != "mysql" {
-		return nil, "", fmt.Errorf("DB_VENDOR must be postgres or mysql")
+		return nil, nil, "", fmt.Errorf("DB_VENDOR must be postgres or mysql")
 	}
 
 	db, err := sql.Open(dbDriver(vendor), dsn)
 	if err != nil {
-		return nil, "", err
+		return nil, nil, "", err
 	}
 	if err := db.Ping(); err != nil {
-		return nil, "", err
+		return nil, nil, "", err
 	}
 
 	sqlStore := &SQLStorage{db: db, vendor: vendor}
 	if err := sqlStore.ensureSchema(); err != nil {
-		return nil, "", err
+		return nil, nil, "", err
 	}
 	if err := sqlStore.seedProducts(); err != nil {
-		return nil, "", err
+		return nil, nil, "", err
 	}
-	return sqlStore, vendor, nil
+	return sqlStore, sqlStore, vendor, nil
 }
 
 func dbDriver(vendor string) string {
@@ -498,6 +511,10 @@ func (s *SQLStorage) ensureSchema() error {
 	queries := schemaQueries(s.vendor)
 	for _, q := range queries {
 		if _, err := s.db.Exec(q); err != nil {
+			// Ignore duplicate column/index errors to keep migrations idempotent on MySQL
+			if strings.Contains(err.Error(), "Duplicate column name") || strings.Contains(err.Error(), "Duplicate key name") {
+				continue
+			}
 			return err
 		}
 	}
@@ -517,21 +534,45 @@ func schemaQueries(vendor string) []string {
 				video_url TEXT NOT NULL DEFAULT '',
 				created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 			)`,
-			`ALTER TABLE products ADD COLUMN IF NOT EXISTS images_json TEXT NOT NULL DEFAULT '[]'`,
-			`ALTER TABLE products ADD COLUMN IF NOT EXISTS video_url TEXT NOT NULL DEFAULT ''`,
-			`CREATE TABLE IF NOT EXISTS videos (
+			`ALTER TABLE products ADD COLUMN images_json TEXT NOT NULL DEFAULT '[]'`,
+			`ALTER TABLE products ADD COLUMN video_url TEXT NOT NULL DEFAULT ''`,
+			`CREATE TABLE videos (
 				id SERIAL PRIMARY KEY,
 				title TEXT NOT NULL,
 				url TEXT NOT NULL,
 				created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 			)`,
-			`CREATE TABLE IF NOT EXISTS inquiries (
-				id SERIAL PRIMARY KEY,
-				name TEXT NOT NULL,
-				email TEXT NOT NULL,
-				message TEXT NOT NULL,
-				created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-			)`,
+			`CREATE TABLE inquiries (
+					id SERIAL PRIMARY KEY,
+					name TEXT NOT NULL,
+					email TEXT NOT NULL,
+					message TEXT NOT NULL,
+					created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+				)`,
+			`CREATE TABLE IF NOT EXISTS customers (
+					id SERIAL PRIMARY KEY,
+					name TEXT NOT NULL,
+					email TEXT NOT NULL UNIQUE,
+					password_hash TEXT NOT NULL,
+					created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+				)`,
+			`CREATE TABLE IF NOT EXISTS offers (
+						id SERIAL PRIMARY KEY,
+						active BOOLEAN NOT NULL DEFAULT FALSE,
+						offer_type TEXT NOT NULL,
+						title TEXT NOT NULL,
+					descr TEXT NOT NULL,
+					discount_title TEXT NOT NULL DEFAULT '',
+					discount_desc TEXT NOT NULL DEFAULT '',
+					lessons_title TEXT NOT NULL DEFAULT '',
+					lessons_desc TEXT NOT NULL DEFAULT '',
+					coupon_code TEXT NOT NULL DEFAULT '',
+					coupon_percent INT NOT NULL DEFAULT 0,
+					coupon_enabled BOOLEAN NOT NULL DEFAULT TRUE,
+					created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+				)`,
+			`ALTER TABLE offers ADD COLUMN coupon_enabled BOOLEAN NOT NULL DEFAULT TRUE`,
+			`CREATE INDEX idx_offers_active ON offers(active)`,
 		}
 	}
 	return []string{
@@ -542,24 +583,45 @@ func schemaQueries(vendor string) []string {
 			price INT NOT NULL,
 			details TEXT NOT NULL,
 			images_json TEXT NOT NULL,
-			video_url TEXT NOT NULL,
+			video_url VARCHAR(255) NOT NULL DEFAULT '',
 			created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 		)`,
-		`ALTER TABLE products ADD COLUMN IF NOT EXISTS images_json TEXT NOT NULL DEFAULT '[]'`,
-		`ALTER TABLE products ADD COLUMN IF NOT EXISTS video_url TEXT NOT NULL DEFAULT ''`,
 		`CREATE TABLE IF NOT EXISTS videos (
 			id INT AUTO_INCREMENT PRIMARY KEY,
 			title VARCHAR(255) NOT NULL,
 			url TEXT NOT NULL,
-			created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
-		)`,
+				created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+			)`,
 		`CREATE TABLE IF NOT EXISTS inquiries (
-			id INT AUTO_INCREMENT PRIMARY KEY,
-			name VARCHAR(255) NOT NULL,
-			email VARCHAR(255) NOT NULL,
-			message TEXT NOT NULL,
+				id INT AUTO_INCREMENT PRIMARY KEY,
+				name VARCHAR(255) NOT NULL,
+				email VARCHAR(255) NOT NULL,
+				message TEXT NOT NULL,
+				created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+			)`,
+		`CREATE TABLE IF NOT EXISTS customers (
+				id INT AUTO_INCREMENT PRIMARY KEY,
+				name VARCHAR(255) NOT NULL,
+				email VARCHAR(255) NOT NULL UNIQUE,
+				password_hash VARCHAR(255) NOT NULL,
+				created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+			)`,
+		`CREATE TABLE IF NOT EXISTS offers (
+				id INT AUTO_INCREMENT PRIMARY KEY,
+				active BOOLEAN NOT NULL DEFAULT FALSE,
+				offer_type VARCHAR(20) NOT NULL,
+				title VARCHAR(255) NOT NULL,
+			descr TEXT NOT NULL,
+			discount_title VARCHAR(255) NOT NULL DEFAULT '',
+			discount_desc TEXT NOT NULL,
+			lessons_title VARCHAR(255) NOT NULL DEFAULT '',
+			lessons_desc TEXT NOT NULL,
+			coupon_code VARCHAR(64) NOT NULL DEFAULT '',
+			coupon_percent INT NOT NULL DEFAULT 0,
+			coupon_enabled BOOLEAN NOT NULL DEFAULT TRUE,
 			created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 		)`,
+		`ALTER TABLE offers ADD COLUMN coupon_enabled BOOLEAN NOT NULL DEFAULT TRUE`,
 	}
 }
 
@@ -578,6 +640,94 @@ func (s *SQLStorage) seedProducts() error {
 	if err := s.seedVideos(); err != nil {
 		return err
 	}
+	if err := s.seedOffers(); err != nil {
+		return err
+	}
+	if err := s.seedCustomers(); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (s *SQLStorage) seedOffers() error {
+	var count int
+	if err := s.db.QueryRow("SELECT COUNT(*) FROM offers").Scan(&count); err != nil {
+		return err
+	}
+	// Always upsert the two baseline offers in MySQL so they exist for admin editing.
+	if s.vendor == "mysql" {
+		_, _ = s.db.Exec(`
+			INSERT INTO offers
+			(id, active, offer_type, title, descr, discount_title, discount_desc, lessons_title, lessons_desc, coupon_code, coupon_percent)
+			VALUES
+			(1, TRUE, 'discount', '10% off every instrument',
+			 'Logged-in shoppers receive automatic 10% savings on each instrument in their cart.',
+			 '10% off every instrument',
+			 'Logged-in shoppers receive automatic 10% savings on each instrument in their cart.',
+			 '', '', '', 0)
+			ON DUPLICATE KEY UPDATE
+				active=VALUES(active),
+				offer_type=VALUES(offer_type),
+				title=VALUES(title),
+				descr=VALUES(descr),
+				discount_title=VALUES(discount_title),
+				discount_desc=VALUES(discount_desc),
+				lessons_title=VALUES(lessons_title),
+				lessons_desc=VALUES(lessons_desc),
+				coupon_code=VALUES(coupon_code),
+				coupon_percent=VALUES(coupon_percent)
+		`)
+		_, _ = s.db.Exec(`
+			INSERT INTO offers
+			(id, active, offer_type, title, descr, discount_title, discount_desc, lessons_title, lessons_desc, coupon_code, coupon_percent)
+			VALUES
+			(2, FALSE, 'lessons', 'First 4 lessons free',
+			 'After purchase, unlock four complimentary one-on-one learning sessions with our expert musicians.',
+			 '', '',
+			 'First 4 lessons free',
+			 'After purchase, unlock four complimentary one-on-one learning sessions with our expert musicians.',
+			 '', 0)
+			ON DUPLICATE KEY UPDATE
+				active=VALUES(active),
+				offer_type=VALUES(offer_type),
+				title=VALUES(title),
+				descr=VALUES(descr),
+				discount_title=VALUES(discount_title),
+				discount_desc=VALUES(discount_desc),
+				lessons_title=VALUES(lessons_title),
+				lessons_desc=VALUES(lessons_desc),
+				coupon_code=VALUES(coupon_code),
+				coupon_percent=VALUES(coupon_percent)
+		`)
+		// Ensure only offer 1 is active
+		_, _ = s.db.Exec("UPDATE offers SET active = (id = 1)")
+		return nil
+	}
+
+	if count == 0 {
+		_, _ = s.UpsertOffer(0, OfferConfig{
+			OfferType:     "discount",
+			Title:         "10% off every instrument",
+			Desc:          "Logged-in shoppers receive automatic 10% savings on each instrument in their cart.",
+			DiscountTitle: "10% off every instrument",
+			DiscountDesc:  "Logged-in shoppers receive automatic 10% savings on each instrument in their cart.",
+			CouponEnabled: true,
+		})
+		_, _ = s.UpsertOffer(0, OfferConfig{
+			OfferType:     "lessons",
+			Title:         "First 4 lessons free",
+			Desc:          "After purchase, unlock four complimentary one-on-one learning sessions with our expert musicians.",
+			LessonsTitle:  "First 4 lessons free",
+			LessonsDesc:   "After purchase, unlock four complimentary one-on-one learning sessions with our expert musicians.",
+			CouponEnabled: true,
+		})
+		_ = s.ActivateOffer(1)
+	}
+	return nil
+}
+
+func (s *SQLStorage) seedCustomers() error {
+	// no-op seeding; customers are user-created. Keep placeholder for symmetry.
 	return nil
 }
 
@@ -615,6 +765,119 @@ func (s *SQLStorage) ListProducts() ([]Product, error) {
 		out = append(out, p)
 	}
 	return out, rows.Err()
+}
+
+func (s *SQLStorage) ListOffers() ([]OfferEntry, error) {
+	rows, err := s.db.Query("SELECT id, active, offer_type, title, descr, discount_title, discount_desc, lessons_title, lessons_desc, coupon_code, coupon_percent, coupon_enabled FROM offers ORDER BY id")
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	out := []OfferEntry{}
+	for rows.Next() {
+		var entry OfferEntry
+		var cfg OfferConfig
+		if err := rows.Scan(&entry.ID, &entry.Active, &cfg.OfferType, &cfg.Title, &cfg.Desc, &cfg.DiscountTitle, &cfg.DiscountDesc, &cfg.LessonsTitle, &cfg.LessonsDesc, &cfg.CouponCode, &cfg.CouponPercent, &cfg.CouponEnabled); err != nil {
+			return nil, err
+		}
+		entry.Config = cfg
+		out = append(out, entry)
+	}
+	return out, nil
+}
+
+func (s *SQLStorage) UpsertOffer(id int, cfg OfferConfig) (int, error) {
+	if id == 0 {
+		res, err := s.db.Exec(`INSERT INTO offers (active, offer_type, title, descr, discount_title, discount_desc, lessons_title, lessons_desc, coupon_code, coupon_percent, coupon_enabled) VALUES (FALSE, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+			cfg.OfferType, cfg.Title, cfg.Desc, cfg.DiscountTitle, cfg.DiscountDesc, cfg.LessonsTitle, cfg.LessonsDesc, cfg.CouponCode, cfg.CouponPercent, cfg.CouponEnabled)
+		if err != nil {
+			return 0, err
+		}
+		newID, _ := res.LastInsertId()
+		return int(newID), nil
+	}
+	_, err := s.db.Exec(`UPDATE offers SET offer_type=?, title=?, descr=?, discount_title=?, discount_desc=?, lessons_title=?, lessons_desc=?, coupon_code=?, coupon_percent=?, coupon_enabled=? WHERE id=?`,
+		cfg.OfferType, cfg.Title, cfg.Desc, cfg.DiscountTitle, cfg.DiscountDesc, cfg.LessonsTitle, cfg.LessonsDesc, cfg.CouponCode, cfg.CouponPercent, cfg.CouponEnabled, id)
+	return id, err
+}
+
+func (s *SQLStorage) ActivateOffer(id int) error {
+	tx, err := s.db.Begin()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+	if _, err := tx.Exec("UPDATE offers SET active=FALSE"); err != nil {
+		return err
+	}
+	res, err := tx.Exec("UPDATE offers SET active=TRUE WHERE id=?", id)
+	if err != nil {
+		return err
+	}
+	aff, _ := res.RowsAffected()
+	if aff == 0 {
+		return errors.New("offer not found")
+	}
+	return tx.Commit()
+}
+
+func (s *SQLStorage) DeleteOffer(id int) error {
+	_, err := s.db.Exec("DELETE FROM offers WHERE id=?", id)
+	return err
+}
+
+func (s *SQLStorage) ActiveOffer() (OfferConfig, []OfferEntry, error) {
+	list, err := s.ListOffers()
+	if err != nil {
+		return OfferConfig{}, nil, err
+	}
+	active := OfferConfig{}
+	foundActive := false
+	for _, entry := range list {
+		if entry.Active {
+			active = entry.Config
+			foundActive = true
+			break
+		}
+	}
+	if !foundActive && len(list) > 0 {
+		active = list[0].Config
+		// best-effort: mark first as active
+		_, _ = s.db.Exec("UPDATE offers SET active = (id = ?)", list[0].ID)
+	}
+	return active, list, nil
+}
+
+// Customer persistence for SQLStorage
+
+func (s *SQLStorage) GetCustomerByEmail(email string) (CustomerAccount, error) {
+	var account CustomerAccount
+	err := s.db.QueryRow("SELECT name, email, password_hash, created_at FROM customers WHERE email = ?", email).
+		Scan(&account.Name, &account.Email, &account.PasswordHash, &account.CreatedAt)
+	return account, err
+}
+
+func (s *SQLStorage) CreateCustomer(account CustomerAccount) error {
+	_, err := s.db.Exec(`INSERT INTO customers (name, email, password_hash, created_at) VALUES (?,?,?,?)`,
+		account.Name, account.Email, account.PasswordHash, account.CreatedAt)
+	return err
+}
+
+func (s *SQLStorage) ListCustomers() ([]CustomerAccount, error) {
+	rows, err := s.db.Query("SELECT name, email, password_hash, created_at FROM customers ORDER BY created_at DESC")
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var out []CustomerAccount
+	for rows.Next() {
+		var a CustomerAccount
+		if err := rows.Scan(&a.Name, &a.Email, &a.PasswordHash, &a.CreatedAt); err != nil {
+			return nil, err
+		}
+		out = append(out, a)
+	}
+	return out, nil
 }
 
 func (s *SQLStorage) ListVideos() ([]Video, error) {
@@ -799,47 +1062,6 @@ func (s *SQLStorage) ListInquiries() ([]Inquiry, error) {
 		out = append(out, in)
 	}
 	return out, rows.Err()
-}
-
-func newSessionManager(ttl time.Duration) *SessionManager {
-	return &SessionManager{sessions: make(map[string]time.Time), ttl: ttl}
-}
-
-func (sm *SessionManager) Create() (string, error) {
-	buf := make([]byte, 32)
-	if _, err := rand.Read(buf); err != nil {
-		return "", err
-	}
-	token := hex.EncodeToString(buf)
-	expires := time.Now().Add(sm.ttl)
-	sm.mu.Lock()
-	sm.sessions[token] = expires
-	sm.mu.Unlock()
-	return token, nil
-}
-
-func (sm *SessionManager) Valid(token string) bool {
-	if token == "" {
-		return false
-	}
-	now := time.Now()
-	sm.mu.Lock()
-	defer sm.mu.Unlock()
-	exp, ok := sm.sessions[token]
-	if !ok {
-		return false
-	}
-	if now.After(exp) {
-		delete(sm.sessions, token)
-		return false
-	}
-	return true
-}
-
-func (sm *SessionManager) Delete(token string) {
-	sm.mu.Lock()
-	delete(sm.sessions, token)
-	sm.mu.Unlock()
 }
 
 func withLogging(next http.Handler) http.Handler {
@@ -1204,33 +1426,42 @@ func (s *Server) handleCustomerRegister(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	s.customerMu.Lock()
-	if _, exists := s.customers[payload.Email]; exists {
-		s.customerMu.Unlock()
-		writeJSONError(w, http.StatusConflict, "customer already exists")
-		return
-	}
 	account := CustomerAccount{
 		Name:         payload.Name,
 		Email:        payload.Email,
 		PasswordHash: hashPassword(payload.Password),
 		CreatedAt:    time.Now().UTC(),
 	}
-	s.customers[payload.Email] = account
-	snapshot := s.customerSnapshotLocked()
-	s.customerMu.Unlock()
-
-	if err := saveCustomerSnapshot(s.customerDataPath, snapshot); err != nil {
-		writeJSONError(w, http.StatusInternalServerError, "failed to save customer")
-		return
+	if s.sqlStore != nil {
+		if _, err := s.sqlStore.GetCustomerByEmail(account.Email); err == nil {
+			writeJSONError(w, http.StatusConflict, "customer already exists")
+			return
+		}
+		if err := s.sqlStore.CreateCustomer(account); err != nil {
+			writeJSONError(w, http.StatusInternalServerError, "failed to save customer")
+			return
+		}
+	} else {
+		s.customerMu.Lock()
+		if _, exists := s.customers[payload.Email]; exists {
+			s.customerMu.Unlock()
+			writeJSONError(w, http.StatusConflict, "customer already exists")
+			return
+		}
+		s.customers[payload.Email] = account
+		snapshot := s.customerSnapshotLocked()
+		s.customerMu.Unlock()
+		if err := saveCustomerSnapshot(s.customerDataPath, snapshot); err != nil {
+			writeJSONError(w, http.StatusInternalServerError, "failed to save customer")
+			return
+		}
 	}
 
-	token, err := s.customerSessions.Create()
+	token, err := s.issueCustomerToken(account.Email)
 	if err != nil {
 		writeJSONError(w, http.StatusInternalServerError, "failed to create session")
 		return
 	}
-	s.setCustomerSessionEmail(token, account.Email)
 	setCustomerSessionCookie(w, token)
 	writeJSON(w, http.StatusCreated, map[string]any{
 		"status": "ok",
@@ -1259,20 +1490,34 @@ func (s *Server) handleCustomerLogin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	s.customerMu.RLock()
-	account, exists := s.customers[payload.Email]
-	s.customerMu.RUnlock()
-	if !exists || subtle.ConstantTimeCompare([]byte(account.PasswordHash), []byte(hashPassword(payload.Password))) != 1 {
+	var account CustomerAccount
+	var err error
+	if s.sqlStore != nil {
+		account, err = s.sqlStore.GetCustomerByEmail(payload.Email)
+		if err != nil {
+			writeJSONError(w, http.StatusUnauthorized, "invalid credentials")
+			return
+		}
+	} else {
+		s.customerMu.RLock()
+		var exists bool
+		account, exists = s.customers[payload.Email]
+		s.customerMu.RUnlock()
+		if !exists {
+			writeJSONError(w, http.StatusUnauthorized, "invalid credentials")
+			return
+		}
+	}
+	if subtle.ConstantTimeCompare([]byte(account.PasswordHash), []byte(hashPassword(payload.Password))) != 1 {
 		writeJSONError(w, http.StatusUnauthorized, "invalid credentials")
 		return
 	}
 
-	token, err := s.customerSessions.Create()
+	token, err := s.issueCustomerToken(account.Email)
 	if err != nil {
 		writeJSONError(w, http.StatusInternalServerError, "failed to create session")
 		return
 	}
-	s.setCustomerSessionEmail(token, account.Email)
 	setCustomerSessionCookie(w, token)
 	writeJSON(w, http.StatusOK, map[string]any{
 		"status": "ok",
@@ -1289,11 +1534,6 @@ func (s *Server) handleCustomerLogout(w http.ResponseWriter, r *http.Request) {
 		writeJSONError(w, http.StatusMethodNotAllowed, "method not allowed")
 		return
 	}
-	cookie, err := r.Cookie("customer_session")
-	if err == nil {
-		s.customerSessions.Delete(cookie.Value)
-		s.deleteCustomerSessionEmail(cookie.Value)
-	}
 	http.SetCookie(w, &http.Cookie{Name: "customer_session", Value: "", Path: "/", MaxAge: -1, HttpOnly: true})
 	writeJSON(w, http.StatusOK, map[string]string{"status": "ok"})
 }
@@ -1309,12 +1549,23 @@ func (s *Server) handleCustomerMe(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	s.customerMu.RLock()
-	account, exists := s.customers[email]
-	s.customerMu.RUnlock()
-	if !exists {
-		writeJSONError(w, http.StatusUnauthorized, "unauthorized")
-		return
+	var account CustomerAccount
+	var err error
+	if s.sqlStore != nil {
+		account, err = s.sqlStore.GetCustomerByEmail(email)
+		if err != nil {
+			writeJSONError(w, http.StatusUnauthorized, "unauthorized")
+			return
+		}
+	} else {
+		s.customerMu.RLock()
+		var exists bool
+		account, exists = s.customers[email]
+		s.customerMu.RUnlock()
+		if !exists {
+			writeJSONError(w, http.StatusUnauthorized, "unauthorized")
+			return
+		}
 	}
 	writeJSON(w, http.StatusOK, map[string]any{
 		"customer": map[string]string{
@@ -1435,16 +1686,29 @@ func (s *Server) handleAdminCustomers(w http.ResponseWriter, r *http.Request) {
 		writeJSONError(w, http.StatusMethodNotAllowed, "method not allowed")
 		return
 	}
-	s.customerMu.RLock()
-	customers := make([]map[string]string, 0, len(s.customers))
-	for _, account := range s.customers {
+	var accounts []CustomerAccount
+	var err error
+	if s.sqlStore != nil {
+		accounts, err = s.sqlStore.ListCustomers()
+		if err != nil {
+			writeJSONError(w, http.StatusInternalServerError, "failed to load customers")
+			return
+		}
+	} else {
+		s.customerMu.RLock()
+		for _, acc := range s.customers {
+			accounts = append(accounts, acc)
+		}
+		s.customerMu.RUnlock()
+	}
+	customers := make([]map[string]string, 0, len(accounts))
+	for _, account := range accounts {
 		customers = append(customers, map[string]string{
 			"name":       account.Name,
 			"email":      account.Email,
 			"created_at": account.CreatedAt.Format(time.RFC3339),
 		})
 	}
-	s.customerMu.RUnlock()
 	writeJSON(w, http.StatusOK, map[string]any{"customers": customers})
 }
 
@@ -1453,34 +1717,149 @@ func (s *Server) handleGetOffers(w http.ResponseWriter, r *http.Request) {
 		writeJSONError(w, http.StatusMethodNotAllowed, "method not allowed")
 		return
 	}
-	s.offerMu.RLock()
-	config := s.offerConfig
-	s.offerMu.RUnlock()
-	writeJSON(w, http.StatusOK, map[string]any{"offers": config})
+	active, list, err := s.currentOffers()
+	if err != nil {
+		writeJSONError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"offers": active, "list": list.Offers})
 }
 
 func (s *Server) handleAdminOffers(w http.ResponseWriter, r *http.Request) {
-	if !s.isAdmin(r) {
-		writeJSONError(w, http.StatusUnauthorized, "unauthorized")
-		return
-	}
-	if r.Method != http.MethodPost {
+	switch r.Method {
+	case http.MethodGet:
+		active, list, err := s.currentOffers()
+		if err != nil {
+			writeJSONError(w, http.StatusInternalServerError, err.Error())
+			return
+		}
+		writeJSON(w, http.StatusOK, map[string]any{"offers": active, "list": list.Offers})
+	case http.MethodPost:
+		if !s.isAdmin(r) {
+			writeJSONError(w, http.StatusUnauthorized, "unauthorized")
+			return
+		}
+		var payload struct {
+			ID     int         `json:"id"`
+			Config OfferConfig `json:"config"`
+		}
+		if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
+			writeJSONError(w, http.StatusBadRequest, "invalid JSON payload")
+			return
+		}
+		if s.sqlStore != nil {
+			id, err := s.sqlStore.UpsertOffer(payload.ID, payload.Config)
+			if err != nil {
+				writeJSONError(w, http.StatusInternalServerError, err.Error())
+				return
+			}
+			active, list, err := s.sqlStore.ActiveOffer()
+			if err != nil {
+				writeJSONError(w, http.StatusInternalServerError, err.Error())
+				return
+			}
+			s.cacheOffers(active, OffersFile{Offers: list})
+			writeJSON(w, http.StatusOK, map[string]any{"status": "ok", "id": id, "offers": active, "list": list})
+		} else {
+			s.offerMu.Lock()
+			id := s.upsertOfferLocked(payload.ID, payload.Config, false)
+			active := s.offerConfig
+			list := s.offerList
+			s.offerMu.Unlock()
+			if err := saveOffersFile(s.offerConfigPath, list); err != nil {
+				writeJSONError(w, http.StatusInternalServerError, "failed to save offers")
+				return
+			}
+			writeJSON(w, http.StatusOK, map[string]any{"status": "ok", "id": id, "offers": active, "list": list.Offers})
+		}
+	case http.MethodPatch:
+		if !s.isAdmin(r) {
+			writeJSONError(w, http.StatusUnauthorized, "unauthorized")
+			return
+		}
+		var payload struct {
+			ID int `json:"id"`
+		}
+		if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
+			writeJSONError(w, http.StatusBadRequest, "invalid JSON payload")
+			return
+		}
+		if s.sqlStore != nil {
+			if err := s.sqlStore.ActivateOffer(payload.ID); err != nil {
+				writeJSONError(w, http.StatusBadRequest, err.Error())
+				return
+			}
+			active, list, err := s.sqlStore.ActiveOffer()
+			if err != nil {
+				writeJSONError(w, http.StatusInternalServerError, err.Error())
+				return
+			}
+			s.cacheOffers(active, OffersFile{Offers: list})
+			writeJSON(w, http.StatusOK, map[string]any{"status": "ok", "offers": active, "list": list})
+		} else {
+			s.offerMu.Lock()
+			if err := s.activateOfferLocked(payload.ID); err != nil {
+				s.offerMu.Unlock()
+				writeJSONError(w, http.StatusBadRequest, err.Error())
+				return
+			}
+			active := s.offerConfig
+			list := s.offerList
+			s.offerMu.Unlock()
+			if err := saveOffersFile(s.offerConfigPath, list); err != nil {
+				writeJSONError(w, http.StatusInternalServerError, "failed to save offers")
+				return
+			}
+			writeJSON(w, http.StatusOK, map[string]any{"status": "ok", "offers": active, "list": list.Offers})
+		}
+	case http.MethodDelete:
+		if !s.isAdmin(r) {
+			writeJSONError(w, http.StatusUnauthorized, "unauthorized")
+			return
+		}
+		idStr := r.URL.Query().Get("id")
+		id, err := strconv.Atoi(idStr)
+		if err != nil || id <= 0 {
+			writeJSONError(w, http.StatusBadRequest, "invalid id")
+			return
+		}
+		if s.sqlStore != nil {
+			if err := s.sqlStore.DeleteOffer(id); err != nil {
+				writeJSONError(w, http.StatusBadRequest, err.Error())
+				return
+			}
+			active, list, err := s.sqlStore.ActiveOffer()
+			if err != nil {
+				writeJSONError(w, http.StatusInternalServerError, err.Error())
+				return
+			}
+			// ensure an active offer
+			if (active == OfferConfig{}) && len(list) > 0 {
+				_ = s.sqlStore.ActivateOffer(list[0].ID)
+				active = list[0].Config
+				active, list, _ = s.sqlStore.ActiveOffer()
+			}
+			s.cacheOffers(active, OffersFile{Offers: list})
+			writeJSON(w, http.StatusOK, map[string]any{"status": "ok", "offers": active, "list": list})
+		} else {
+			s.offerMu.Lock()
+			if err := s.deleteOfferLocked(id); err != nil {
+				s.offerMu.Unlock()
+				writeJSONError(w, http.StatusBadRequest, err.Error())
+				return
+			}
+			active := s.offerConfig
+			list := s.offerList
+			s.offerMu.Unlock()
+			if err := saveOffersFile(s.offerConfigPath, list); err != nil {
+				writeJSONError(w, http.StatusInternalServerError, "failed to save offers")
+				return
+			}
+			writeJSON(w, http.StatusOK, map[string]any{"status": "ok", "offers": active, "list": list.Offers})
+		}
+	default:
 		writeJSONError(w, http.StatusMethodNotAllowed, "method not allowed")
-		return
 	}
-	var config OfferConfig
-	if err := json.NewDecoder(r.Body).Decode(&config); err != nil {
-		writeJSONError(w, http.StatusBadRequest, "invalid JSON payload")
-		return
-	}
-	s.offerMu.Lock()
-	s.offerConfig = config
-	s.offerMu.Unlock()
-	if err := saveOfferConfig(s.offerConfigPath, config); err != nil {
-		writeJSONError(w, http.StatusInternalServerError, "failed to save offers")
-		return
-	}
-	writeJSON(w, http.StatusOK, map[string]string{"status": "ok"})
 }
 
 func parseIDFromPath(path, prefix string) (int, error) {
@@ -1524,9 +1903,6 @@ func validateProductInput(in ProductInput) error {
 	if len(in.Images) < 5 {
 		return errors.New("minimum 5 product photos are required")
 	}
-	if in.VideoURL == "" {
-		return errors.New("product making video is required")
-	}
 	return nil
 }
 
@@ -1539,15 +1915,40 @@ func (s *Server) isAdmin(r *http.Request) bool {
 }
 
 func (s *Server) loadCustomers() error {
+	// DB-backed customers
+	if s.sqlStore != nil {
+		accounts, err := s.sqlStore.ListCustomers()
+		if err != nil {
+			return err
+		}
+		// If DB empty, migrate from file snapshot once.
+		if len(accounts) == 0 {
+			fileAccounts, err := loadCustomerAccounts(s.customerDataPath)
+			if err == nil && len(fileAccounts) > 0 {
+				for _, acc := range fileAccounts {
+					_ = s.sqlStore.CreateCustomer(acc)
+				}
+				accounts, _ = s.sqlStore.ListCustomers()
+			}
+		}
+		s.customerMu.Lock()
+		for _, account := range accounts {
+			s.customers[strings.ToLower(strings.TrimSpace(account.Email))] = account
+		}
+		s.customerMu.Unlock()
+		return nil
+	}
+
+	// File-backed customers (legacy)
 	accounts, err := loadCustomerAccounts(s.customerDataPath)
 	if err != nil {
 		return err
 	}
 	s.customerMu.Lock()
-	defer s.customerMu.Unlock()
 	for _, account := range accounts {
 		s.customers[strings.ToLower(strings.TrimSpace(account.Email))] = account
 	}
+	s.customerMu.Unlock()
 	return nil
 }
 
@@ -1590,13 +1991,41 @@ func saveCustomerSnapshot(path string, accounts []CustomerAccount) error {
 }
 
 func (s *Server) loadOffers() error {
-	config, err := loadOfferConfig(s.offerConfigPath)
-	if err != nil {
-		return err
+	if s.sqlStore != nil {
+		active, list, err := s.sqlStore.ActiveOffer()
+		if err != nil {
+			return err
+		}
+		s.cacheOffers(active, OffersFile{Offers: list})
+		return nil
 	}
-	s.offerMu.Lock()
-	s.offerConfig = config
-	s.offerMu.Unlock()
+	file, err := loadOffersFile(s.offerConfigPath)
+	if err != nil {
+		legacy, legacyErr := loadOfferConfig(s.offerConfigPath)
+		if legacyErr != nil {
+			return legacyErr
+		}
+		if (legacy != OfferConfig{}) {
+			file = OffersFile{Offers: []OfferEntry{{ID: 1, Active: true, Config: legacy}}}
+		} else {
+			return err
+		}
+	}
+	activeCfg := OfferConfig{}
+	activeSet := false
+	for i, entry := range file.Offers {
+		if entry.Active {
+			activeCfg = entry.Config
+			activeSet = true
+			file.Offers[i].Active = true
+			break
+		}
+	}
+	if !activeSet && len(file.Offers) > 0 {
+		file.Offers[0].Active = true
+		activeCfg = file.Offers[0].Config
+	}
+	s.cacheOffers(activeCfg, file)
 	return nil
 }
 
@@ -1630,33 +2059,138 @@ func saveOfferConfig(path string, config OfferConfig) error {
 	return os.Rename(tmp, path)
 }
 
+func saveOffersFile(path string, file OffersFile) error {
+	if len(file.Offers) == 0 {
+		file.Offers = []OfferEntry{}
+	}
+	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+		return err
+	}
+	body, err := json.MarshalIndent(file, "", "  ")
+	if err != nil {
+		return err
+	}
+	tmp := path + ".tmp"
+	if err := os.WriteFile(tmp, body, 0o600); err != nil {
+		return err
+	}
+	return os.Rename(tmp, path)
+}
+
+func loadOffersFile(path string) (OffersFile, error) {
+	var file OffersFile
+	data, err := os.ReadFile(path)
+	if errors.Is(err, os.ErrNotExist) {
+		return file, nil
+	}
+	if err != nil {
+		return file, err
+	}
+	if err := json.Unmarshal(data, &file); err != nil {
+		return file, err
+	}
+	return file, nil
+}
+
+func (s *Server) nextOfferIDLocked() int {
+	maxID := 0
+	for _, entry := range s.offerList.Offers {
+		if entry.ID > maxID {
+			maxID = entry.ID
+		}
+	}
+	return maxID + 1
+}
+
+func (s *Server) setActiveOfferLocked(cfg OfferConfig, id int) {
+	s.offerConfig = cfg
+	updated := make([]OfferEntry, 0, len(s.offerList.Offers))
+	for _, entry := range s.offerList.Offers {
+		entry.Active = entry.ID == id
+		updated = append(updated, entry)
+		if entry.Active {
+			entry.Config = cfg
+		}
+	}
+	s.offerList.Offers = updated
+	if id == 0 {
+		newID := s.nextOfferIDLocked()
+		s.offerList.Offers = append([]OfferEntry{{ID: newID, Active: true, Config: cfg}}, updated...)
+	}
+}
+
+func (s *Server) upsertOfferLocked(id int, cfg OfferConfig, makeActive bool) int {
+	if id == 0 {
+		id = s.nextOfferIDLocked()
+		s.offerList.Offers = append(s.offerList.Offers, OfferEntry{ID: id, Active: false, Config: cfg})
+	} else {
+		found := false
+		for i, entry := range s.offerList.Offers {
+			if entry.ID == id {
+				entry.Config = cfg
+				s.offerList.Offers[i] = entry
+				found = true
+				break
+			}
+		}
+		if !found {
+			s.offerList.Offers = append(s.offerList.Offers, OfferEntry{ID: id, Active: false, Config: cfg})
+		}
+	}
+	if makeActive || len(s.offerList.Offers) == 1 {
+		_ = s.activateOfferLocked(id)
+	}
+	return id
+}
+
+func (s *Server) activateOfferLocked(id int) error {
+	found := false
+	for i := range s.offerList.Offers {
+		entry := s.offerList.Offers[i]
+		entry.Active = entry.ID == id
+		s.offerList.Offers[i] = entry
+		if entry.Active {
+			s.offerConfig = entry.Config
+			found = true
+		}
+	}
+	if !found {
+		return errors.New("offer not found")
+	}
+	return nil
+}
+
+func (s *Server) deleteOfferLocked(id int) error {
+	newList := make([]OfferEntry, 0, len(s.offerList.Offers))
+	activeRemoved := false
+	for _, entry := range s.offerList.Offers {
+		if entry.ID == id {
+			if entry.Active {
+				activeRemoved = true
+			}
+			continue
+		}
+		newList = append(newList, entry)
+	}
+	if len(newList) == len(s.offerList.Offers) {
+		return errors.New("offer not found")
+	}
+	s.offerList.Offers = newList
+	if activeRemoved {
+		if len(newList) > 0 {
+			s.offerConfig = newList[0].Config
+			newList[0].Active = true
+			s.offerList.Offers[0] = newList[0]
+		} else {
+			s.offerConfig = OfferConfig{}
+		}
+	}
+	return nil
+}
+
 func hashPassword(password string) string {
 	sum := sha256.Sum256([]byte(password))
 	return hex.EncodeToString(sum[:])
-}
-
-func setCustomerSessionCookie(w http.ResponseWriter, token string) {
-	http.SetCookie(w, &http.Cookie{
-		Name:     "customer_session",
-		Value:    token,
-		Path:     "/",
-		HttpOnly: true,
-		Secure:   false,
-		SameSite: http.SameSiteLaxMode,
-		MaxAge:   int((12 * time.Hour).Seconds()),
-	})
-}
-
-func (s *Server) setCustomerSessionEmail(token, email string) {
-	s.customerSessionMu.Lock()
-	defer s.customerSessionMu.Unlock()
-	s.customerSessionTo[token] = email
-}
-
-func (s *Server) deleteCustomerSessionEmail(token string) {
-	s.customerSessionMu.Lock()
-	defer s.customerSessionMu.Unlock()
-	delete(s.customerSessionTo, token)
 }
 
 func (s *Server) customerEmailFromRequest(r *http.Request) (string, bool) {
@@ -1664,15 +2198,10 @@ func (s *Server) customerEmailFromRequest(r *http.Request) (string, bool) {
 	if err != nil {
 		return "", false
 	}
-	token := cookie.Value
-	if !s.customerSessions.Valid(token) {
-		s.deleteCustomerSessionEmail(token)
-		return "", false
+	if email, ok := s.parseCustomerToken(cookie.Value); ok {
+		return email, true
 	}
-	s.customerSessionMu.RLock()
-	email, ok := s.customerSessionTo[token]
-	s.customerSessionMu.RUnlock()
-	return email, ok
+	return "", false
 }
 
 func appendInquiryLog(inquiry InquiryRequest) error {

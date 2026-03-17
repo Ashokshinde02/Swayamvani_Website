@@ -200,11 +200,11 @@ function formatINR(value) {
 
 function resolveImage(product) {
   const key = product.name.toLowerCase();
-  if (key.includes("sitar")) return "assets/images/sitar.svg";
-  if (key.includes("tabla")) return "assets/images/tabla.svg";
+  if (key.includes("sitar")) return "assets/images/sitar_1.jpg";
+  if (key.includes("tabla")) return "assets/images/tabla_1.jpg";
   if (key.includes("tanpura")) return "assets/images/tanpura.svg";
   if (key.includes("bansuri") || key.includes("flute")) return "assets/images/bansuri.svg";
-  if (key.includes("harmonium")) return "assets/images/harmonium.svg";
+  if (key.includes("harmonium")) return "assets/images/harmonium";
   if (key.includes("pakhawaj")) return "assets/images/pakhawaj.svg";
   return "assets/images/sitar.svg";
 }
