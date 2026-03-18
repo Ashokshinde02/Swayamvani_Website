@@ -18,6 +18,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"swayamvani/orders"
 	"sync"
 	"time"
 
@@ -61,7 +62,9 @@ type CheckoutItem struct {
 }
 
 type CheckoutRequest struct {
-	Items []CheckoutItem `json:"items"`
+	Items   []CheckoutItem `json:"items"`
+	Mobile  string         `json:"mobile"`
+	Address string         `json:"address"`
 }
 
 type OfferConfig struct {
@@ -172,6 +175,7 @@ type Server struct {
 	customerMu        sync.RWMutex
 	customers         map[string]CustomerAccount
 	customerDataPath  string
+	ordersStore       *orders.Store
 	offerConfig       OfferConfig
 	offerList         OffersFile
 	offerMu           sync.RWMutex
@@ -207,6 +211,7 @@ func main() {
 		customerSessions:  newSessionManager(12 * time.Hour),
 		customers:         make(map[string]CustomerAccount),
 		customerDataPath:  filepath.Join("data", "customers.json"),
+		ordersStore:       orders.NewStore(filepath.Join("data")),
 		offerConfigPath:   filepath.Join("data", "offers.json"),
 		razorpayKeyID:     strings.TrimSpace(os.Getenv("RAZORPAY_KEY_ID")),
 		razorpayKeySecret: strings.TrimSpace(os.Getenv("RAZORPAY_KEY_SECRET")),
@@ -220,6 +225,9 @@ func main() {
 	}
 	if err := s.loadCustomers(); err != nil {
 		log.Printf("warning: failed to load customers: %v", err)
+	}
+	if err := s.ordersStore.Load(); err != nil {
+		log.Printf("warning: failed to load orders: %v", err)
 	}
 
 	mux := http.NewServeMux()
@@ -236,13 +244,16 @@ func main() {
 	mux.HandleFunc("/api/customer/login", s.handleCustomerLogin)
 	mux.HandleFunc("/api/customer/logout", s.handleCustomerLogout)
 	mux.HandleFunc("/api/customer/me", s.handleCustomerMe)
+	mux.HandleFunc("/api/customer/orders", s.handleCustomerOrders)
 	mux.HandleFunc("/api/offers", s.handleGetOffers)
 	mux.HandleFunc("/api/admin/offers", s.handleAdminOffers)
+	mux.HandleFunc("/api/admin/orders", s.handleAdminOrders)
 	mux.HandleFunc("/api/admin/products", s.handleAdminProducts)
 	mux.HandleFunc("/api/admin/products/", s.handleAdminProductByID)
 	mux.HandleFunc("/api/admin/videos", s.handleAdminVideos)
 	mux.HandleFunc("/api/admin/videos/", s.handleAdminVideoByID)
 	mux.HandleFunc("/api/admin/inquiries", s.handleAdminInquiries)
+	mux.HandleFunc("/api/admin/orders/", s.handleAdminOrderStatus)
 	mux.HandleFunc("/api/admin/customers", s.handleAdminCustomers)
 	mux.HandleFunc("/admin", s.handleAdminPage)
 	mux.HandleFunc("/", s.handleHome)
@@ -556,6 +567,20 @@ func schemaQueries(vendor string) []string {
 					password_hash TEXT NOT NULL,
 					created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 				)`,
+			`CREATE TABLE IF NOT EXISTS orders (
+					id SERIAL PRIMARY KEY,
+					customer_email TEXT NOT NULL,
+					items_json JSONB NOT NULL,
+					total INTEGER NOT NULL,
+					status TEXT NOT NULL,
+					payment_ref TEXT NOT NULL DEFAULT '',
+					mobile TEXT NOT NULL DEFAULT '',
+					address TEXT NOT NULL DEFAULT '',
+					metadata JSONB,
+					created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+				)`,
+			`ALTER TABLE orders ADD COLUMN IF NOT EXISTS mobile TEXT NOT NULL DEFAULT ''`,
+			`ALTER TABLE orders ADD COLUMN IF NOT EXISTS address TEXT NOT NULL DEFAULT ''`,
 			`CREATE TABLE IF NOT EXISTS offers (
 						id SERIAL PRIMARY KEY,
 						active BOOLEAN NOT NULL DEFAULT FALSE,
@@ -606,6 +631,21 @@ func schemaQueries(vendor string) []string {
 				password_hash VARCHAR(255) NOT NULL,
 				created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 			)`,
+		`CREATE TABLE IF NOT EXISTS orders (
+				id INT AUTO_INCREMENT PRIMARY KEY,
+				customer_email VARCHAR(255) NOT NULL,
+				items_json JSON NOT NULL,
+				total INT NOT NULL,
+				status VARCHAR(32) NOT NULL,
+				payment_ref VARCHAR(255) NOT NULL DEFAULT '',
+				mobile VARCHAR(32) NOT NULL DEFAULT '',
+				address TEXT NOT NULL,
+				metadata JSON NULL,
+				created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+				INDEX idx_orders_customer_email (customer_email)
+			)`,
+		`ALTER TABLE orders ADD COLUMN mobile VARCHAR(32) NOT NULL DEFAULT ''`,
+		`ALTER TABLE orders ADD COLUMN address TEXT NOT NULL`,
 		`CREATE TABLE IF NOT EXISTS offers (
 				id INT AUTO_INCREMENT PRIMARY KEY,
 				active BOOLEAN NOT NULL DEFAULT FALSE,
@@ -1064,6 +1104,194 @@ func (s *SQLStorage) ListInquiries() ([]Inquiry, error) {
 	return out, rows.Err()
 }
 
+// Orders
+func (s *SQLStorage) CreateOrder(email string, items []orders.Item, total int, status, paymentRef, mobile, address string, metadata map[string]any) (orders.Order, error) {
+	itemsJSON, _ := json.Marshal(items)
+	metaJSON, _ := json.Marshal(metadata)
+
+	if s.vendor == "postgres" {
+		row := s.db.QueryRow(`
+			INSERT INTO orders (customer_email, items_json, total, status, payment_ref, mobile, address, metadata)
+			VALUES ($1, $2::jsonb, $3, $4, $5, $6, $7, $8::jsonb)
+			RETURNING id, created_at
+		`, email, string(itemsJSON), total, status, paymentRef, mobile, address, string(metaJSON))
+		var id int
+		var created time.Time
+		if err := row.Scan(&id, &created); err != nil {
+			return orders.Order{}, err
+		}
+		return orders.Order{
+			ID:            id,
+			CustomerEmail: email,
+			Items:         items,
+			Total:         total,
+			Status:        status,
+			PaymentRef:    paymentRef,
+			Mobile:        mobile,
+			Address:       address,
+			Metadata:      metadata,
+			CreatedAt:     created,
+		}, nil
+	}
+
+	res, err := s.db.Exec(`
+		INSERT INTO orders (customer_email, items_json, total, status, payment_ref, mobile, address, metadata, created_at)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW())
+	`, email, string(itemsJSON), total, status, paymentRef, mobile, address, string(metaJSON))
+	if err != nil {
+		return orders.Order{}, err
+	}
+	id64, _ := res.LastInsertId()
+	return orders.Order{
+		ID:            int(id64),
+		CustomerEmail: email,
+		Items:         items,
+		Total:         total,
+		Status:        status,
+		PaymentRef:    paymentRef,
+		Mobile:        mobile,
+		Address:       address,
+		Metadata:      metadata,
+		CreatedAt:     time.Now(),
+	}, nil
+}
+
+func (s *SQLStorage) ListOrdersByEmail(email string) ([]orders.Order, error) {
+	query := `
+		SELECT id, items_json, total, status, payment_ref, mobile, address, metadata, created_at
+		FROM orders WHERE customer_email = ?
+		ORDER BY created_at DESC
+	`
+	args := []any{email}
+	if s.vendor == "postgres" {
+		query = `
+			SELECT id, items_json, total, status, payment_ref, metadata, created_at
+			FROM orders WHERE customer_email = $1
+			ORDER BY created_at DESC
+		`
+	}
+	rows, err := s.db.Query(query, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var out []orders.Order
+	for rows.Next() {
+		var (
+			id         int
+			itemsJSON  string
+			total      int
+			status     string
+			paymentRef string
+			mobile     string
+			address    string
+			metaJSON   sql.NullString
+			created    time.Time
+		)
+		if err := rows.Scan(&id, &itemsJSON, &total, &status, &paymentRef, &mobile, &address, &metaJSON, &created); err != nil {
+			return nil, err
+		}
+		var items []orders.Item
+		_ = json.Unmarshal([]byte(itemsJSON), &items)
+		var metadata map[string]any
+		if metaJSON.Valid {
+			_ = json.Unmarshal([]byte(metaJSON.String), &metadata)
+		}
+		out = append(out, orders.Order{
+			ID:            id,
+			CustomerEmail: email,
+			Items:         items,
+			Total:         total,
+			Status:        status,
+			PaymentRef:    paymentRef,
+			Mobile:        mobile,
+			Address:       address,
+			Metadata:      metadata,
+			CreatedAt:     created,
+		})
+	}
+	return out, nil
+}
+
+func (s *SQLStorage) UpdateOrderStatus(id int, status string) error {
+	if s.vendor == "postgres" {
+		_, err := s.db.Exec("UPDATE orders SET status = $1 WHERE id = $2", status, id)
+		return err
+	}
+	_, err := s.db.Exec("UPDATE orders SET status = ? WHERE id = ?", status, id)
+	return err
+}
+
+func (s *SQLStorage) ListOrders(statuses []string) ([]orders.Order, error) {
+	base := `
+		SELECT id, customer_email, items_json, total, status, payment_ref, mobile, address, metadata, created_at
+		FROM orders
+	`
+	var rows *sql.Rows
+	var err error
+
+	if len(statuses) > 0 {
+		placeholders := make([]string, len(statuses))
+		args := make([]any, len(statuses))
+		for i, st := range statuses {
+			args[i] = st
+			if s.vendor == "postgres" {
+				placeholders[i] = fmt.Sprintf("$%d", i+1)
+			} else {
+				placeholders[i] = "?"
+			}
+		}
+		ph := strings.Join(placeholders, ",")
+		query := base + ` WHERE status IN (` + ph + `) ORDER BY created_at DESC`
+		rows, err = s.db.Query(query, args...)
+	} else {
+		rows, err = s.db.Query(base + ` ORDER BY created_at DESC`)
+	}
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var out []orders.Order
+	for rows.Next() {
+		var (
+			id         int
+			email      string
+			itemsJSON  string
+			total      int
+			statusVal  string
+			paymentRef string
+			mobile     string
+			address    string
+			metaJSON   sql.NullString
+			created    time.Time
+		)
+		if err := rows.Scan(&id, &email, &itemsJSON, &total, &statusVal, &paymentRef, &mobile, &address, &metaJSON, &created); err != nil {
+			return nil, err
+		}
+		var items []orders.Item
+		_ = json.Unmarshal([]byte(itemsJSON), &items)
+		var metadata map[string]any
+		if metaJSON.Valid {
+			_ = json.Unmarshal([]byte(metaJSON.String), &metadata)
+		}
+		out = append(out, orders.Order{
+			ID:            id,
+			CustomerEmail: email,
+			Items:         items,
+			Total:         total,
+			Status:        statusVal,
+			PaymentRef:    paymentRef,
+			Mobile:        mobile,
+			Address:       address,
+			Metadata:      metadata,
+			CreatedAt:     created,
+		})
+	}
+	return out, nil
+}
+
 func withLogging(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		start := time.Now()
@@ -1228,9 +1456,20 @@ func (s *Server) handleCheckout(w http.ResponseWriter, r *http.Request) {
 		writeJSONError(w, http.StatusMethodNotAllowed, "method not allowed")
 		return
 	}
+	email, ok := s.customerEmailFromRequest(r)
+	if !ok {
+		writeJSONError(w, http.StatusUnauthorized, "please login before checkout")
+		return
+	}
 	var payload CheckoutRequest
 	if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
 		writeJSONError(w, http.StatusBadRequest, "invalid JSON payload")
+		return
+	}
+	payload.Mobile = strings.TrimSpace(payload.Mobile)
+	payload.Address = strings.TrimSpace(payload.Address)
+	if payload.Mobile == "" || payload.Address == "" {
+		writeJSONError(w, http.StatusBadRequest, "mobile and address are required")
 		return
 	}
 	if len(payload.Items) == 0 {
@@ -1252,12 +1491,26 @@ func (s *Server) handleCheckout(w http.ResponseWriter, r *http.Request) {
 
 	message := fmt.Sprintf("Hello स्वयंवाणी, I want to order: %s. Total: Rs %d.", strings.Join(parts, ", "), total)
 	waURL := "https://wa.me/919922317125?text=" + url.QueryEscape(message)
-	writeJSON(w, http.StatusOK, map[string]string{"whatsapp_url": waURL})
+	orderItems := make([]orders.Item, 0, len(payload.Items))
+	for _, it := range payload.Items {
+		orderItems = append(orderItems, orders.Item{Name: it.Name, Price: it.Price})
+	}
+	order, err := s.createOrder(email, orderItems, total, "pending", "", payload.Mobile, payload.Address, map[string]any{"channel": "whatsapp"})
+	if err != nil {
+		writeJSONError(w, http.StatusInternalServerError, "failed to save order")
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"whatsapp_url": waURL, "order": order})
 }
 
 func (s *Server) handleCreateRazorpayOrder(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		writeJSONError(w, http.StatusMethodNotAllowed, "method not allowed")
+		return
+	}
+	email, ok := s.customerEmailFromRequest(r)
+	if !ok {
+		writeJSONError(w, http.StatusUnauthorized, "please login before checkout")
 		return
 	}
 	if s.razorpayKeyID == "" || s.razorpayKeySecret == "" {
@@ -1270,6 +1523,7 @@ func (s *Server) handleCreateRazorpayOrder(w http.ResponseWriter, r *http.Reques
 		writeJSONError(w, http.StatusBadRequest, "invalid JSON payload")
 		return
 	}
+	// Razorpay path reuses checkout payload for items only; mobile/address expected via /api/checkout.
 	if len(payload.Items) == 0 {
 		writeJSONError(w, http.StatusBadRequest, "cart is empty")
 		return
@@ -1332,12 +1586,28 @@ func (s *Server) handleCreateRazorpayOrder(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
+	orderItems := make([]orders.Item, 0, len(payload.Items))
+	for _, it := range payload.Items {
+		orderItems = append(orderItems, orders.Item{Name: it.Name, Price: it.Price})
+	}
+	if _, err := s.createOrder(email, orderItems, totalINR, "pending_payment", rpResp.ID, "", "", map[string]any{"channel": "razorpay"}); err != nil {
+		writeJSONError(w, http.StatusInternalServerError, "failed to save order")
+		return
+	}
+
 	writeJSON(w, http.StatusOK, map[string]any{
 		"key_id":   s.razorpayKeyID,
 		"order_id": rpResp.ID,
 		"amount":   rpResp.Amount,
 		"currency": rpResp.Currency,
 	})
+}
+
+func (s *Server) createOrder(email string, items []orders.Item, total int, status, paymentRef, mobile, address string, metadata map[string]any) (orders.Order, error) {
+	if s.sqlStore != nil {
+		return s.sqlStore.CreateOrder(email, items, total, status, paymentRef, mobile, address, metadata)
+	}
+	return s.ordersStore.Add(email, items, total, status, paymentRef, mobile, address, metadata)
 }
 
 func (s *Server) handleAdminLogin(w http.ResponseWriter, r *http.Request) {
@@ -1574,6 +1844,121 @@ func (s *Server) handleCustomerMe(w http.ResponseWriter, r *http.Request) {
 			"created_at": account.CreatedAt.Format(time.RFC3339),
 		},
 	})
+}
+
+func (s *Server) handleCustomerOrders(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		writeJSONError(w, http.StatusMethodNotAllowed, "method not allowed")
+		return
+	}
+	email, ok := s.customerEmailFromRequest(r)
+	if !ok {
+		writeJSONError(w, http.StatusUnauthorized, "unauthorized")
+		return
+	}
+	var list []orders.Order
+	var err error
+	if s.sqlStore != nil {
+		list, err = s.sqlStore.ListOrdersByEmail(email)
+	} else {
+		list = s.ordersStore.ListForEmail(email)
+	}
+	if err != nil {
+		writeJSONError(w, http.StatusInternalServerError, "failed to load orders")
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"orders": list})
+}
+
+func (s *Server) handleAdminOrders(w http.ResponseWriter, r *http.Request) {
+	if !s.isAdmin(r) {
+		writeJSONError(w, http.StatusUnauthorized, "unauthorized")
+		return
+	}
+	if r.Method != http.MethodGet {
+		writeJSONError(w, http.StatusMethodNotAllowed, "method not allowed")
+		return
+	}
+	statusFilter := strings.TrimSpace(r.URL.Query().Get("status"))
+	statuses := []string{}
+	if statusFilter != "" {
+		if strings.EqualFold(statusFilter, "pending") {
+			statuses = []string{"pending", "pending_payment"}
+		} else {
+			statuses = []string{statusFilter}
+		}
+	}
+
+	var list []orders.Order
+	var err error
+	if s.sqlStore != nil {
+		list, err = s.sqlStore.ListOrders(statuses)
+	} else {
+		list = s.ordersStore.ListAll()
+		if len(statuses) > 0 {
+			filtered := make([]orders.Order, 0, len(list))
+			for _, o := range list {
+				for _, st := range statuses {
+					if strings.EqualFold(o.Status, st) {
+						filtered = append(filtered, o)
+						break
+					}
+				}
+			}
+			list = filtered
+		}
+	}
+	if err != nil {
+		writeJSONError(w, http.StatusInternalServerError, "failed to load orders")
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"orders": list})
+}
+
+func (s *Server) handleAdminOrderStatus(w http.ResponseWriter, r *http.Request) {
+	if !s.isAdmin(r) {
+		writeJSONError(w, http.StatusUnauthorized, "unauthorized")
+		return
+	}
+	if r.Method != http.MethodPatch && r.Method != http.MethodPut {
+		writeJSONError(w, http.StatusMethodNotAllowed, "method not allowed")
+		return
+	}
+	id, err := parseIDFromPath(r.URL.Path, "/api/admin/orders/")
+	if err != nil {
+		writeJSONError(w, http.StatusBadRequest, "invalid order id")
+		return
+	}
+	var payload struct {
+		Status string `json:"status"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
+		writeJSONError(w, http.StatusBadRequest, "invalid JSON payload")
+		return
+	}
+	payload.Status = strings.TrimSpace(payload.Status)
+	if payload.Status == "" {
+		writeJSONError(w, http.StatusBadRequest, "status is required")
+		return
+	}
+
+	if s.sqlStore != nil {
+		if err := s.sqlStore.UpdateOrderStatus(id, payload.Status); err != nil {
+			writeJSONError(w, http.StatusInternalServerError, "failed to update order")
+			return
+		}
+	} else {
+		if err := s.ordersStore.UpdateStatus(id, payload.Status); err != nil {
+			if errors.Is(err, os.ErrNotExist) {
+				writeJSONError(w, http.StatusNotFound, "order not found")
+				return
+			}
+			writeJSONError(w, http.StatusInternalServerError, "failed to update order")
+			return
+		}
+	}
+
+	writeJSON(w, http.StatusOK, map[string]string{"status": "ok"})
 }
 
 func (s *Server) handleAdminProducts(w http.ResponseWriter, r *http.Request) {

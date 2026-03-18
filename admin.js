@@ -12,6 +12,7 @@ const customersEl = document.getElementById("adminCustomers");
 const refreshInquiriesBtn = document.getElementById("refreshInquiriesBtn");
 const refreshCustomersBtn = document.getElementById("refreshCustomersBtn");
 const editOffersBtn = document.getElementById("editOffersBtn");
+const refreshOrdersBtn = document.getElementById("refreshOrdersBtn");
 const OfferService = window.OfferService;
 const adminHeaderActions = document.querySelector(".admin-header-actions");
 const hasBackend = window.location.protocol === "http:" || window.location.protocol === "https:";
@@ -20,6 +21,8 @@ const adminModal = document.getElementById("adminModal");
 const adminModalTitle = document.getElementById("adminModalTitle");
 const adminModalBody = document.getElementById("adminModalBody");
 const adminModalClose = document.getElementById("adminModalClose");
+
+let latestOrders = [];
 
 function escapeHtml(value) {
   return String(value || "")
@@ -384,6 +387,46 @@ function renderCustomers(customers) {
   customersEl.innerHTML = buildCustomerCardsHtml(customers);
 }
 
+function buildOrdersHtml(orders = []) {
+  if (!orders.length) {
+    return "<p>No orders found.</p>";
+  }
+  return `
+    <div class="admin-modal-scroll">
+      ${orders
+        .map((o) => {
+          const created = o.created_at ? new Date(o.created_at).toLocaleString("en-IN") : "—";
+          const items = (o.items || [])
+            .map((it) => `${escapeHtml(it.name)} (${new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 }).format(it.price)})`)
+            .join(" · ");
+          return `
+          <div class="cart-item order-admin-card">
+            <div class="order-admin-head">
+              <div>
+                <strong>Order #${o.id}</strong>
+                <p>${escapeHtml(o.customer_email || "")}</p>
+                <p class="form-hint">${created}</p>
+              </div>
+              <label class="order-status-select">
+                <span>Status</span>
+                <select data-order-id="${o.id}">
+                  ${["pending", "pending_payment", "confirmed", "shipped", "delivered", "cancelled"]
+                    .map((status) => `<option value="${status}" ${o.status === status ? "selected" : ""}>${status}</option>`)
+                    .join("")}
+                </select>
+              </label>
+            </div>
+            <p>${items}</p>
+            <p><strong>Total:</strong> ${new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 }).format(o.total || 0)}</p>
+            ${o.payment_ref ? `<p class="form-hint">Payment Ref: ${escapeHtml(o.payment_ref)}</p>` : ""}
+          </div>
+        `;
+        })
+        .join("")}
+    </div>
+  `;
+}
+
 async function refreshInquiries() {
   try {
     const data = await api("/api/admin/inquiries");
@@ -426,6 +469,21 @@ async function openOffersModal() {
       bindOffersForm(document.getElementById("adminOffersForm"));
     }
     if (adminStatus) adminStatus.textContent = error.message || "Failed to load offers.";
+  }
+}
+
+async function openOrdersModal(status = "pending") {
+  openAdminModal("Orders", "<p class=\"form-status\">Loading orders…</p>");
+  try {
+    const data = await api(`/api/admin/orders${status ? `?status=${encodeURIComponent(status)}` : ""}`);
+    latestOrders = data.orders || [];
+    if (adminModalBody) {
+      adminModalBody.innerHTML = buildOrdersHtml(latestOrders);
+    }
+    if (adminStatus) adminStatus.textContent = `Loaded ${latestOrders.length} orders${status ? ` (${status})` : ""}.`;
+  } catch (error) {
+    if (adminModalBody) adminModalBody.innerHTML = `<p class="form-status">${escapeHtml(error.message || "Failed to load orders")}</p>`;
+    if (adminStatus) adminStatus.textContent = error.message || "Failed to load orders.";
   }
 }
 
@@ -606,6 +664,7 @@ refreshCustomersBtn?.addEventListener("click", async () => {
   openAdminModal("Login Customers", content);
 });
 editOffersBtn?.addEventListener("click", openOffersModal);
+refreshOrdersBtn?.addEventListener("click", () => openOrdersModal("pending"));
 
 adminModalOverlay?.addEventListener("click", (event) => {
   if (event.target === adminModalOverlay) {
@@ -616,6 +675,27 @@ adminModalClose?.addEventListener("click", closeAdminModal);
 document.addEventListener("keydown", (event) => {
   if (event.key === "Escape" && adminModalOverlay?.classList?.contains("is-visible")) {
     closeAdminModal();
+  }
+});
+
+adminModalBody?.addEventListener("change", async (event) => {
+  const target = event.target;
+  if (!(target instanceof HTMLSelectElement)) return;
+  const orderId = target.getAttribute("data-order-id");
+  if (!orderId) return;
+  const prev = target.value;
+  target.disabled = true;
+  try {
+    await api(`/api/admin/orders/${orderId}`, {
+      method: "PATCH",
+      body: JSON.stringify({ status: target.value })
+    });
+    if (adminStatus) adminStatus.textContent = `Order #${orderId} updated to ${target.value}.`;
+  } catch (error) {
+    target.value = prev;
+    if (adminStatus) adminStatus.textContent = error.message || "Failed to update order.";
+  } finally {
+    target.disabled = false;
   }
 });
 

@@ -14,7 +14,7 @@
       href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;700&family=Manrope:wght@400;600;700&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="styles.css?v=20260318f" />
+    <link rel="stylesheet" href="styles.css?v=20260319cart5" />
   </head>
   <body>
     <header class="site-header">
@@ -38,12 +38,19 @@
           </select>
           <div class="auth-group">
             <span id="customerGreeting" class="customer-greeting" aria-live="polite"></span>
-            <button id="customerProfileToggle" class="profile-icon" aria-label="Show profile" aria-expanded="false" hidden>
-              <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-                <circle cx="12" cy="8" r="3.2" />
-                <path d="M6 19c0-2 2-3.5 6-3.5s6 1.5 6 3.5" fill="none" stroke-width="1.5" />
-              </svg>
-            </button>
+            <div class="profile-menu" id="profileMenu" hidden>
+              <button id="customerProfileToggle" class="profile-icon" aria-label="Show profile menu" aria-expanded="false">
+                <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                  <circle cx="12" cy="8" r="3.2" />
+                  <path d="M6 19c0-2 2-3.5 6-3.5s6 1.5 6 3.5" fill="none" stroke-width="1.5" />
+                </svg>
+              </button>
+              <div class="profile-dropdown" id="profileDropdown" role="menu" aria-hidden="true">
+                <button type="button" id="dropdownOrders" role="menuitem">Orders</button>
+                <button type="button" id="dropdownLogout" role="menuitem">Logout</button>
+              </div>
+            </div>
+            <button id="customerOrdersBtn" class="orders-btn" aria-label="View your orders" hidden>My Orders</button>
             <button id="customerAuthBtn" class="auth-btn" data-i18n="customerLogin">Customer Login</button>
           </div>
           <button id="cartBtn" class="cart-btn" aria-label="Open cart">
@@ -200,21 +207,30 @@
         <h2 data-i18n="yourCart">Your Cart</h2>
         <button id="closeCart" class="close-cart-icon" aria-label="Close cart">×</button>
       </div>
-      <div id="cartItems" class="cart-items"></div>
-      <div class="cart-footer">
-        <div class="coupon-box">
-          <label for="couponCodeInput" data-i18n="couponLabel">Coupon</label>
-          <div class="coupon-row">
-            <input id="couponCodeInput" type="text" placeholder="Enter code" autocomplete="off" />
-            <button id="couponApplyBtn" type="button" class="filter-btn" data-i18n="applyCoupon">Apply</button>
+      <div class="cart-body-grid">
+        <div id="cartItems" class="cart-items"></div>
+        <div class="cart-footer">
+          <div class="coupon-box">
+            <label for="couponCodeInput" data-i18n="couponLabel">Coupon</label>
+            <div class="coupon-row">
+              <input id="couponCodeInput" type="text" placeholder="Enter code" autocomplete="off" />
+              <button id="couponApplyBtn" type="button" class="filter-btn" data-i18n="applyCoupon">Apply</button>
+            </div>
+            <p id="couponStatus" class="form-status" aria-live="polite"></p>
           </div>
-          <p id="couponStatus" class="form-status" aria-live="polite"></p>
-        </div>
-        <p><span data-i18n="total">Total</span>: ₹<span id="cartTotal">0</span></p>
-        <p id="cartSavings" class="cart-savings" aria-live="polite"></p>
-        <div class="cart-actions">
-          <button id="checkoutBtn" data-i18n="checkout">Proceed to Checkout</button>
-          <button id="closeCartFooter" class="close-cart-btn" data-i18n="closeCart">Close Cart</button>
+          <div class="ship-box">
+              <label for="checkoutMobile">Mobile</label>
+              <input id="checkoutMobile" type="tel" inputmode="numeric" pattern="\\d{10}" maxlength="10" placeholder="10-digit mobile" />
+              <label for="checkoutAddress">Shipping Address</label>
+              <textarea id="checkoutAddress" rows="2" placeholder="House, street, city, pincode"></textarea>
+              <p id="shipStatus" class="form-status" aria-live="polite"></p>
+            </div>
+          <p><span data-i18n="total">Total</span>: <span id="cartTotal">0</span></p>
+          <p id="cartSavings" class="cart-savings" aria-live="polite"></p>
+          <div class="cart-actions">
+            <button id="checkoutBtn" data-i18n="checkout">Proceed to Checkout</button>
+            <button id="closeCartFooter" class="close-cart-btn" data-i18n="closeCart">Close Cart</button>
+          </div>
         </div>
       </div>
     </aside>
@@ -240,54 +256,101 @@
           <button id="closeCustomerModal" class="close-cart-icon" type="button" aria-label="Close">×</button>
         </div>
         <p id="customerAuthStatus" class="form-status" aria-live="polite"></p>
-        <div class="customer-auth-grid">
-          <form id="customerLoginForm" class="inquiry-form customer-form">
-            <h4 data-i18n="customerLogin">Customer Login</h4>
-            <label>
-              <span data-i18n="labelEmail">Email</span>
-              <input type="email" id="customerLoginEmail" required />
-            </label>
-            <label>
-              <span data-i18n="customerPassword">Password</span>
-              <span class="password-field">
-                <input type="password" id="customerLoginPassword" minlength="6" required />
-                <button type="button" class="password-toggle" data-target="customerLoginPassword" onclick="togglePasswordById('customerLoginPassword', this)" aria-label="Show password" aria-pressed="false">
-                  <svg class="password-eye" viewBox="0 0 24 24" aria-hidden="true">
-                    <path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6-10-6-10-6z" fill="none" stroke="currentColor" stroke-width="2"/>
-                    <circle cx="12" cy="12" r="3" fill="none" stroke="currentColor" stroke-width="2"/>
-                    <path class="password-eye-slash" d="M4 20L20 4" fill="none" stroke="currentColor" stroke-width="2"/>
-                  </svg>
-                </button>
-              </span>
-            </label>
-            <button type="submit" data-i18n="customerLogin">Customer Login</button>
-          </form>
-          <form id="customerRegisterForm" class="inquiry-form customer-form">
-            <h4 data-i18n="customerRegister">Create Account</h4>
-            <label>
-              <span data-i18n="labelName">Name</span>
-              <input type="text" id="customerRegisterName" required />
-            </label>
-            <label>
-              <span data-i18n="labelEmail">Email</span>
-              <input type="email" id="customerRegisterEmail" required />
-            </label>
-            <label>
-              <span data-i18n="customerPassword">Password</span>
-              <span class="password-field">
-                <input type="password" id="customerRegisterPassword" minlength="6" required />
-                <button type="button" class="password-toggle" data-target="customerRegisterPassword" onclick="togglePasswordById('customerRegisterPassword', this)" aria-label="Show password" aria-pressed="false">
-                  <svg class="password-eye" viewBox="0 0 24 24" aria-hidden="true">
-                    <path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6-10-6-10-6z" fill="none" stroke="currentColor" stroke-width="2"/>
-                    <circle cx="12" cy="12" r="3" fill="none" stroke="currentColor" stroke-width="2"/>
-                    <path class="password-eye-slash" d="M4 20L20 4" fill="none" stroke="currentColor" stroke-width="2"/>
-                  </svg>
-                </button>
-              </span>
-            </label>
-            <button type="submit" data-i18n="customerRegister">Create Account</button>
-          </form>
+        <div class="customer-layout">
+          <aside class="customer-hero">
+            <p class="customer-pill">Member exclusives</p>
+            <h4 class="customer-hero-title">Unlock tuned instruments, faster delivery, and lesson credits.</h4>
+            <ul class="customer-perks" aria-label="Customer benefits">
+              <li>10% instant savings applied at checkout</li>
+              <li>Priority WhatsApp support with makers</li>
+              <li>4 complimentary one-on-one lessons</li>
+            </ul>
+            <div class="customer-stats" aria-label="Social proof">
+              <div class="stat-card">
+                <span class="stat-value">12k+</span>
+                <span class="stat-label">Orders fulfilled</span>
+              </div>
+              <div class="stat-card">
+                <span class="stat-value">4.9★</span>
+                <span class="stat-label">Musician rating</span>
+              </div>
+              <div class="stat-card">
+                <span class="stat-value">SSL</span>
+                <span class="stat-label">Secure checkout</span>
+              </div>
+            </div>
+            <p class="customer-quote">“Feels like having a personal luthier on call.”</p>
+          </aside>
+          <div class="customer-auth-grid">
+            <form id="customerLoginForm" class="inquiry-form customer-form">
+              <h4 data-i18n="customerLogin">Customer Login</h4>
+              <label>
+                <span data-i18n="labelEmail">Email</span>
+                <input type="email" id="customerLoginEmail" required />
+              </label>
+              <label>
+                <span data-i18n="customerPassword">Password</span>
+                <span class="password-field">
+                  <input type="password" id="customerLoginPassword" minlength="6" required />
+                  <button type="button" class="password-toggle" data-target="customerLoginPassword" onclick="togglePasswordById('customerLoginPassword', this)" aria-label="Show password" aria-pressed="false">
+                    <svg class="password-eye" viewBox="0 0 24 24" aria-hidden="true">
+                      <path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6-10-6-10-6z" fill="none" stroke="currentColor" stroke-width="2"/>
+                      <circle cx="12" cy="12" r="3" fill="none" stroke="currentColor" stroke-width="2"/>
+                      <path class="password-eye-slash" d="M4 20L20 4" fill="none" stroke="currentColor" stroke-width="2"/>
+                    </svg>
+                  </button>
+                </span>
+              </label>
+              <button type="submit" data-i18n="customerLogin">Customer Login</button>
+              <p class="form-footnote">We’ll remember your cart and lesson credits.</p>
+            </form>
+            <form id="customerRegisterForm" class="inquiry-form customer-form">
+              <h4 data-i18n="customerRegister">Create Account</h4>
+              <label>
+                <span data-i18n="labelName">Name</span>
+                <input
+                  type="text"
+                  id="customerRegisterName"
+                  placeholder="Enter first and last name"
+                  maxlength="20"
+                  pattern=".{1,20}"
+                  title="Enter first and last name, max 20 characters"
+                  required
+                />
+              </label>
+              <label>
+                <span data-i18n="labelEmail">Email</span>
+                <input type="email" id="customerRegisterEmail" required />
+              </label>
+              <label>
+                <span data-i18n="customerPassword">Password</span>
+                <span class="password-field">
+                  <input type="password" id="customerRegisterPassword" minlength="6" required />
+                  <button type="button" class="password-toggle" data-target="customerRegisterPassword" onclick="togglePasswordById('customerRegisterPassword', this)" aria-label="Show password" aria-pressed="false">
+                    <svg class="password-eye" viewBox="0 0 24 24" aria-hidden="true">
+                      <path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6-10-6-10-6z" fill="none" stroke="currentColor" stroke-width="2"/>
+                      <circle cx="12" cy="12" r="3" fill="none" stroke="currentColor" stroke-width="2"/>
+                      <path class="password-eye-slash" d="M4 20L20 4" fill="none" stroke="currentColor" stroke-width="2"/>
+                    </svg>
+                  </button>
+                </span>
+              </label>
+              <button type="submit" data-i18n="customerRegister">Create Account</button>
+              <p class="form-footnote">No spam. Only order updates and tuning tips.</p>
+            </form>
+          </div>
         </div>
+      </div>
+    </div>
+
+    <div id="ordersModal" class="orders-modal" aria-hidden="true">
+      <div class="orders-modal-card">
+        <div class="orders-head">
+          <h3>My Orders</h3>
+          <button id="closeOrdersModal" class="close-cart-icon" type="button" aria-label="Close">×</button>
+        </div>
+        <div id="ordersEmpty" class="orders-empty">Login to see your past orders.</div>
+        <div id="ordersList" class="orders-list" role="list"></div>
       </div>
     </div>
 
@@ -350,6 +413,7 @@
     </footer>
 
     <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
-    <script src="script.js?v=20260313a"></script>
+    <script src="script.js?v=20260319e"></script>
+    <script src="assets/orders/orders.js?v=20260318p"></script>
   </body>
 </html>
