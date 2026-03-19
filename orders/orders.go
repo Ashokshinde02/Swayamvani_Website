@@ -13,12 +13,14 @@ import (
 type Item struct {
 	Name  string `json:"name"`
 	Price int    `json:"price"`
+	Image string `json:"image,omitempty"`
 }
 
 // Order represents a placed order that can be shown in "My Orders".
 type Order struct {
 	ID            int            `json:"id"`
 	CustomerEmail string         `json:"customer_email"`
+	CustomerName  string         `json:"customer_name,omitempty"`
 	Items         []Item         `json:"items"`
 	Total         int            `json:"total"`
 	Status        string         `json:"status"`
@@ -83,13 +85,14 @@ func (o *Store) saveLocked() error {
 	return enc.Encode(o.orders)
 }
 
-func (o *Store) Add(email string, items []Item, total int, status, paymentRef, mobile, address string, metadata map[string]any) (Order, error) {
+func (o *Store) Add(email, name string, items []Item, total int, status, paymentRef, mobile, address string, metadata map[string]any) (Order, error) {
 	o.mu.Lock()
 	defer o.mu.Unlock()
 	o.nextID++
 	order := Order{
 		ID:            o.nextID,
 		CustomerEmail: email,
+		CustomerName:  name,
 		Items:         items,
 		Total:         total,
 		Status:        status,

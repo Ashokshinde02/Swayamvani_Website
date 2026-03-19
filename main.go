@@ -59,6 +59,7 @@ type InquiryRequest struct {
 type CheckoutItem struct {
 	Name  string `json:"name"`
 	Price int    `json:"price"`
+	Image string `json:"image"`
 }
 
 type CheckoutRequest struct {
@@ -125,6 +126,14 @@ type CustomerAccount struct {
 	Email        string    `json:"email"`
 	PasswordHash string    `json:"password_hash"`
 	CreatedAt    time.Time `json:"created_at"`
+}
+
+type CustomerProfile struct {
+	Name      string `json:"name"`
+	Email     string `json:"email"`
+	CreatedAt string `json:"created_at"`
+	Mobile    string `json:"mobile,omitempty"`
+	Address   string `json:"address,omitempty"`
 }
 
 type RazorpayOrderRequest struct {
@@ -570,6 +579,7 @@ func schemaQueries(vendor string) []string {
 			`CREATE TABLE IF NOT EXISTS orders (
 					id SERIAL PRIMARY KEY,
 					customer_email TEXT NOT NULL,
+					customer_name TEXT NOT NULL DEFAULT '',
 					items_json JSONB NOT NULL,
 					total INTEGER NOT NULL,
 					status TEXT NOT NULL,
@@ -581,6 +591,7 @@ func schemaQueries(vendor string) []string {
 				)`,
 			`ALTER TABLE orders ADD COLUMN IF NOT EXISTS mobile TEXT NOT NULL DEFAULT ''`,
 			`ALTER TABLE orders ADD COLUMN IF NOT EXISTS address TEXT NOT NULL DEFAULT ''`,
+			`ALTER TABLE orders ADD COLUMN IF NOT EXISTS customer_name TEXT NOT NULL DEFAULT ''`,
 			`CREATE TABLE IF NOT EXISTS offers (
 						id SERIAL PRIMARY KEY,
 						active BOOLEAN NOT NULL DEFAULT FALSE,
@@ -634,6 +645,7 @@ func schemaQueries(vendor string) []string {
 		`CREATE TABLE IF NOT EXISTS orders (
 				id INT AUTO_INCREMENT PRIMARY KEY,
 				customer_email VARCHAR(255) NOT NULL,
+				customer_name VARCHAR(255) NOT NULL DEFAULT '',
 				items_json JSON NOT NULL,
 				total INT NOT NULL,
 				status VARCHAR(32) NOT NULL,
@@ -646,6 +658,7 @@ func schemaQueries(vendor string) []string {
 			)`,
 		`ALTER TABLE orders ADD COLUMN mobile VARCHAR(32) NOT NULL DEFAULT ''`,
 		`ALTER TABLE orders ADD COLUMN address TEXT NOT NULL`,
+		`ALTER TABLE orders ADD COLUMN customer_name VARCHAR(255) NOT NULL DEFAULT ''`,
 		`CREATE TABLE IF NOT EXISTS offers (
 				id INT AUTO_INCREMENT PRIMARY KEY,
 				active BOOLEAN NOT NULL DEFAULT FALSE,
@@ -1105,16 +1118,16 @@ func (s *SQLStorage) ListInquiries() ([]Inquiry, error) {
 }
 
 // Orders
-func (s *SQLStorage) CreateOrder(email string, items []orders.Item, total int, status, paymentRef, mobile, address string, metadata map[string]any) (orders.Order, error) {
+func (s *SQLStorage) CreateOrder(email, name string, items []orders.Item, total int, status, paymentRef, mobile, address string, metadata map[string]any) (orders.Order, error) {
 	itemsJSON, _ := json.Marshal(items)
 	metaJSON, _ := json.Marshal(metadata)
 
 	if s.vendor == "postgres" {
 		row := s.db.QueryRow(`
-			INSERT INTO orders (customer_email, items_json, total, status, payment_ref, mobile, address, metadata)
-			VALUES ($1, $2::jsonb, $3, $4, $5, $6, $7, $8::jsonb)
+			INSERT INTO orders (customer_email, customer_name, items_json, total, status, payment_ref, mobile, address, metadata)
+			VALUES ($1, $2, $3::jsonb, $4, $5, $6, $7, $8, $9::jsonb)
 			RETURNING id, created_at
-		`, email, string(itemsJSON), total, status, paymentRef, mobile, address, string(metaJSON))
+		`, email, name, string(itemsJSON), total, status, paymentRef, mobile, address, string(metaJSON))
 		var id int
 		var created time.Time
 		if err := row.Scan(&id, &created); err != nil {
@@ -1123,6 +1136,7 @@ func (s *SQLStorage) CreateOrder(email string, items []orders.Item, total int, s
 		return orders.Order{
 			ID:            id,
 			CustomerEmail: email,
+			CustomerName:  name,
 			Items:         items,
 			Total:         total,
 			Status:        status,
@@ -1135,9 +1149,9 @@ func (s *SQLStorage) CreateOrder(email string, items []orders.Item, total int, s
 	}
 
 	res, err := s.db.Exec(`
-		INSERT INTO orders (customer_email, items_json, total, status, payment_ref, mobile, address, metadata, created_at)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW())
-	`, email, string(itemsJSON), total, status, paymentRef, mobile, address, string(metaJSON))
+		INSERT INTO orders (customer_email, customer_name, items_json, total, status, payment_ref, mobile, address, metadata, created_at)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())
+	`, email, name, string(itemsJSON), total, status, paymentRef, mobile, address, string(metaJSON))
 	if err != nil {
 		return orders.Order{}, err
 	}
@@ -1145,6 +1159,7 @@ func (s *SQLStorage) CreateOrder(email string, items []orders.Item, total int, s
 	return orders.Order{
 		ID:            int(id64),
 		CustomerEmail: email,
+		CustomerName:  name,
 		Items:         items,
 		Total:         total,
 		Status:        status,
@@ -1158,14 +1173,14 @@ func (s *SQLStorage) CreateOrder(email string, items []orders.Item, total int, s
 
 func (s *SQLStorage) ListOrdersByEmail(email string) ([]orders.Order, error) {
 	query := `
-		SELECT id, items_json, total, status, payment_ref, mobile, address, metadata, created_at
+		SELECT id, items_json, total, status, payment_ref, mobile, address, customer_name, metadata, created_at
 		FROM orders WHERE customer_email = ?
 		ORDER BY created_at DESC
 	`
 	args := []any{email}
 	if s.vendor == "postgres" {
 		query = `
-			SELECT id, items_json, total, status, payment_ref, metadata, created_at
+			SELECT id, items_json, total, status, payment_ref, mobile, address, customer_name, metadata, created_at
 			FROM orders WHERE customer_email = $1
 			ORDER BY created_at DESC
 		`
@@ -1179,17 +1194,18 @@ func (s *SQLStorage) ListOrdersByEmail(email string) ([]orders.Order, error) {
 	var out []orders.Order
 	for rows.Next() {
 		var (
-			id         int
-			itemsJSON  string
-			total      int
-			status     string
-			paymentRef string
-			mobile     string
-			address    string
-			metaJSON   sql.NullString
-			created    time.Time
+			id           int
+			itemsJSON    string
+			total        int
+			status       string
+			paymentRef   string
+			mobile       string
+			address      string
+			customerName string
+			metaJSON     sql.NullString
+			created      time.Time
 		)
-		if err := rows.Scan(&id, &itemsJSON, &total, &status, &paymentRef, &mobile, &address, &metaJSON, &created); err != nil {
+		if err := rows.Scan(&id, &itemsJSON, &total, &status, &paymentRef, &mobile, &address, &customerName, &metaJSON, &created); err != nil {
 			return nil, err
 		}
 		var items []orders.Item
@@ -1201,6 +1217,7 @@ func (s *SQLStorage) ListOrdersByEmail(email string) ([]orders.Order, error) {
 		out = append(out, orders.Order{
 			ID:            id,
 			CustomerEmail: email,
+			CustomerName:  customerName,
 			Items:         items,
 			Total:         total,
 			Status:        status,
@@ -1214,6 +1231,62 @@ func (s *SQLStorage) ListOrdersByEmail(email string) ([]orders.Order, error) {
 	return out, nil
 }
 
+func (s *SQLStorage) LastOrderByEmail(email string) (orders.Order, bool, error) {
+	query := `
+		SELECT id, items_json, total, status, payment_ref, mobile, address, customer_name, metadata, created_at
+		FROM orders WHERE customer_email = ?
+		ORDER BY created_at DESC
+		LIMIT 1
+	`
+	args := []any{email}
+	if s.vendor == "postgres" {
+		query = `
+			SELECT id, items_json, total, status, payment_ref, mobile, address, customer_name, metadata, created_at
+			FROM orders WHERE customer_email = $1
+			ORDER BY created_at DESC
+			LIMIT 1
+		`
+	}
+	row := s.db.QueryRow(query, args...)
+	var (
+		id           int
+		itemsJSON    string
+		total        int
+		status       string
+		paymentRef   string
+		mobile       string
+		address      string
+		customerName string
+		metaJSON     sql.NullString
+		created      time.Time
+	)
+	if err := row.Scan(&id, &itemsJSON, &total, &status, &paymentRef, &mobile, &address, &customerName, &metaJSON, &created); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return orders.Order{}, false, nil
+		}
+		return orders.Order{}, false, err
+	}
+	var items []orders.Item
+	_ = json.Unmarshal([]byte(itemsJSON), &items)
+	var metadata map[string]any
+	if metaJSON.Valid {
+		_ = json.Unmarshal([]byte(metaJSON.String), &metadata)
+	}
+	return orders.Order{
+		ID:            id,
+		CustomerEmail: email,
+		CustomerName:  customerName,
+		Items:         items,
+		Total:         total,
+		Status:        status,
+		PaymentRef:    paymentRef,
+		Mobile:        mobile,
+		Address:       address,
+		Metadata:      metadata,
+		CreatedAt:     created,
+	}, true, nil
+}
+
 func (s *SQLStorage) UpdateOrderStatus(id int, status string) error {
 	if s.vendor == "postgres" {
 		_, err := s.db.Exec("UPDATE orders SET status = $1 WHERE id = $2", status, id)
@@ -1225,7 +1298,7 @@ func (s *SQLStorage) UpdateOrderStatus(id int, status string) error {
 
 func (s *SQLStorage) ListOrders(statuses []string) ([]orders.Order, error) {
 	base := `
-		SELECT id, customer_email, items_json, total, status, payment_ref, mobile, address, metadata, created_at
+		SELECT id, customer_email, customer_name, items_json, total, status, payment_ref, mobile, address, metadata, created_at
 		FROM orders
 	`
 	var rows *sql.Rows
@@ -1256,18 +1329,19 @@ func (s *SQLStorage) ListOrders(statuses []string) ([]orders.Order, error) {
 	var out []orders.Order
 	for rows.Next() {
 		var (
-			id         int
-			email      string
-			itemsJSON  string
-			total      int
-			statusVal  string
-			paymentRef string
-			mobile     string
-			address    string
-			metaJSON   sql.NullString
-			created    time.Time
+			id           int
+			email        string
+			customerName string
+			itemsJSON    string
+			total        int
+			statusVal    string
+			paymentRef   string
+			mobile       string
+			address      string
+			metaJSON     sql.NullString
+			created      time.Time
 		)
-		if err := rows.Scan(&id, &email, &itemsJSON, &total, &statusVal, &paymentRef, &mobile, &address, &metaJSON, &created); err != nil {
+		if err := rows.Scan(&id, &email, &customerName, &itemsJSON, &total, &statusVal, &paymentRef, &mobile, &address, &metaJSON, &created); err != nil {
 			return nil, err
 		}
 		var items []orders.Item
@@ -1279,6 +1353,7 @@ func (s *SQLStorage) ListOrders(statuses []string) ([]orders.Order, error) {
 		out = append(out, orders.Order{
 			ID:            id,
 			CustomerEmail: email,
+			CustomerName:  customerName,
 			Items:         items,
 			Total:         total,
 			Status:        statusVal,
@@ -1476,9 +1551,16 @@ func (s *Server) handleCheckout(w http.ResponseWriter, r *http.Request) {
 		writeJSONError(w, http.StatusBadRequest, "cart is empty")
 		return
 	}
+	accountName := ""
+	if acc, ok := s.customerAccountByEmail(email); ok {
+		accountName = acc.Name
+	}
+	if accountName == "" {
+		accountName = strings.Split(email, "@")[0]
+	}
 
 	total := 0
-	parts := make([]string, 0, len(payload.Items))
+	lines := make([]string, 0, len(payload.Items))
 	for _, item := range payload.Items {
 		name := strings.TrimSpace(item.Name)
 		if name == "" || item.Price <= 0 {
@@ -1486,20 +1568,36 @@ func (s *Server) handleCheckout(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		total += item.Price
-		parts = append(parts, fmt.Sprintf("%s (Rs %d)", name, item.Price))
+		img := strings.TrimSpace(item.Image)
+		if img != "" {
+			lines = append(lines, fmt.Sprintf("%s (Rs %d)\nImage: %s", name, item.Price, img))
+		} else {
+			lines = append(lines, fmt.Sprintf("%s (Rs %d)", name, item.Price))
+		}
 	}
 
-	message := fmt.Sprintf("Hello स्वयंवाणी, I want to order: %s. Total: Rs %d.", strings.Join(parts, ", "), total)
-	waURL := "https://wa.me/919922317125?text=" + url.QueryEscape(message)
 	orderItems := make([]orders.Item, 0, len(payload.Items))
 	for _, it := range payload.Items {
-		orderItems = append(orderItems, orders.Item{Name: it.Name, Price: it.Price})
+		orderItems = append(orderItems, orders.Item{Name: it.Name, Price: it.Price, Image: it.Image})
 	}
-	order, err := s.createOrder(email, orderItems, total, "pending", "", payload.Mobile, payload.Address, map[string]any{"channel": "whatsapp"})
+	order, err := s.createOrder(email, accountName, orderItems, total, "pending", "", payload.Mobile, payload.Address, map[string]any{"channel": "whatsapp"})
 	if err != nil {
 		writeJSONError(w, http.StatusInternalServerError, "failed to save order")
 		return
 	}
+	brandLine := "Swayamvani — Indian Classical Instruments\nwww.swayamvani.com\nLogo: https://www.swayamvani.com/logo.jpeg"
+	message := fmt.Sprintf(
+		"%s\n\nNew order%nOrder #: %d%nName: %s%nEmail: %s%nMobile: %s%nAddress: %s%n%nItems:%n%s%n%nTotal: Rs %d",
+		brandLine,
+		order.ID,
+		accountName,
+		email,
+		payload.Mobile,
+		payload.Address,
+		strings.Join(lines, "\n\n"),
+		total,
+	)
+	waURL := "https://wa.me/919922317125?text=" + url.QueryEscape(message)
 	writeJSON(w, http.StatusOK, map[string]any{"whatsapp_url": waURL, "order": order})
 }
 
@@ -1527,6 +1625,13 @@ func (s *Server) handleCreateRazorpayOrder(w http.ResponseWriter, r *http.Reques
 	if len(payload.Items) == 0 {
 		writeJSONError(w, http.StatusBadRequest, "cart is empty")
 		return
+	}
+	accountName := ""
+	if acc, ok := s.customerAccountByEmail(email); ok {
+		accountName = acc.Name
+	}
+	if accountName == "" {
+		accountName = strings.Split(email, "@")[0]
 	}
 
 	totalINR := 0
@@ -1590,7 +1695,7 @@ func (s *Server) handleCreateRazorpayOrder(w http.ResponseWriter, r *http.Reques
 	for _, it := range payload.Items {
 		orderItems = append(orderItems, orders.Item{Name: it.Name, Price: it.Price})
 	}
-	if _, err := s.createOrder(email, orderItems, totalINR, "pending_payment", rpResp.ID, "", "", map[string]any{"channel": "razorpay"}); err != nil {
+	if _, err := s.createOrder(email, accountName, orderItems, totalINR, "pending_payment", rpResp.ID, "", "", map[string]any{"channel": "razorpay"}); err != nil {
 		writeJSONError(w, http.StatusInternalServerError, "failed to save order")
 		return
 	}
@@ -1603,11 +1708,11 @@ func (s *Server) handleCreateRazorpayOrder(w http.ResponseWriter, r *http.Reques
 	})
 }
 
-func (s *Server) createOrder(email string, items []orders.Item, total int, status, paymentRef, mobile, address string, metadata map[string]any) (orders.Order, error) {
+func (s *Server) createOrder(email, name string, items []orders.Item, total int, status, paymentRef, mobile, address string, metadata map[string]any) (orders.Order, error) {
 	if s.sqlStore != nil {
-		return s.sqlStore.CreateOrder(email, items, total, status, paymentRef, mobile, address, metadata)
+		return s.sqlStore.CreateOrder(email, name, items, total, status, paymentRef, mobile, address, metadata)
 	}
-	return s.ordersStore.Add(email, items, total, status, paymentRef, mobile, address, metadata)
+	return s.ordersStore.Add(email, name, items, total, status, paymentRef, mobile, address, metadata)
 }
 
 func (s *Server) handleAdminLogin(w http.ResponseWriter, r *http.Request) {
@@ -1734,12 +1839,8 @@ func (s *Server) handleCustomerRegister(w http.ResponseWriter, r *http.Request) 
 	}
 	setCustomerSessionCookie(w, token)
 	writeJSON(w, http.StatusCreated, map[string]any{
-		"status": "ok",
-		"customer": map[string]string{
-			"name":       account.Name,
-			"email":      account.Email,
-			"created_at": account.CreatedAt.Format(time.RFC3339),
-		},
+		"status":   "ok",
+		"customer": CustomerProfile{Name: account.Name, Email: account.Email, CreatedAt: account.CreatedAt.Format(time.RFC3339)},
 	})
 }
 
@@ -1789,12 +1890,15 @@ func (s *Server) handleCustomerLogin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	setCustomerSessionCookie(w, token)
+	mobile, address := s.latestShippingForCustomer(account.Email)
 	writeJSON(w, http.StatusOK, map[string]any{
 		"status": "ok",
-		"customer": map[string]string{
-			"name":       account.Name,
-			"email":      account.Email,
-			"created_at": account.CreatedAt.Format(time.RFC3339),
+		"customer": CustomerProfile{
+			Name:      account.Name,
+			Email:     account.Email,
+			CreatedAt: account.CreatedAt.Format(time.RFC3339),
+			Mobile:    mobile,
+			Address:   address,
 		},
 	})
 }
@@ -1837,11 +1941,14 @@ func (s *Server) handleCustomerMe(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
+	mobile, address := s.latestShippingForCustomer(email)
 	writeJSON(w, http.StatusOK, map[string]any{
-		"customer": map[string]string{
-			"name":       account.Name,
-			"email":      account.Email,
-			"created_at": account.CreatedAt.Format(time.RFC3339),
+		"customer": CustomerProfile{
+			Name:      account.Name,
+			Email:     account.Email,
+			CreatedAt: account.CreatedAt.Format(time.RFC3339),
+			Mobile:    mobile,
+			Address:   address,
 		},
 	})
 }
@@ -1868,6 +1975,34 @@ func (s *Server) handleCustomerOrders(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"orders": list})
+}
+
+func (s *Server) customerAccountByEmail(email string) (CustomerAccount, bool) {
+	if s.sqlStore != nil {
+		acc, err := s.sqlStore.GetCustomerByEmail(email)
+		if err == nil {
+			return acc, true
+		}
+		return CustomerAccount{}, false
+	}
+	s.customerMu.RLock()
+	acc, ok := s.customers[email]
+	s.customerMu.RUnlock()
+	return acc, ok
+}
+
+func (s *Server) latestShippingForCustomer(email string) (string, string) {
+	if s.sqlStore != nil {
+		if last, ok, err := s.sqlStore.LastOrderByEmail(email); err == nil && ok {
+			return last.Mobile, last.Address
+		}
+		return "", ""
+	}
+	orders := s.ordersStore.ListForEmail(email)
+	if len(orders) == 0 {
+		return "", ""
+	}
+	return orders[0].Mobile, orders[0].Address
 }
 
 func (s *Server) handleAdminOrders(w http.ResponseWriter, r *http.Request) {

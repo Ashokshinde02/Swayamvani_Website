@@ -17,7 +17,12 @@ async function loadOrders() {
     const response = await fetch(requireBackendPath("/api/customer/orders"), { credentials: "same-origin" });
     const data = await response.json();
     if (!response.ok) {
-      throw new Error(data.error || "Could not load orders");
+      // If backend still returns 401, surface a neutral message instead of stuck login text
+      const msg = response.status === 401 ? "No Record Found." : data.error || "Could not load orders";
+      ordersCache = [];
+      renderOrders([]);
+      if (ordersEmpty) ordersEmpty.textContent = msg;
+      return;
     }
     ordersCache = data.orders || [];
     renderOrders(ordersCache);
@@ -30,7 +35,7 @@ function renderOrders(orders) {
   if (!ordersList || !ordersEmpty) return;
   ordersList.innerHTML = "";
   if (!orders || orders.length === 0) {
-    ordersEmpty.textContent = "No orders yet.";
+    ordersEmpty.textContent = "No Record Found.";
     return;
   }
   ordersEmpty.textContent = "";

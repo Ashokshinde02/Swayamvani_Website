@@ -391,21 +391,25 @@ function buildOrdersHtml(orders = []) {
   if (!orders.length) {
     return "<p>No orders found.</p>";
   }
+  const fmtINR = (val) => new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 }).format(val || 0);
   return `
     <div class="admin-modal-scroll">
       ${orders
         .map((o) => {
           const created = o.created_at ? new Date(o.created_at).toLocaleString("en-IN") : "—";
           const items = (o.items || [])
-            .map((it) => `${escapeHtml(it.name)} (${new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 }).format(it.price)})`)
+            .map((it) => `${escapeHtml(it.name)} (${fmtINR(it.price)})`)
             .join(" · ");
           return `
           <div class="cart-item order-admin-card">
             <div class="order-admin-head">
               <div>
                 <strong>Order #${o.id}</strong>
-                <p>${escapeHtml(o.customer_email || "")}</p>
+                <p>${escapeHtml(o.customer_name || "")}</p>
+                <p class="form-hint">${escapeHtml(o.customer_email || "")}</p>
                 <p class="form-hint">${created}</p>
+                <p class="form-hint">Mobile: ${escapeHtml(o.mobile || "—")}</p>
+                <p class="form-hint">Address: ${escapeHtml(o.address || "—")}</p>
               </div>
               <label class="order-status-select">
                 <span>Status</span>
@@ -417,7 +421,8 @@ function buildOrdersHtml(orders = []) {
               </label>
             </div>
             <p>${items}</p>
-            <p><strong>Total:</strong> ${new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 }).format(o.total || 0)}</p>
+            <p><strong>Total:</strong> ${fmtINR(o.total || 0)}</p>
+            <button type="button" class="filter-btn" data-invoice="${o.id}">Generate Invoice</button>
             ${o.payment_ref ? `<p class="form-hint">Payment Ref: ${escapeHtml(o.payment_ref)}</p>` : ""}
           </div>
         `;
@@ -425,6 +430,97 @@ function buildOrdersHtml(orders = []) {
         .join("")}
     </div>
   `;
+}
+
+function renderInvoice(order) {
+  const fmtINR = (val) => new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 }).format(val || 0);
+  const win = window.open("", "_blank", "width=800,height=900");
+  if (!win) {
+    if (adminStatus) adminStatus.textContent = "Popup blocked. Allow popups to view invoice.";
+    return;
+  }
+  const itemsRows = (order.items || [])
+    .map(
+      (it, idx) => `
+        <tr>
+          <td style="padding:6px 8px;border:1px solid #e0d6ca;">${idx + 1}</td>
+          <td style="padding:6px 8px;border:1px solid #e0d6ca;">${escapeHtml(it.name)}</td>
+          <td style="padding:6px 8px;border:1px solid #e0d6ca; text-align:right;">${fmtINR(it.price)}</td>
+        </tr>
+      `
+    )
+    .join("");
+
+  const html = `
+  <html>
+    <head>
+      <title>Invoice #${order.id}</title>
+      <style>
+        :root {
+          --accent: #c96a1b;
+          --text: #2a1e16;
+          --line: #e0d6ca;
+          --bg: #fffaf3;
+        }
+        body { font-family: "Manrope", sans-serif; margin: 24px; color: var(--text); background: #fff; }
+        h1 { margin: 0 0 6px; font-size: 1.4rem; letter-spacing: 0.05em; text-transform: uppercase; color: var(--accent); }
+        .brand { display: flex; align-items: center; gap: 12px; margin-bottom: 10px; }
+        .brand img { width: 52px; height: 52px; border-radius: 50%; border: 2px solid #d8c4a1; object-fit: cover; background: #000; }
+        .brand .name { font-size: 1.2rem; font-weight: 800; color: var(--text); line-height: 1.2; }
+        .brand .sub { font-size: 0.95rem; color: #5b3a2a; }
+        .box { border: 1px solid var(--line); border-radius: 12px; padding: 12px; margin-bottom: 12px; background: var(--bg); box-shadow: 0 8px 18px rgba(0,0,0,0.05); }
+        table { width: 100%; border-collapse: collapse; margin-top: 8px; }
+        th { text-align: left; padding: 8px 10px; border:1px solid var(--line); background:#fff8ef; }
+        td { font-size: 0.95rem; padding: 8px 10px; border:1px solid var(--line); }
+        .totals { text-align: right; font-weight: 800; margin-top: 12px; color: var(--accent); }
+        .meta { font-size: 0.95rem; line-height: 1.5; }
+        .status { font-weight: 800; color: var(--accent); }
+        .print-btn { margin-top: 14px; padding: 10px 16px; border-radius: 10px; background: var(--accent); color: #fff; border: none; cursor: pointer; font-weight: 700; }
+      </style>
+    </head>
+    <body>
+      <div class="brand">
+        <img src="/logo.jpeg" alt="Swayamvani logo" onerror="this.style.display='none';">
+        <div>
+          <div class="name">Swayamvani</div>
+          <div class="sub">Indian Classical Instruments</div>
+          <div class="sub"><a href="https://www.swayamvani.com" target="_blank" rel="noopener noreferrer">www.swayamvani.com</a></div>
+        </div>
+      </div>
+      <h1>Order Invoice</h1>
+      <div class="box meta">
+        <div><strong>Order #</strong> ${order.id}</div>
+        <div><strong>Status:</strong> <span class="status">${order.status || "pending"}</span></div>
+        <div><strong>Date:</strong> ${order.created_at ? new Date(order.created_at).toLocaleString("en-IN") : "—"}</div>
+      </div>
+      <div class="box meta">
+        <div><strong>Customer:</strong> ${escapeHtml(order.customer_name || order.customer_email || "—")}</div>
+        <div><strong>Email:</strong> ${escapeHtml(order.customer_email || "—")}</div>
+        <div><strong>Mobile:</strong> ${escapeHtml(order.mobile || "—")}</div>
+        <div><strong>Address:</strong> ${escapeHtml(order.address || "—")}</div>
+      </div>
+      <div class="box">
+        <strong>Items</strong>
+        <table>
+          <thead>
+            <tr>
+              <th style="width:40px;">#</th>
+              <th>Product</th>
+              <th style="text-align:right;">Price</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${itemsRows || `<tr><td colspan="3" style="padding:8px;">No items</td></tr>`}
+          </tbody>
+        </table>
+        <div class="totals">Total: ${fmtINR(order.total || 0)}</div>
+      </div>
+      <button class="print-btn" onclick="window.print()">Print</button>
+    </body>
+  </html>
+  `;
+  win.document.write(html);
+  win.document.close();
 }
 
 async function refreshInquiries() {
@@ -697,6 +793,15 @@ adminModalBody?.addEventListener("change", async (event) => {
   } finally {
     target.disabled = false;
   }
+});
+
+adminModalBody?.addEventListener("click", (event) => {
+  const btn = event.target.closest("[data-invoice]");
+  if (!btn) return;
+  const orderId = btn.getAttribute("data-invoice");
+  const order = latestOrders.find((o) => String(o.id) === String(orderId));
+  if (!order) return;
+  renderInvoice(order);
 });
 
 document.addEventListener("click", async (event) => {

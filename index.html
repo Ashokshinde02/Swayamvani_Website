@@ -8,13 +8,14 @@
       name="description"
       content="Buy authentic Indian classical instruments: sitar, tabla, tanpura, flute and more."
     />
+    <link rel="icon" href="/logo.jpeg" type="image/jpeg" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
       href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;700&family=Manrope:wght@400;600;700&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="styles.css?v=20260319cart5" />
+    <link rel="stylesheet" href="styles.css?v=20260319cart6" />
   </head>
   <body>
     <header class="site-header">
@@ -25,9 +26,9 @@
         </a>
         <nav class="main-nav" aria-label="Main navigation">
           <a href="#products" data-i18n="navProducts">Products</a>
-          <a href="/about.html" data-i18n="navAbout">About</a>
+          <a href="#about" data-i18n="navAbout">About</a>
           <a href="#contact" data-i18n="navContact">Contact</a>
-          <a href="/admin" data-i18n="navAdmin">Admin</a>
+          <!-- Admin link hidden on customer-facing site -->
         </nav>
         <div class="header-actions">
           <label for="langSwitcher" class="sr-only">Language</label>
@@ -50,8 +51,8 @@
                 <button type="button" id="dropdownLogout" role="menuitem">Logout</button>
               </div>
             </div>
-            <button id="customerOrdersBtn" class="orders-btn" aria-label="View your orders" hidden>My Orders</button>
-            <button id="customerAuthBtn" class="auth-btn" data-i18n="customerLogin">Customer Login</button>
+           <!-- <button id="customerOrdersBtn" class="orders-btn" aria-label="View your orders" hidden>My Orders</button> -->
+            <button id="customerAuthBtn" class="auth-btn" data-i18n="customerLogin">Login</button>
           </div>
           <button id="cartBtn" class="cart-btn" aria-label="Open cart">
             <span id="cartBtnLabel" data-i18n="cart">Cart</span> <span id="cartCount">0</span>
@@ -207,29 +208,37 @@
         <h2 data-i18n="yourCart">Your Cart</h2>
         <button id="closeCart" class="close-cart-icon" aria-label="Close cart">×</button>
       </div>
-      <div class="cart-body-grid">
+  <div class="cart-body-grid">
         <div id="cartItems" class="cart-items"></div>
-        <div class="cart-footer">
-          <div class="coupon-box">
-            <label for="couponCodeInput" data-i18n="couponLabel">Coupon</label>
-            <div class="coupon-row">
-              <input id="couponCodeInput" type="text" placeholder="Enter code" autocomplete="off" />
-              <button id="couponApplyBtn" type="button" class="filter-btn" data-i18n="applyCoupon">Apply</button>
+        <div class="cart-summary">
+          <div class="summary-card">
+            <h3 class="summary-title">Order Summary</h3>
+            <div class="summary-body">
+              <div class="summary-row"><span>Items</span><span id="cartItemsCount">0</span></div>
+              <div class="summary-row"><span>Subtotal</span><span id="cartSubtotal">₹0</span></div>
+              <div class="summary-row"><span>Savings</span><span id="cartTotalSavings">₹0</span></div>
+              <p id="cartSavings" class="cart-savings" aria-live="polite"></p>
+              <div class="coupon-box">
+                <label for="couponCodeInput" data-i18n="couponLabel">Coupon</label>
+                <div class="coupon-row">
+                  <input id="couponCodeInput" type="text" placeholder="Enter code" autocomplete="off" />
+                  <button id="couponApplyBtn" type="button" class="filter-btn" data-i18n="applyCoupon">Apply</button>
+                </div>
+                <p id="couponStatus" class="form-status" aria-live="polite"></p>
+              </div>
+              <div class="ship-box">
+                  <label for="checkoutMobile">Mobile</label>
+                  <input id="checkoutMobile" type="tel" inputmode="numeric" pattern="\\d{10}" maxlength="10" placeholder="10-digit mobile" />
+                  <label for="checkoutAddress">Shipping Address</label>
+                  <textarea id="checkoutAddress" rows="2" placeholder="House, street, city, pincode"></textarea>
+                  <p id="shipStatus" class="form-status" aria-live="polite"></p>
+                </div>
             </div>
-            <p id="couponStatus" class="form-status" aria-live="polite"></p>
-          </div>
-          <div class="ship-box">
-              <label for="checkoutMobile">Mobile</label>
-              <input id="checkoutMobile" type="tel" inputmode="numeric" pattern="\\d{10}" maxlength="10" placeholder="10-digit mobile" />
-              <label for="checkoutAddress">Shipping Address</label>
-              <textarea id="checkoutAddress" rows="2" placeholder="House, street, city, pincode"></textarea>
-              <p id="shipStatus" class="form-status" aria-live="polite"></p>
+            <div class="summary-total"><span data-i18n="total">Total</span><span id="cartTotal">₹0</span></div>
+            <div class="cart-actions">
+              <button id="checkoutBtn" data-i18n="checkout">Proceed to Checkout</button>
+              <button id="closeCartFooter" class="close-cart-btn" data-i18n="closeCart">Close Cart</button>
             </div>
-          <p><span data-i18n="total">Total</span>: <span id="cartTotal">0</span></p>
-          <p id="cartSavings" class="cart-savings" aria-live="polite"></p>
-          <div class="cart-actions">
-            <button id="checkoutBtn" data-i18n="checkout">Proceed to Checkout</button>
-            <button id="closeCartFooter" class="close-cart-btn" data-i18n="closeCart">Close Cart</button>
           </div>
         </div>
       </div>
@@ -255,35 +264,10 @@
           <h3 data-i18n="customerTitle">Customer Account</h3>
           <button id="closeCustomerModal" class="close-cart-icon" type="button" aria-label="Close">×</button>
         </div>
-        <p id="customerAuthStatus" class="form-status" aria-live="polite"></p>
         <div class="customer-layout">
-          <aside class="customer-hero">
-            <p class="customer-pill">Member exclusives</p>
-            <h4 class="customer-hero-title">Unlock tuned instruments, faster delivery, and lesson credits.</h4>
-            <ul class="customer-perks" aria-label="Customer benefits">
-              <li>10% instant savings applied at checkout</li>
-              <li>Priority WhatsApp support with makers</li>
-              <li>4 complimentary one-on-one lessons</li>
-            </ul>
-            <div class="customer-stats" aria-label="Social proof">
-              <div class="stat-card">
-                <span class="stat-value">12k+</span>
-                <span class="stat-label">Orders fulfilled</span>
-              </div>
-              <div class="stat-card">
-                <span class="stat-value">4.9★</span>
-                <span class="stat-label">Musician rating</span>
-              </div>
-              <div class="stat-card">
-                <span class="stat-value">SSL</span>
-                <span class="stat-label">Secure checkout</span>
-              </div>
-            </div>
-            <p class="customer-quote">“Feels like having a personal luthier on call.”</p>
-          </aside>
           <div class="customer-auth-grid">
             <form id="customerLoginForm" class="inquiry-form customer-form">
-              <h4 data-i18n="customerLogin">Customer Login</h4>
+              <h4 data-i18n="customerLogin">Login</h4>
               <label>
                 <span data-i18n="labelEmail">Email</span>
                 <input type="email" id="customerLoginEmail" required />
@@ -301,10 +285,11 @@
                   </button>
                 </span>
               </label>
-              <button type="submit" data-i18n="customerLogin">Customer Login</button>
+              <button type="submit" data-i18n="customerLogin">Login</button>
               <p class="form-footnote">We’ll remember your cart and lesson credits.</p>
+              <a href="#" id="showRegisterLink" class="text-link">Create account</a>
             </form>
-            <form id="customerRegisterForm" class="inquiry-form customer-form">
+            <form id="customerRegisterForm" class="inquiry-form customer-form hidden">
               <h4 data-i18n="customerRegister">Create Account</h4>
               <label>
                 <span data-i18n="labelName">Name</span>
@@ -337,6 +322,7 @@
               </label>
               <button type="submit" data-i18n="customerRegister">Create Account</button>
               <p class="form-footnote">No spam. Only order updates and tuning tips.</p>
+              <a href="#" id="backToLoginLink" class="text-link">Back to login</a>
             </form>
           </div>
         </div>
@@ -349,7 +335,7 @@
           <h3>My Orders</h3>
           <button id="closeOrdersModal" class="close-cart-icon" type="button" aria-label="Close">×</button>
         </div>
-        <div id="ordersEmpty" class="orders-empty">Login to see your past orders.</div>
+        <div id="ordersEmpty" class="orders-empty">No Record Found.</div>
         <div id="ordersList" class="orders-list" role="list"></div>
       </div>
     </div>
@@ -362,7 +348,7 @@
         </div>
         <div>
           <p class="footer-title">Quick Links</p>
-          <p><a href="#products">Products</a> · <a href="/about.html">About</a> · <a href="#contact">Contact</a></p>
+          <p><a href="#products">Products</a> · <a href="#about">About</a> · <a href="#contact">Contact</a></p>
         </div>
         <div>
           <p class="footer-title">Support</p>

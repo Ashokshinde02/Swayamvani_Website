@@ -128,7 +128,7 @@ const translations = {
     checkoutUnavailable: "Razorpay checkout unavailable",
     checkoutFailed: "Checkout failed",
     customerTitle: "Customer Account",
-    customerLogin: "Customer Login",
+  customerLogin: "Login",
     customerRegister: "Create Account",
     customerPassword: "Password",
     customerLogout: "Logout",
@@ -379,6 +379,8 @@ const closeCustomerModal = document.getElementById("closeCustomerModal");
 const customerAuthStatus = document.getElementById("customerAuthStatus");
 const customerLoginForm = document.getElementById("customerLoginForm");
 const customerRegisterForm = document.getElementById("customerRegisterForm");
+const showRegisterLink = document.getElementById("showRegisterLink");
+const backToLoginLink = document.getElementById("backToLoginLink");
 const videoGrid = document.getElementById("videoGrid");
 const productModal = document.getElementById("productModal");
 const closeProductModal = document.getElementById("closeProductModal");
@@ -400,6 +402,34 @@ const profileDropdown = document.getElementById("profileDropdown");
 const dropdownOrders = document.getElementById("dropdownOrders");
 const dropdownLogout = document.getElementById("dropdownLogout");
 let isCustomerProfileVisible = false;
+
+function toggleRegisterForm(show) {
+  if (!customerLoginForm || !customerRegisterForm) return;
+  const shouldShow = typeof show === "boolean" ? show : customerRegisterForm.classList.contains("hidden");
+  if (shouldShow) {
+    customerRegisterForm.classList.remove("hidden");
+    customerLoginForm.classList.add("hidden");
+    const firstField = document.getElementById("customerRegisterName");
+    if (firstField) firstField.focus();
+  } else {
+    customerRegisterForm.classList.add("hidden");
+    customerLoginForm.classList.remove("hidden");
+    customerLoginForm.querySelector("input")?.focus();
+  }
+}
+
+showRegisterLink?.addEventListener("click", (e) => {
+  e.preventDefault();
+  toggleRegisterForm(true);
+});
+
+backToLoginLink?.addEventListener("click", (e) => {
+  e.preventDefault();
+  toggleRegisterForm(false);
+});
+
+// initial state
+toggleRegisterForm(false);
 
 function firstNameFrom(name = "") {
   const trimmed = String(name).trim();
@@ -484,6 +514,7 @@ async function performLogout() {
     /* ignore */
   }
   clearCartAndStorage();
+  clearCheckoutContact();
   state.customer = null;
   renderCustomerState();
 }
@@ -669,7 +700,9 @@ function getCartItemFinalPrice(item) {
 }
 
 function getCartItemSavings(item) {
-  return Math.max(0, (item?.price || 0) - getCartItemFinalPrice(item));
+  const unitSavings = Math.max(0, (item?.price || 0) - getCartItemFinalPrice(item));
+  const qty = Number(item?.qty || 1);
+  return unitSavings * qty;
 }
 
 function resolveImage(product) {
@@ -696,35 +729,27 @@ function renderProducts() {
     card.className = "product-card";
     card.setAttribute("data-product-id", String(product.id));
     const image = product.images && product.images.length ? product.images[0] : resolveImage(product);
-    const videoLink = product.video_url ? `<a href="${product.video_url}" target="_blank" rel="noopener noreferrer">${t("watchMakingVideo")}</a>` : "";
     const discountPct = getActiveDiscountPercent();
     const dealPrice = discountPct > 0 ? getCartItemFinalPrice(product) : product.price;
     const savings = discountPct > 0 ? product.price - dealPrice : 0;
     card.innerHTML = `
       <img src="${image}" alt="${product.name}" class="product-image" onerror="this.src='assets/images/sitar.svg'" />
       <h3>${product.name}</h3>
-      <p class="product-meta">${product.details}</p>
-      <p class="product-meta">${videoLink}</p>
       <div class="product-bottom">
         <div class="price-stack">
           <div class="price-row">
             <span class="price-label">${discountPct > 0 ? t("discountedPriceLabel") : "Price"}</span>
             <span class="price deal">${formatINR(dealPrice)}</span>
           </div>
-          ${
-            discountPct > 0
-              ? `<div class="price-subrow">
-                  <span class="price-label muted">M.R.P:</span>
-                  <span class="price-original">${formatINR(product.price)}</span>
-                  <span class="price-pct">(${discountPct}% off)</span>
-                </div>
-                <span class="price-savings">You save ${formatINR(savings)}</span>`
-              : ""
-          }
+          <div class="price-subrow">
+            <span class="price-label muted">M.R.P:</span>
+            <span class="price-original">${formatINR(product.price)}</span>
+            ${discountPct > 0 ? `<span class="price-pct">(${discountPct}% off)</span>` : ""}
+          </div>
+          ${discountPct > 0 ? `<span class="price-savings">You save ${formatINR(savings)}</span>` : ""}
         </div>
-        <button data-id="${product.id}">
-          <span>${t("addToCart")}</span>
-        </button>
+        <button class="product-cta" data-id="${product.id}"><span>${t("addToCart")}</span></button>
+        <button class="secondary-cta view-details" data-product-id="${product.id}">View details</button>
       </div>
     `;
     productGrid.appendChild(card);
@@ -745,23 +770,55 @@ function openProductModal(product) {
       : `${product.category} | ${formatINR(product.price)}`;
   productMediaList.innerHTML = "";
 
-  const images = product.images && product.images.length ? product.images : [resolveImage(product)];
-  images.forEach((src, index) => {
-    const img = document.createElement("img");
-    img.src = src;
-    img.alt = `${product.name} photo ${index + 1}`;
-    img.loading = "lazy";
-    productMediaList.appendChild(img);
+  const images = (product.images && product.images.length ? product.images : [resolveImage(product)]).slice(0, 8);
+
+  const wrapper = document.createElement("div");
+  wrapper.className = "modal-product-grid";
+
+  const gallery = document.createElement("div");
+  gallery.className = "modal-gallery";
+
+  const mainWrap = document.createElement("div");
+  mainWrap.className = "modal-main";
+  const mainImg = document.createElement("img");
+  mainImg.src = images[0];
+  mainImg.alt = product.name;
+  mainImg.loading = "lazy";
+  mainWrap.appendChild(mainImg);
+
+  const thumbs = document.createElement("div");
+  thumbs.className = "modal-thumbs";
+  images.forEach((src, idx) => {
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "modal-thumb";
+    if (idx === 0) btn.classList.add("active");
+    btn.innerHTML = `<img src="${src}" alt="${product.name} thumbnail ${idx + 1}" loading="lazy" />`;
+    btn.addEventListener("click", () => {
+      mainImg.src = src;
+      thumbs.querySelectorAll(".modal-thumb").forEach((el) => el.classList.remove("active"));
+      btn.classList.add("active");
+    });
+    thumbs.appendChild(btn);
   });
 
-  if (product.video_url) {
-    const video = document.createElement("video");
-    video.controls = true;
-    video.preload = "metadata";
-    video.playsInline = true;
-    video.src = product.video_url;
-    productMediaList.appendChild(video);
-  }
+  gallery.appendChild(mainWrap);
+  gallery.appendChild(thumbs);
+
+  const detailCol = document.createElement("div");
+  detailCol.className = "modal-details";
+  detailCol.innerHTML = `
+    <p class="modal-price">${formatINR(dealPrice)} ${
+      discountPct > 0 ? `<span class="price-original">${formatINR(product.price)}</span> <span class="price-pct">(${discountPct}% off)</span>` : ""
+    }</p>
+    ${savings > 0 ? `<p class="modal-savings">${t("youSavedLabel")} ${formatINR(savings)}</p>` : ""}
+    <p class="modal-category">${product.category || ""}</p>
+    <p class="modal-desc">${product.details || ""}</p>
+  `;
+
+  wrapper.appendChild(gallery);
+  wrapper.appendChild(detailCol);
+  productMediaList.appendChild(wrapper);
 
   productModalAddToCart.dataset.productId = String(product.id);
   productModalAddToCart.innerHTML = `<span>${t("addToCart")}</span>`;
@@ -782,6 +839,7 @@ function renderCart() {
     cartItems.innerHTML = `<p>${t("cartEmpty")}</p>`;
   } else {
     state.cart.forEach((item, index) => {
+      const qty = Number(item.qty || 1);
       const row = document.createElement("div");
       row.className = "cart-item";
       const imageSrc = item.images && item.images.length ? item.images[0] : resolveImage(item);
@@ -812,8 +870,9 @@ function renderCart() {
       meta.className = "cart-item-meta";
 
       const discountedPrice = getCartItemFinalPrice(item);
+      const lineTotal = discountedPrice * qty;
       const savings = getCartItemSavings(item);
-      const discountPct = item.price > 0 ? Math.round((savings / item.price) * 100) : 0;
+      const discountPct = item.price > 0 ? Math.round(((item.price - discountedPrice) / item.price) * 100) : 0;
 
       const priceWrap = document.createElement("div");
       priceWrap.className = "cart-item-price-wrap";
@@ -825,28 +884,30 @@ function renderCart() {
       dealLabel.textContent = t("discountedPriceLabel");
       const dealPrice = document.createElement("span");
       dealPrice.className = "cart-item-price";
-      dealPrice.textContent = `${formatINR(discountedPrice)}`;
+      dealPrice.textContent = `${formatINR(lineTotal)}`;
       dealRow.appendChild(dealLabel);
       dealRow.appendChild(dealPrice);
       priceWrap.appendChild(dealRow);
 
-      if (savings > 0) {
-        const mrpRow = document.createElement("div");
-        mrpRow.className = "cart-price-subrow";
-        const mrpLabel = document.createElement("span");
-        mrpLabel.className = "cart-item-price-label muted";
-        mrpLabel.textContent = "M.R.P:";
-        const original = document.createElement("span");
-        original.className = "cart-item-price-original";
-        original.textContent = `${formatINR(item.price)}`;
+      const mrpRow = document.createElement("div");
+      mrpRow.className = "cart-price-subrow";
+      const mrpLabel = document.createElement("span");
+      mrpLabel.className = "cart-item-price-label muted";
+      mrpLabel.textContent = "M.R.P:";
+      const original = document.createElement("span");
+      original.className = "cart-item-price-original";
+      original.textContent = `${formatINR(item.price * qty)}`;
+      mrpRow.appendChild(mrpLabel);
+      mrpRow.appendChild(original);
+      if (discountPct > 0) {
         const pct = document.createElement("span");
         pct.className = "cart-item-discount-pct";
         pct.textContent = `(${discountPct}% off)`;
-        mrpRow.appendChild(mrpLabel);
-        mrpRow.appendChild(original);
         mrpRow.appendChild(pct);
-        priceWrap.appendChild(mrpRow);
+      }
+      priceWrap.appendChild(mrpRow);
 
+      if (savings > 0) {
         const discountNote = document.createElement("span");
         discountNote.className = "cart-item-discount";
         discountNote.textContent = `You save ${formatINR(savings)}`;
@@ -854,12 +915,21 @@ function renderCart() {
         priceWrap.appendChild(discountNote);
       }
 
+      const controls = document.createElement("div");
+      controls.className = "qty-controls";
+      controls.innerHTML = `
+        <button class=\"qty-btn\" type=\"button\" data-qty-dec=\"${index}\">-</button>
+        <span class=\"qty-value\">${qty}</span>
+        <button class=\"qty-btn\" type=\"button\" data-qty-inc=\"${index}\">+</button>
+      `;
+
       const removeButton = document.createElement("button");
       removeButton.type = "button";
       removeButton.dataset.remove = String(index);
       removeButton.textContent = t("remove");
 
       meta.appendChild(priceWrap);
+      meta.appendChild(controls);
       meta.appendChild(removeButton);
       details.appendChild(meta);
 
@@ -869,10 +939,17 @@ function renderCart() {
     });
   }
 
-  const total = state.cart.reduce((sum, item) => sum + getCartItemFinalPrice(item), 0);
-  const mrpTotal = state.cart.reduce((sum, item) => sum + (item?.price || 0), 0);
+  const total = state.cart.reduce((sum, item) => sum + getCartItemFinalPrice(item) * (item.qty || 1), 0);
+  const mrpTotal = state.cart.reduce((sum, item) => sum + (item?.price || 0) * (item.qty || 1), 0);
+  const itemsCount = state.cart.reduce((sum, item) => sum + (item.qty || 1), 0);
   cartTotal.textContent = formatINR(total);
   cartCount.textContent = state.cart.length;
+  const itemsCountEl = document.getElementById("cartItemsCount");
+  const cartSubtotalEl = document.getElementById("cartSubtotal");
+  const cartTotalSavingsEl = document.getElementById("cartTotalSavings");
+  if (itemsCountEl) itemsCountEl.textContent = itemsCount;
+  if (cartSubtotalEl) cartSubtotalEl.textContent = formatINR(mrpTotal);
+  if (cartTotalSavingsEl) cartTotalSavingsEl.textContent = formatINR(Math.max(0, mrpTotal - total));
   saveCart();
   if (cartSavingsEl) {
     const totalSavings = state.cart.reduce((sum, item) => sum + getCartItemSavings(item), 0);
@@ -1036,12 +1113,13 @@ function closeCustomerAuthModal() {
 function renderCustomerState() {
   if (customerAuthBtn) {
     if (state.customer) {
-      customerAuthBtn.textContent = t("customerLogout");
+      customerAuthBtn.setAttribute("hidden", "true");
       if (customerGreeting) {
         const firstName = firstNameFrom(state.customer.name || "");
         customerGreeting.textContent = firstName ? `Hi, ${firstName}` : "";
       }
     } else {
+      customerAuthBtn.removeAttribute("hidden");
       customerAuthBtn.textContent = t("customerLogin");
       if (customerGreeting) customerGreeting.textContent = "";
     }
@@ -1119,6 +1197,7 @@ async function checkCustomerSession() {
   renderCustomerState();
   renderProducts();
   renderCart();
+  applyStoredShipping(state.customer);
 }
 
 function togglePasswordById(targetId, button) {
@@ -1185,7 +1264,12 @@ document.addEventListener("click", async (event) => {
   if (id) {
     const selected = products.find((p) => p.id === Number(id));
     if (selected) {
-      state.cart.push(selected);
+      const existing = state.cart.find((item) => item.id === selected.id);
+      if (existing) {
+        existing.qty = Number(existing.qty || 1) + 1;
+      } else {
+        state.cart.push({ ...selected, qty: 1 });
+      }
       renderCart();
     }
     return;
@@ -1205,6 +1289,26 @@ document.addEventListener("click", async (event) => {
   if (removeIndex !== null) {
     state.cart.splice(Number(removeIndex), 1);
     renderCart();
+  }
+
+  const incIndex = event.target.getAttribute("data-qty-inc");
+  if (incIndex !== null) {
+    const idx = Number(incIndex);
+    if (state.cart[idx]) {
+      state.cart[idx].qty = Number(state.cart[idx].qty || 1) + 1;
+      renderCart();
+    }
+    return;
+  }
+
+  const decIndex = event.target.getAttribute("data-qty-dec");
+  if (decIndex !== null) {
+    const idx = Number(decIndex);
+    if (state.cart[idx]) {
+      state.cart[idx].qty = Math.max(1, Number(state.cart[idx].qty || 1) - 1);
+      renderCart();
+    }
+    return;
   }
 
 });
@@ -1240,7 +1344,12 @@ productModalAddToCart?.addEventListener("click", () => {
   const id = Number(productModalAddToCart.dataset.productId || "0");
   const selected = products.find((p) => p.id === id);
   if (selected) {
-    state.cart.push(selected);
+    const existing = state.cart.find((item) => item.id === selected.id);
+    if (existing) {
+      existing.qty = Number(existing.qty || 1) + 1;
+    } else {
+      state.cart.push({ ...selected, qty: 1 });
+    }
     renderCart();
     closeProductDetailsModal();
   }
@@ -1269,7 +1378,13 @@ customerAuthBtn?.addEventListener("click", async () => {
 
 closeCustomerModal?.addEventListener("click", closeCustomerAuthModal);
 customerModal?.addEventListener("click", (event) => {
-  if (event.target === customerModal) closeCustomerAuthModal();
+  // Close when clicking anywhere outside the modal card
+  if (!event.target.closest(".customer-modal-card")) closeCustomerAuthModal();
+});
+document.addEventListener("keydown", (event) => {
+  if (event.key === "Escape" && customerModal?.classList.contains("open")) {
+    closeCustomerAuthModal();
+  }
 });
 
 // Profile dropdown (hover + click)
@@ -1284,6 +1399,9 @@ function closeProfileDropdown() {
   if (!profileMenu || !profileDropdown) return;
   profileMenu.classList.remove("open");
   profileDropdown.setAttribute("aria-hidden", "true");
+  if (profileDropdown.contains(document.activeElement)) {
+    customerProfileToggle?.focus();
+  }
   customerProfileToggle?.setAttribute("aria-expanded", "false");
 }
 profileMenu?.addEventListener("mouseenter", () => {
@@ -1337,6 +1455,7 @@ customerLoginForm?.addEventListener("submit", async (event) => {
     });
 
     state.customer = data.customer || null;
+    applyStoredShipping(state.customer);
     renderCustomerState();
     customerLoginForm.reset();
     closeCustomerAuthModal();
@@ -1365,6 +1484,7 @@ customerRegisterForm?.addEventListener("submit", async (event) => {
     });
 
     state.customer = data.customer || null;
+    applyStoredShipping(state.customer);
     renderCustomerState();
     customerRegisterForm.reset();
     closeCustomerAuthModal();
@@ -1373,12 +1493,38 @@ customerRegisterForm?.addEventListener("submit", async (event) => {
   }
 });
 
+function applyStoredShipping(customer) {
+  if (!customer) return;
+  const mobileField = document.getElementById("checkoutMobile");
+  const addressField = document.getElementById("checkoutAddress");
+  if (customer.mobile && mobileField && !mobileField.value) {
+    mobileField.value = customer.mobile;
+  }
+  if (customer.address && addressField && !addressField.value) {
+    addressField.value = customer.address;
+  }
+}
+
+function clearCheckoutContact() {
+  const mobileField = document.getElementById("checkoutMobile");
+  const addressField = document.getElementById("checkoutAddress");
+  if (mobileField) mobileField.value = "";
+  if (addressField) addressField.value = "";
+}
+
+function clearCheckoutContact() {
+  const mobileField = document.getElementById("checkoutMobile");
+  const addressField = document.getElementById("checkoutAddress");
+  if (mobileField) mobileField.value = "";
+  if (addressField) addressField.value = "";
+}
+
 async function tryRazorpayCheckout() {
   const response = await fetch(requireBackendPath("/api/payment/razorpay/order"), {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
-      items: state.cart.map((item) => ({ name: item.name, price: getCartItemFinalPrice(item) }))
+      items: state.cart.map((item) => ({ name: item.name, price: getCartItemFinalPrice(item) * (item.qty || 1) }))
     })
   });
 
@@ -1427,7 +1573,12 @@ async function fallbackWhatsAppCheckout() {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
-      items: state.cart.map((item) => ({ name: item.name, price: getCartItemFinalPrice(item) })),
+      items: state.cart.map((item) => ({
+        name: item.name,
+        price: getCartItemFinalPrice(item) * (item.qty || 1),
+        qty: item.qty || 1,
+        image: (item.images && item.images[0]) || ""
+      })),
       mobile,
       address
     })
