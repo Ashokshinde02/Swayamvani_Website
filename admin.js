@@ -22,6 +22,16 @@ const adminModalTitle = document.getElementById("adminModalTitle");
 const adminModalBody = document.getElementById("adminModalBody");
 const adminModalClose = document.getElementById("adminModalClose");
 
+const ORDER_STATUS_FILTERS = [
+  { value: "all", label: "All orders" },
+  { value: "pending", label: "Pending" },
+  { value: "pending_payment", label: "Pending payment" },
+  { value: "confirmed", label: "Confirmed" },
+  { value: "shipped", label: "Shipped" },
+  { value: "delivered", label: "Delivered" },
+  { value: "cancelled", label: "Cancelled" }
+];
+
 let latestOrders = [];
 
 function escapeHtml(value) {
@@ -389,45 +399,71 @@ function renderCustomers(customers) {
 
 function buildOrdersHtml(orders = []) {
   if (!orders.length) {
-    return "<p>No orders found.</p>";
+    return '<p class="form-status" aria-live="polite">No orders found.</p>';
   }
   const fmtINR = (val) => new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 }).format(val || 0);
-  return `
-    <div class="admin-modal-scroll">
-      ${orders
-        .map((o) => {
-          const created = o.created_at ? new Date(o.created_at).toLocaleString("en-IN") : "—";
-          const items = (o.items || [])
-            .map((it) => `${escapeHtml(it.name)} (${fmtINR(it.price)})`)
-            .join(" · ");
-          return `
-          <div class="cart-item order-admin-card">
-            <div class="order-admin-head">
-              <div>
-                <strong>Order #${o.id}</strong>
-                <p>${escapeHtml(o.customer_name || "")}</p>
-                <p class="form-hint">${escapeHtml(o.customer_email || "")}</p>
-                <p class="form-hint">${created}</p>
-                <p class="form-hint">Mobile: ${escapeHtml(o.mobile || "—")}</p>
-                <p class="form-hint">Address: ${escapeHtml(o.address || "—")}</p>
-              </div>
-              <label class="order-status-select">
-                <span>Status</span>
-                <select data-order-id="${o.id}">
-                  ${["pending", "pending_payment", "confirmed", "shipped", "delivered", "cancelled"]
-                    .map((status) => `<option value="${status}" ${o.status === status ? "selected" : ""}>${status}</option>`)
-                    .join("")}
-                </select>
-              </label>
+  return orders
+    .map((o) => {
+      const canInvoice = ["confirmed", "shipped", "delivered"].includes(o.status);
+      const created = o.created_at ? new Date(o.created_at).toLocaleString("en-IN") : "—";
+      const items = (o.items || [])
+        .map((it) => `${escapeHtml(it.name)} (${fmtINR(it.price)})`)
+        .join(" · ");
+      return `
+        <div class="cart-item order-admin-card">
+          <div class="order-admin-head">
+            <div>
+              <strong>Order #${o.id}</strong>
+              <p>${escapeHtml(o.customer_name || "")}</p>
+              <p class="form-hint">${escapeHtml(o.customer_email || "")}</p>
+              <p class="form-hint">${created}</p>
+              <p class="form-hint">Mobile: ${escapeHtml(o.mobile || "—")}</p>
+              <p class="form-hint">Address: ${escapeHtml(o.address || "—")}</p>
             </div>
-            <p>${items}</p>
-            <p><strong>Total:</strong> ${fmtINR(o.total || 0)}</p>
-            <button type="button" class="filter-btn" data-invoice="${o.id}">Generate Invoice</button>
-            ${o.payment_ref ? `<p class="form-hint">Payment Ref: ${escapeHtml(o.payment_ref)}</p>` : ""}
+            <label class="order-status-select">
+              <span>Status</span>
+              <select data-order-id="${o.id}">
+                ${["pending", "pending_payment", "confirmed", "shipped", "delivered", "cancelled"]
+                  .map((status) => `<option value="${status}" ${o.status === status ? "selected" : ""}>${status}</option>`)
+                  .join("")}
+              </select>
+            </label>
           </div>
-        `;
-        })
-        .join("")}
+          <p>${items}</p>
+          <p><strong>Total:</strong> ${fmtINR(o.total || 0)}</p>
+          ${
+            canInvoice
+              ? `<button type="button" class="filter-btn" data-invoice="${o.id}">Generate Invoice</button>`
+              : `<p class="form-hint">Invoice available after status is confirmed.</p>`
+          }
+          ${o.payment_ref ? `<p class="form-hint">Payment Ref: ${escapeHtml(o.payment_ref)}</p>` : ""}
+        </div>
+      `;
+    })
+    .join("");
+}
+
+function buildOrdersModalContent(selectedStatus, orders) {
+  const statusLabel = ORDER_STATUS_FILTERS.find((entry) => entry.value === selectedStatus)?.label || "All orders";
+  const optionsHtml = ORDER_STATUS_FILTERS.map(
+    (entry) => `<option value="${entry.value}" ${entry.value === selectedStatus ? "selected" : ""}>${entry.label}</option>`
+  ).join("");
+  return `
+    <div class="admin-modal-scroll admin-modal-orders">
+      <div class="orders-filter-row">
+        <label>
+          Show
+          <select id="orderStatusFilter">
+            ${optionsHtml}
+          </select>
+        </label>
+        <p class="form-hint" aria-live="polite">
+          Showing ${orders.length} order${orders.length === 1 ? "" : "s"} (${statusLabel.toLowerCase()})
+        </p>
+      </div>
+      <div id="ordersListContainer">
+        ${buildOrdersHtml(orders)}
+      </div>
     </div>
   `;
 }
@@ -571,12 +607,16 @@ async function openOffersModal() {
 async function openOrdersModal(status = "pending") {
   openAdminModal("Orders", "<p class=\"form-status\">Loading orders…</p>");
   try {
-    const data = await api(`/api/admin/orders${status ? `?status=${encodeURIComponent(status)}` : ""}`);
+    const queryStatus = status && status !== "all" ? status : "";
+    const data = await api(`/api/admin/orders${queryStatus ? `?status=${encodeURIComponent(queryStatus)}` : ""}`);
     latestOrders = data.orders || [];
     if (adminModalBody) {
-      adminModalBody.innerHTML = buildOrdersHtml(latestOrders);
+      adminModalBody.innerHTML = buildOrdersModalContent(status || "all", latestOrders);
+      const filter = adminModalBody.querySelector("#orderStatusFilter");
+      filter?.addEventListener("change", () => openOrdersModal(filter.value));
     }
-    if (adminStatus) adminStatus.textContent = `Loaded ${latestOrders.length} orders${status ? ` (${status})` : ""}.`;
+    const statusLabel = status && status !== "all" ? status : "all";
+    if (adminStatus) adminStatus.textContent = `Loaded ${latestOrders.length} orders (${statusLabel}).`;
   } catch (error) {
     if (adminModalBody) adminModalBody.innerHTML = `<p class="form-status">${escapeHtml(error.message || "Failed to load orders")}</p>`;
     if (adminStatus) adminStatus.textContent = error.message || "Failed to load orders.";
@@ -801,6 +841,11 @@ adminModalBody?.addEventListener("click", (event) => {
   const orderId = btn.getAttribute("data-invoice");
   const order = latestOrders.find((o) => String(o.id) === String(orderId));
   if (!order) return;
+   const canInvoice = ["confirmed", "shipped", "delivered"].includes(order.status);
+   if (!canInvoice) {
+     if (adminStatus) adminStatus.textContent = "Invoice can be generated only after the order is confirmed.";
+     return;
+   }
   renderInvoice(order);
 });
 

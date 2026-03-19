@@ -255,6 +255,7 @@ func main() {
 	mux.HandleFunc("/api/customer/me", s.handleCustomerMe)
 	mux.HandleFunc("/api/customer/orders", s.handleCustomerOrders)
 	mux.HandleFunc("/api/offers", s.handleGetOffers)
+	mux.HandleFunc("/api/coupon/use", s.handleCouponUse)
 	mux.HandleFunc("/api/admin/offers", s.handleAdminOffers)
 	mux.HandleFunc("/api/admin/orders", s.handleAdminOrders)
 	mux.HandleFunc("/api/admin/products", s.handleAdminProducts)
@@ -1413,6 +1414,40 @@ func (s *Server) handleProducts(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"products": products})
+}
+
+func (s *Server) handleCouponUse(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		writeJSONError(w, http.StatusMethodNotAllowed, "method not allowed")
+		return
+	}
+	var payload struct {
+		Code  string `json:"code"`
+		Email string `json:"email"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
+		writeJSONError(w, http.StatusBadRequest, "invalid JSON payload")
+		return
+	}
+	code := strings.TrimSpace(payload.Code)
+	if code == "" {
+		writeJSONError(w, http.StatusBadRequest, "invalid coupon code")
+		return
+	}
+	active, _, err := s.currentOffers()
+	if err != nil {
+		writeJSONError(w, http.StatusInternalServerError, "failed to load offers")
+		return
+	}
+	if !active.CouponEnabled || active.CouponCode == "" || active.CouponPercent <= 0 {
+		writeJSONError(w, http.StatusBadRequest, "coupon unavailable")
+		return
+	}
+	if !strings.EqualFold(code, active.CouponCode) {
+		writeJSONError(w, http.StatusBadRequest, "invalid coupon code")
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]string{"status": "ok"})
 }
 
 func (s *Server) handleVideos(w http.ResponseWriter, r *http.Request) {

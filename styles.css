@@ -2110,7 +2110,7 @@ h3 {
 }
 
 .admin-modal {
-  width: min(520px, 100%);
+  width: min(900px, 100%);
   background: var(--surface);
   border-radius: 1rem;
   padding: 1.1rem 1.2rem;
@@ -2147,6 +2147,113 @@ h3 {
 
 .admin-modal-body {
   overflow: hidden;
+}
+
+.orders-filter-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.orders-filter-row label {
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.orders-filter-row select {
+  min-width: 150px;
+  border-radius: 0.65rem;
+  border: 1px solid #d9c7b4;
+  padding: 0.35rem 0.55rem;
+  font-family: "Manrope", sans-serif;
+  font-size: 0.95rem;
+  background: #fff;
+}
+
+.orders-filter-row .form-hint {
+  margin: 0;
+  font-size: 0.9rem;
+  color: #5a4031;
+}
+
+.admin-modal-orders #ordersListContainer {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.order-admin-card {
+  padding: 1rem;
+  border-radius: 1rem;
+  border: 1px solid #d1bda9;
+  background: linear-gradient(135deg, #fffdf8 0%, #fff4eb 60%);
+  box-shadow: 0 8px 20px rgba(15, 10, 6, 0.15);
+  font-family: "Manrope", sans-serif;
+}
+
+.order-admin-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
+}
+
+.order-admin-head strong {
+  font-size: 1.05rem;
+  letter-spacing: 0.02em;
+}
+
+.order-admin-head p {
+  margin: 0.2rem 0;
+  font-size: 0.9rem;
+  color: #3f2a1f;
+}
+
+.order-admin-head .form-hint {
+  color: #5c4231;
+  font-size: 0.85rem;
+}
+
+.order-status-select {
+  display: inline-flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #4a3322;
+}
+
+.order-status-select select {
+  border-radius: 0.65rem;
+  border: 1px solid #b79a88;
+  padding: 0.35rem 0.55rem;
+  font-family: "Manrope", sans-serif;
+}
+
+.order-admin-card p {
+  margin: 0.35rem 0;
+}
+
+.order-admin-card .filter-btn {
+  margin-top: 0.6rem;
+  width: 100%;
+  justify-content: center;
+}
+
+.order-admin-card strong {
+  font-weight: 600;
+  color: #1f1a17;
+}
+
+.order-admin-card .form-hint:last-child {
+  margin-top: 0.4rem;
+  font-size: 0.82rem;
+  color: #6b4e3b;
 }
 
 .admin-modal-scroll {

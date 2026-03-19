@@ -134,12 +134,12 @@ const translations = {
     customerLogout: "Logout",
     customerAuthSuccess: "You are logged in.",
     customerAuthFailed: "Customer authentication failed.",
-    offerTitle: "Exclusive Customer Offers",
-    offerDesc: "Login now to unlock instant savings and complimentary guidance from our master craftsmen.",
-    offerDiscountTitle: "10% off every instrument",
-    offerDiscountDesc: "Logged-in shoppers receive automatic 10% savings on each instrument in their cart.",
-    offerLessonsTitle: "First 4 lessons free",
-    offerLessonsDesc: "After purchase, unlock four complimentary one-on-one learning sessions with our expert musicians.",
+  offerTitle: "Exclusive Customer Offers",
+  offerDesc: "Login now to unlock instant savings and complimentary guidance from our master craftsmen.",
+  offerDiscountTitle: "",
+  offerDiscountDesc: "",
+  offerLessonsTitle: "",
+  offerLessonsDesc: "",
     discountedPriceLabel: "Discounted price",
     youSavedLabel: "You saved",
     couponLabel: "Coupon",
@@ -222,11 +222,11 @@ const translations = {
     customerAuthSuccess: "तुम्ही लॉगिन आहात.",
     customerAuthFailed: "ग्राहक प्रमाणीकरण अयशस्वी.",
     offerTitle: "ग्राहकांसाठी खास ऑफर्स",
-    offerDesc: "लॉगिन करून तत्काळ सूट आणि आमच्या मास्टर कारीगरांच्या मार्गदर्शनाचा लाभ घ्या.",
-    offerDiscountTitle: "प्रत्येक वाद्यावर 10% सूट",
-    offerDiscountDesc: "लॉगिन केलेल्या खरेदीदारांना प्रत्येक वाद्यावर 10% सूट आपोआप लागू होते.",
-    offerLessonsTitle: "पहिले 4 धडे मोफत",
-    offerLessonsDesc: "खरेदी केल्यानंतर चार मार्गदर्शित धडे आपल्याला मोफत मिळतात.",
+  offerDesc: "लॉगिन करून तत्काळ सूट आणि आमच्या मास्टर कारीगरांच्या मार्गदर्शनाचा लाभ घ्या.",
+  offerDiscountTitle: "",
+  offerDiscountDesc: "",
+  offerLessonsTitle: "",
+  offerLessonsDesc: "",
     discountedPriceLabel: "सुट केलेली किंमत",
     youSavedLabel: "तुम्ही वाचवले",
     couponLabel: "कूपन",
@@ -309,11 +309,11 @@ const translations = {
     customerAuthSuccess: "आप लॉगिन हैं।",
     customerAuthFailed: "ग्राहक प्रमाणीकरण विफल।",
     offerTitle: "ग्राहक ऑफ़र",
-    offerDesc: "अब लॉगिन करें और तुरंत बचत व हमारे मास्टर संगीतकारों की मार्गदर्शित सहायता पाएं।",
-    offerDiscountTitle: "हर वाद्य पर 10% छूट",
-    offerDiscountDesc: "लॉगइन करने वाले हर ग्राहक को हर ऑर्डर पर 10% छूट मिलती है।",
-    offerLessonsTitle: "पहले 4 पाठ मुफ्त",
-    offerLessonsDesc: "खरीद के बाद विशेषज्ञ संगीतकारों से चार मार्गदर्शित पाठ मुफ्त मिलेंगे।",
+  offerDesc: "अब लॉगिन करें और तुरंत बचत व हमारे मास्टर संगीतकारों की मार्गदर्शित सहायता पाएं।",
+  offerDiscountTitle: "",
+  offerDiscountDesc: "",
+  offerLessonsTitle: "",
+  offerLessonsDesc: "",
     discountedPriceLabel: "छूट वाली कीमत",
     youSavedLabel: "आपने बचाए",
     couponLabel: "कूपन",
@@ -401,6 +401,7 @@ const profileMenu = document.getElementById("profileMenu");
 const profileDropdown = document.getElementById("profileDropdown");
 const dropdownOrders = document.getElementById("dropdownOrders");
 const dropdownLogout = document.getElementById("dropdownLogout");
+const navLinks = document.querySelectorAll(".main-nav a, .brand, .cta");
 let isCustomerProfileVisible = false;
 
 function toggleRegisterForm(show) {
@@ -526,7 +527,8 @@ const offerLessonsTitleText = document.getElementById("offerLessonsTitleText");
 const offerLessonsDescText = document.getElementById("offerLessonsDescText");
 const offersSection = document.querySelector(".offers-section");
 const offerGrid = document.querySelector(".offer-grid");
-let offerOverrides = { offerType: "discount" };
+const offerGridDynamic = document.getElementById("offerGridDynamic");
+let offerOverrides = {};
 const LOYALTY_DISCOUNT_RATE = 0.1;
 
 function requireBackendPath(path) {
@@ -542,20 +544,26 @@ function getCookieValue(name) {
 }
 
 function getActiveDiscountPercent() {
+  if (state.activeOfferType === "coupon") {
+    return 0;
+  }
   if (state.coupon?.applied) {
     return Math.min(90, Math.max(0, Number(state.coupon.percent) || 0));
   }
-  if (state.customer) {
+  if (state.activeOfferType === "discount") {
+    return Math.round(LOYALTY_DISCOUNT_RATE * 100);
+  }
+  if (state.customer && state.activeOfferType !== "lessons") {
     return Math.round(LOYALTY_DISCOUNT_RATE * 100);
   }
   return 0;
 }
 
 function getActiveDiscountLabel() {
-  if (state.coupon?.applied && state.coupon.code) {
+  if (state.activeOfferType === "coupon" && state.coupon?.applied && state.coupon.code) {
     return `${state.coupon.code} coupon`;
   }
-  if (state.customer) return t("offerDiscountTitle");
+  if (state.activeOfferType === "discount" && state.customer) return t("offerDiscountTitle");
   return "";
 }
 
@@ -576,6 +584,7 @@ function syncCouponUIAvailability() {
     return; // preserve last explicit message (e.g., duplicate use)
   }
   const hasConfig = !!(
+    state.activeOfferType === "coupon" &&
     state.couponConfig?.enabled !== false &&
     state.couponConfig?.code &&
     state.couponConfig.percent > 0
@@ -596,16 +605,20 @@ function syncCouponUIAvailability() {
 }
 
 function applyCoupon(codeInput) {
+  // Keep grid populated even if apply flow fails mid-way
+  ensureProductsVisible();
   const config = state.couponConfig;
   const code = (codeInput || "").trim().toUpperCase();
   if (!config?.enabled || !config.code || !config.percent) {
     setCouponStatus(t("couponUnavailable"), true, true);
+    ensureProductsVisible();
     return;
   }
   if (code !== config.code.toUpperCase()) {
     state.coupon = { applied: false, code: null, percent: 0 };
     setCouponStatus(t("couponInvalid"), true, true);
     renderCart();
+    ensureProductsVisible();
     return;
   }
   logCouponUsage(code)
@@ -614,17 +627,22 @@ function applyCoupon(codeInput) {
         state.coupon = { applied: false, code: null, percent: 0 };
         setCouponStatus(result.message || t("couponInvalid"), true, true);
         renderCart();
+        ensureProductsVisible();
         return;
       }
       state.coupon = { applied: true, code: config.code, percent: Number(config.percent) };
       setCouponStatus(`${t("couponApplied")} ${config.percent}% off`, false, false);
-      renderProducts();
+      ensureProductsVisible();
       renderCart();
     })
     .catch(() => {
       state.coupon = { applied: false, code: null, percent: 0 };
       setCouponStatus(t("couponInvalid"), true, true);
       renderCart();
+      ensureProductsVisible();
+    })
+    .finally(() => {
+      ensureProductsVisible();
     });
 }
 
@@ -694,12 +712,16 @@ function formatINR(value) {
 
 function getCartItemFinalPrice(item) {
   const basePrice = normalizePrice(item?.price);
+  if (state.activeOfferType === "coupon") {
+    return basePrice;
+  }
   const pct = getActiveDiscountPercent();
   const price = Math.round(basePrice * (1 - pct / 100));
   return Math.max(0, price);
 }
 
 function getCartItemSavings(item) {
+  if (state.activeOfferType === "coupon") return 0;
   const unitSavings = Math.max(0, (item?.price || 0) - getCartItemFinalPrice(item));
   const qty = Number(item?.qty || 1);
   return unitSavings * qty;
@@ -722,9 +744,12 @@ function visibleProducts() {
 }
 
 function renderProducts() {
+  if (!products || products.length === 0) {
+    products = [...fallbackProducts];
+  }
   productGrid.innerHTML = "";
-
-  visibleProducts().forEach((product) => {
+  const items = visibleProducts();
+  items.forEach((product) => {
     const card = document.createElement("article");
     card.className = "product-card";
     card.setAttribute("data-product-id", String(product.id));
@@ -754,6 +779,50 @@ function renderProducts() {
     `;
     productGrid.appendChild(card);
   });
+
+  // If nothing rendered (e.g., products unexpectedly empty or filter mismatch), fall back once.
+  if (productGrid.children.length === 0 && fallbackProducts.length > 0) {
+    products = [...fallbackProducts];
+    state.filter = "all";
+    productGrid.innerHTML = "";
+    visibleProducts().forEach((product) => {
+      const card = document.createElement("article");
+      card.className = "product-card";
+      card.setAttribute("data-product-id", String(product.id));
+      const image = product.images && product.images.length ? product.images[0] : resolveImage(product);
+      const discountPct = getActiveDiscountPercent();
+      const dealPrice = discountPct > 0 ? getCartItemFinalPrice(product) : product.price;
+      const savings = discountPct > 0 ? product.price - dealPrice : 0;
+      card.innerHTML = `
+        <img src="${image}" alt="${product.name}" class="product-image" onerror="this.src='assets/images/sitar.svg'" />
+        <h3>${product.name}</h3>
+        <div class="product-bottom">
+          <div class="price-stack">
+            <div class="price-row">
+              <span class="price-label">${discountPct > 0 ? t("discountedPriceLabel") : "Price"}</span>
+              <span class="price deal">${formatINR(dealPrice)}</span>
+            </div>
+            <div class="price-subrow">
+              <span class="price-label muted">M.R.P:</span>
+              <span class="price-original">${formatINR(product.price)}</span>
+              ${discountPct > 0 ? `<span class="price-pct">(${discountPct}% off)</span>` : ""}
+            </div>
+            ${discountPct > 0 ? `<span class="price-savings">You save ${formatINR(savings)}</span>` : ""}
+          </div>
+          <button class="product-cta" data-id="${product.id}"><span>${t("addToCart")}</span></button>
+          <button class="secondary-cta view-details" data-product-id="${product.id}">View details</button>
+        </div>
+      `;
+      productGrid.appendChild(card);
+    });
+  }
+}
+
+function ensureProductsVisible() {
+  if (!products || products.length === 0) {
+    products = [...fallbackProducts];
+  }
+  renderProducts();
 }
 
 function openProductModal(product) {
@@ -869,10 +938,11 @@ function renderCart() {
       const meta = document.createElement("div");
       meta.className = "cart-item-meta";
 
-      const discountedPrice = getCartItemFinalPrice(item);
+      const isCouponOffer = state.activeOfferType === "coupon";
+      const discountedPrice = isCouponOffer ? item.price : getCartItemFinalPrice(item);
       const lineTotal = discountedPrice * qty;
-      const savings = getCartItemSavings(item);
-      const discountPct = item.price > 0 ? Math.round(((item.price - discountedPrice) / item.price) * 100) : 0;
+      const savings = isCouponOffer ? 0 : getCartItemSavings(item);
+      const discountPct = isCouponOffer ? 0 : item.price > 0 ? Math.round(((item.price - discountedPrice) / item.price) * 100) : 0;
 
       const priceWrap = document.createElement("div");
       priceWrap.className = "cart-item-price-wrap";
@@ -939,8 +1009,14 @@ function renderCart() {
     });
   }
 
-  const total = state.cart.reduce((sum, item) => sum + getCartItemFinalPrice(item) * (item.qty || 1), 0);
   const mrpTotal = state.cart.reduce((sum, item) => sum + (item?.price || 0) * (item.qty || 1), 0);
+  let subtotal = state.cart.reduce((sum, item) => sum + getCartItemFinalPrice(item) * (item.qty || 1), 0);
+  let total = subtotal;
+  if (state.activeOfferType === "coupon" && state.coupon?.applied && state.coupon.percent > 0) {
+    const pct = Math.min(90, Math.max(0, Number(state.coupon.percent) || 0));
+    total = Math.round(mrpTotal * (1 - pct / 100));
+    subtotal = mrpTotal;
+  }
   const itemsCount = state.cart.reduce((sum, item) => sum + (item.qty || 1), 0);
   cartTotal.textContent = formatINR(total);
   cartCount.textContent = state.cart.length;
@@ -952,7 +1028,10 @@ function renderCart() {
   if (cartTotalSavingsEl) cartTotalSavingsEl.textContent = formatINR(Math.max(0, mrpTotal - total));
   saveCart();
   if (cartSavingsEl) {
-    const totalSavings = state.cart.reduce((sum, item) => sum + getCartItemSavings(item), 0);
+    const totalSavings =
+      state.activeOfferType === "coupon" && state.coupon?.applied
+        ? Math.max(0, mrpTotal - total)
+        : state.cart.reduce((sum, item) => sum + getCartItemSavings(item), 0);
     if (totalSavings > 0) {
       const discountLabel = getActiveDiscountLabel();
       cartSavingsEl.style.display = "inline-flex";
@@ -980,7 +1059,7 @@ function applyOfferOverrides(overrides = null) {
     offerOverrides = { ...offerOverrides, ...overrides };
   }
   const resolved = {
-    offerType: offerOverrides.offerType || state.activeOfferType || "discount",
+    offerType: offerOverrides.offerType || state.activeOfferType || null,
     title: offerOverrides.title || t("offerTitle"),
     desc: offerOverrides.desc || t("offerDesc"),
     discountTitle: offerOverrides.discountTitle || t("offerDiscountTitle"),
@@ -991,7 +1070,7 @@ function applyOfferOverrides(overrides = null) {
     couponPercent: Number(offerOverrides.couponPercent || 0),
     couponEnabled: offerOverrides.couponEnabled !== false
   };
-  state.activeOfferType = resolved.offerType || "discount";
+  state.activeOfferType = resolved.offerType || null;
   const isCouponType = resolved.offerType === "coupon";
   const couponCode = (resolved.couponCode || "").trim();
   const escapeRegex = (str) => str.replace(/[-/\\^$*+?.()|[\\]{}]/g, "\\$&");
@@ -1014,6 +1093,39 @@ function applyOfferOverrides(overrides = null) {
   if (offerDiscountDescText) offerDiscountDescText.textContent = displayDiscountDesc;
   if (offerLessonsTitleText) offerLessonsTitleText.textContent = displayLessonsTitle;
   if (offerLessonsDescText) offerLessonsDescText.textContent = displayLessonsDesc;
+  if (!resolved.offerType && offerGridDynamic) {
+    offerGridDynamic.innerHTML = "";
+  }
+  if (offerGridDynamic) {
+    offerGridDynamic.innerHTML = "";
+    if (!resolved.offerType) {
+      return;
+    }
+    const iconText =
+      resolved.offerType === "lessons"
+        ? "4"
+        : resolved.offerType === "coupon" && resolved.couponPercent
+        ? `${resolved.couponPercent}%`
+        : resolved.offerType === "coupon"
+        ? resolved.couponCode || "★"
+        : (resolved.discountTitle || resolved.title || "★").split(" ")[0] || "★";
+    const titleText =
+      resolved.offerType === "lessons"
+        ? displayLessonsTitle || displayTitle
+        : resolved.offerType === "coupon"
+        ? displayDiscountTitle || displayTitle
+        : displayDiscountTitle || displayTitle;
+    const descText =
+      resolved.offerType === "lessons"
+        ? displayLessonsDesc || displayDesc
+        : resolved.offerType === "coupon"
+        ? displayDiscountDesc || displayDesc
+        : displayDiscountDesc || displayDesc;
+    const card = document.createElement("article");
+    card.className = "offer-card";
+    card.innerHTML = `<div class=\"offer-icon\" aria-hidden=\"true\">${iconText}</div><div><h3>${titleText}</h3><p>${descText}</p></div>`;
+    offerGridDynamic.appendChild(card);
+  }
   state.couponConfig = { code: resolved.couponCode, percent: resolved.couponPercent, enabled: resolved.couponEnabled };
   if (!state.coupon.applied) {
     state.coupon = { applied: false, code: null, percent: 0 };
@@ -1024,13 +1136,21 @@ function applyOfferOverrides(overrides = null) {
 
 async function loadOffers() {
   if (!hasBackend) {
-    applyOfferOverrides({ offerType: "discount" });
+    state.activeOfferType = null;
+    if (offerGridDynamic) offerGridDynamic.innerHTML = "";
+    updateOfferVisibility();
     return;
   }
   try {
     const response = await fetch("/api/offers", { credentials: "same-origin" });
     const data = await response.json();
     const config = data.offers || {};
+    if (!config.offerType) {
+      state.activeOfferType = null;
+      if (offerGridDynamic) offerGridDynamic.innerHTML = "";
+      updateOfferVisibility();
+      return;
+    }
     applyOfferOverrides({
       offerType: config.offerType,
       title: config.title,
@@ -1045,7 +1165,9 @@ async function loadOffers() {
     });
   } catch (error) {
     console.warn("Failed to load offers", error);
-    applyOfferOverrides({ offerType: "discount" });
+    state.activeOfferType = null;
+    if (offerGridDynamic) offerGridDynamic.innerHTML = "";
+    updateOfferVisibility();
   }
 }
 
@@ -1095,8 +1217,16 @@ function renderVideos() {
 }
 
 function closeCartPanel() {
+  if (cartPanel.contains(document.activeElement)) {
+    cartBtn?.focus();
+  }
   cartPanel.classList.remove("open");
   cartPanel.setAttribute("aria-hidden", "true");
+}
+
+function openCartPanel() {
+  cartPanel.classList.add("open");
+  cartPanel.setAttribute("aria-hidden", "false");
 }
 
 function openCustomerModal() {
@@ -1214,10 +1344,14 @@ function togglePasswordById(targetId, button) {
 
 function updateOfferVisibility() {
   if (!offersSection) return;
-  offersSection.hidden = false;
-  offersSection.style.display = "block";
+  const hasActive = !!state.activeOfferType;
+  offersSection.hidden = !hasActive;
+  offersSection.style.display = hasActive ? "block" : "none";
   if (offerGrid) {
-    offerGrid.style.display = "grid";
+    offerGrid.style.display = hasActive ? "grid" : "none";
+  }
+  if (offerGridDynamic) {
+    offerGridDynamic.style.display = hasActive ? "grid" : "none";
   }
 }
 window.togglePasswordById = togglePasswordById;
@@ -1319,9 +1453,31 @@ customerProfileToggle?.addEventListener("click", () => {
   renderCustomerProfile();
 });
 
+navLinks.forEach((link) => {
+  link.addEventListener("click", (event) => {
+    const href = link.getAttribute("href");
+    if (href && href.startsWith("#")) {
+      event.preventDefault();
+      const target = document.querySelector(href);
+      if (target) target.scrollIntoView({ behavior: "smooth" });
+    }
+    // Close cart when navigating via menu/brand/CTA
+    if (cartPanel.classList.contains("open")) {
+      closeCartPanel();
+    }
+  });
+});
+
+// Fallback: close cart on any header/menu/CTA click (event delegation)
+document.addEventListener("click", (event) => {
+  const navClick = event.target.closest(".main-nav a, .brand, .cta");
+  if (navClick && cartPanel.classList.contains("open")) {
+    closeCartPanel();
+  }
+});
+
 cartBtn.addEventListener("click", () => {
-  cartPanel.classList.add("open");
-  cartPanel.setAttribute("aria-hidden", "false");
+  openCartPanel();
 });
 
 closeCart?.addEventListener("click", closeCartPanel);
@@ -1662,7 +1818,8 @@ async function loadProducts() {
     if (!response.ok) {
       throw new Error(data.error || t("loadFailed"));
     }
-    products = data.products || [];
+    const fetched = data.products || [];
+    products = fetched.length > 0 ? fetched : [...fallbackProducts];
     hydrateCartWithProducts();
     renderProducts();
   } catch (error) {
