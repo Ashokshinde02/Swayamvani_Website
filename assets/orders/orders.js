@@ -11,7 +11,7 @@ function formatINR(value) {
 }
 
 async function loadOrders() {
-  if (!ordersModal || !customerOrdersBtn || customerOrdersBtn.hidden) return;
+  if (!ordersModal) return;
   if (ordersEmpty) ordersEmpty.textContent = "Loading your orders...";
   try {
     const response = await fetch(requireBackendPath("/api/customer/orders"), { credentials: "same-origin" });
