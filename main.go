@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"crypto/rand"
 	"crypto/sha256"
 	"crypto/subtle"
 	"database/sql"
@@ -121,6 +122,16 @@ type CustomerLoginRequest struct {
 	Password string `json:"password"`
 }
 
+type CustomerForgotRequest struct {
+	Email string `json:"email"`
+}
+
+type CustomerResetPasswordRequest struct {
+	Email    string `json:"email"`
+	Token    string `json:"token"`
+	Password string `json:"password"`
+}
+
 type CustomerAccount struct {
 	Name         string    `json:"name"`
 	Email        string    `json:"email"`
@@ -134,6 +145,19 @@ type CustomerProfile struct {
 	CreatedAt string `json:"created_at"`
 	Mobile    string `json:"mobile,omitempty"`
 	Address   string `json:"address,omitempty"`
+}
+
+type passwordResetEntry struct {
+	Email     string
+	ExpiresAt time.Time
+}
+
+const logsDir = "logs"
+
+type frontendLogPayload struct {
+	Level   string `json:"level"`
+	Message string `json:"message"`
+	Source  string `json:"source,omitempty"`
 }
 
 type RazorpayOrderRequest struct {
@@ -183,6 +207,8 @@ type Server struct {
 	customerSessions  *SessionManager
 	customerMu        sync.RWMutex
 	customers         map[string]CustomerAccount
+	resetTokens       map[string]passwordResetEntry
+	resetTokensMu     sync.Mutex
 	customerDataPath  string
 	ordersStore       *orders.Store
 	offerConfig       OfferConfig
@@ -195,6 +221,13 @@ type Server struct {
 }
 
 func main() {
+	backendLogFile, err := setupBackendLogging()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "warning: failed to initialize backend log: %v\n", err)
+	} else {
+		defer backendLogFile.Close()
+	}
+
 	store, sqlStore, mode, err := createStorage()
 	if err != nil {
 		log.Fatalf("storage setup failed: %v", err)
@@ -219,6 +252,7 @@ func main() {
 		sessions:          newSessionManager(12 * time.Hour),
 		customerSessions:  newSessionManager(12 * time.Hour),
 		customers:         make(map[string]CustomerAccount),
+		resetTokens:       make(map[string]passwordResetEntry),
 		customerDataPath:  filepath.Join("data", "customers.json"),
 		ordersStore:       orders.NewStore(filepath.Join("data")),
 		offerConfigPath:   filepath.Join("data", "offers.json"),
@@ -251,10 +285,13 @@ func main() {
 	mux.HandleFunc("/api/admin/me", s.handleAdminMe)
 	mux.HandleFunc("/api/customer/register", s.handleCustomerRegister)
 	mux.HandleFunc("/api/customer/login", s.handleCustomerLogin)
+	mux.HandleFunc("/api/customer/forgot-password", s.handleCustomerForgotPassword)
+	mux.HandleFunc("/api/customer/reset-password", s.handleCustomerResetPassword)
 	mux.HandleFunc("/api/customer/logout", s.handleCustomerLogout)
 	mux.HandleFunc("/api/customer/me", s.handleCustomerMe)
 	mux.HandleFunc("/api/customer/orders", s.handleCustomerOrders)
 	mux.HandleFunc("/api/offers", s.handleGetOffers)
+	mux.HandleFunc("/api/frontend/log", s.handleFrontendLog)
 	mux.HandleFunc("/api/coupon/use", s.handleCouponUse)
 	mux.HandleFunc("/api/admin/offers", s.handleAdminOffers)
 	mux.HandleFunc("/api/admin/orders", s.handleAdminOrders)
@@ -915,6 +952,21 @@ func (s *SQLStorage) CreateCustomer(account CustomerAccount) error {
 	_, err := s.db.Exec(`INSERT INTO customers (name, email, password_hash, created_at) VALUES (?,?,?,?)`,
 		account.Name, account.Email, account.PasswordHash, account.CreatedAt)
 	return err
+}
+
+func (s *SQLStorage) UpdateCustomerPassword(email, hash string) error {
+	res, err := s.db.Exec("UPDATE customers SET password_hash = ? WHERE email = ?", hash, email)
+	if err != nil {
+		return err
+	}
+	aff, err := res.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if aff == 0 {
+		return errors.New("customer not found")
+	}
+	return nil
 }
 
 func (s *SQLStorage) ListCustomers() ([]CustomerAccount, error) {
@@ -1947,6 +1999,103 @@ func (s *Server) handleCustomerLogout(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]string{"status": "ok"})
 }
 
+func (s *Server) handleCustomerForgotPassword(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		writeJSONError(w, http.StatusMethodNotAllowed, "method not allowed")
+		return
+	}
+	var payload CustomerForgotRequest
+	if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
+		writeJSONError(w, http.StatusBadRequest, "invalid JSON payload")
+		return
+	}
+	email := strings.ToLower(strings.TrimSpace(payload.Email))
+	if email == "" {
+		writeJSONError(w, http.StatusBadRequest, "email is required")
+		return
+	}
+	if _, exists := s.customerAccountByEmail(email); !exists {
+		writeJSON(w, http.StatusOK, map[string]any{"status": "ok", "message": "If that email exists we sent a reset link."})
+		return
+	}
+	token, expires, err := s.createPasswordResetToken(email)
+	if err != nil {
+		writeJSONError(w, http.StatusInternalServerError, "failed to create reset token")
+		return
+	}
+	resetLink := fmt.Sprintf("%s/reset-password?email=%s&token=%s", baseURLFromRequest(r), url.QueryEscape(email), url.QueryEscape(token))
+	log.Printf("password reset requested for %s: %s", email, resetLink)
+	writeJSON(w, http.StatusOK, map[string]any{
+		"status":      "ok",
+		"message":     "Reset link sent. Use the token to update your password.",
+		"reset_token": token,
+		"expires_in":  int(time.Until(expires).Seconds()),
+	})
+}
+
+func (s *Server) handleCustomerResetPassword(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		writeJSONError(w, http.StatusMethodNotAllowed, "method not allowed")
+		return
+	}
+	var payload CustomerResetPasswordRequest
+	if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
+		writeJSONError(w, http.StatusBadRequest, "invalid JSON payload")
+		return
+	}
+	email := strings.ToLower(strings.TrimSpace(payload.Email))
+	token := strings.TrimSpace(payload.Token)
+	password := strings.TrimSpace(payload.Password)
+	if email == "" || token == "" || password == "" {
+		writeJSONError(w, http.StatusBadRequest, "email, token, and password are required")
+		return
+	}
+	if len(password) < 6 {
+		writeJSONError(w, http.StatusBadRequest, "password must be at least 6 characters")
+		return
+	}
+	entryEmail, ok := s.consumeResetToken(token)
+	if !ok || entryEmail != email {
+		writeJSONError(w, http.StatusUnauthorized, "invalid or expired token")
+		return
+	}
+	hashed := hashPassword(password)
+	if err := s.updateCustomerPassword(email, hashed); err != nil {
+		writeJSONError(w, http.StatusInternalServerError, "failed to update password")
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]string{"status": "ok"})
+}
+
+func (s *Server) handleFrontendLog(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		writeJSONError(w, http.StatusMethodNotAllowed, "method not allowed")
+		return
+	}
+	var payload frontendLogPayload
+	if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
+		writeJSONError(w, http.StatusBadRequest, "invalid JSON payload")
+		return
+	}
+	level := strings.ToUpper(strings.TrimSpace(payload.Level))
+	if level == "" {
+		level = "INFO"
+	}
+	message := strings.TrimSpace(payload.Message)
+	if message == "" {
+		message = "(no message)"
+	}
+	source := strings.TrimSpace(payload.Source)
+	if source != "" {
+		source = fmt.Sprintf(" [%s]", source)
+	}
+	entry := fmt.Sprintf("%s [%s]%s %s\n", time.Now().UTC().Format(time.RFC3339), level, source, sanitizeLog(message))
+	if err := appendLogLine("frontend.log", entry); err != nil {
+		log.Printf("failed to append frontend log: %v", err)
+	}
+	writeJSON(w, http.StatusCreated, map[string]string{"status": "ok"})
+}
+
 func (s *Server) handleCustomerMe(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
 		writeJSONError(w, http.StatusMethodNotAllowed, "method not allowed")
@@ -2743,9 +2892,86 @@ func (s *Server) deleteOfferLocked(id int) error {
 	return nil
 }
 
-func hashPassword(password string) string {
-	sum := sha256.Sum256([]byte(password))
+func hashValue(value string) string {
+	sum := sha256.Sum256([]byte(value))
 	return hex.EncodeToString(sum[:])
+}
+
+func hashPassword(password string) string {
+	return hashValue(password)
+}
+
+func baseURLFromRequest(r *http.Request) string {
+	scheme := "https"
+	if r.TLS == nil {
+		px := strings.ToLower(r.Header.Get("X-Forwarded-Proto"))
+		if px != "" && px != "https" {
+			scheme = "http"
+		}
+	}
+	host := r.Host
+	if host == "" {
+		host = "localhost"
+	}
+	return fmt.Sprintf("%s://%s", scheme, host)
+}
+
+func (s *Server) createPasswordResetToken(email string) (string, time.Time, error) {
+	raw := make([]byte, 24)
+	if _, err := rand.Read(raw); err != nil {
+		return "", time.Time{}, err
+	}
+	token := hex.EncodeToString(raw)
+	hashed := hashValue(token)
+	expires := time.Now().Add(20 * time.Minute)
+	s.resetTokensMu.Lock()
+	s.cleanupExpiredResetTokensLocked()
+	s.resetTokens[hashed] = passwordResetEntry{Email: email, ExpiresAt: expires}
+	s.resetTokensMu.Unlock()
+	return token, expires, nil
+}
+
+func (s *Server) consumeResetToken(token string) (string, bool) {
+	hashed := hashValue(token)
+	s.resetTokensMu.Lock()
+	defer s.resetTokensMu.Unlock()
+	entry, ok := s.resetTokens[hashed]
+	if !ok {
+		return "", false
+	}
+	if time.Now().After(entry.ExpiresAt) {
+		delete(s.resetTokens, hashed)
+		return "", false
+	}
+	delete(s.resetTokens, hashed)
+	return entry.Email, true
+}
+
+func (s *Server) cleanupExpiredResetTokensLocked() {
+	now := time.Now()
+	for key, entry := range s.resetTokens {
+		if entry.ExpiresAt.Before(now) {
+			delete(s.resetTokens, key)
+		}
+	}
+}
+
+func (s *Server) updateCustomerPassword(email, hash string) error {
+	email = strings.ToLower(strings.TrimSpace(email))
+	if s.sqlStore != nil {
+		return s.sqlStore.UpdateCustomerPassword(email, hash)
+	}
+	s.customerMu.Lock()
+	account, ok := s.customers[email]
+	if !ok {
+		s.customerMu.Unlock()
+		return errors.New("customer not found")
+	}
+	account.PasswordHash = hash
+	s.customers[email] = account
+	snapshot := s.customerSnapshotLocked()
+	s.customerMu.Unlock()
+	return saveCustomerSnapshot(s.customerDataPath, snapshot)
 }
 
 func (s *Server) customerEmailFromRequest(r *http.Request) (string, bool) {
@@ -2795,6 +3021,39 @@ func decodeImagesJSON(raw string) []string {
 		return nil
 	}
 	return out
+}
+
+func ensureLogsDir() error {
+	return os.MkdirAll(logsDir, 0o755)
+}
+
+func setupBackendLogging() (*os.File, error) {
+	if err := ensureLogsDir(); err != nil {
+		return nil, err
+	}
+	path := filepath.Join(logsDir, "backend.log")
+	f, err := os.OpenFile(path, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0o644)
+	if err != nil {
+		return nil, err
+	}
+	log.SetOutput(io.MultiWriter(os.Stdout, f))
+	return f, nil
+}
+
+func appendLogLine(name, line string) error {
+	if err := ensureLogsDir(); err != nil {
+		return err
+	}
+	path := filepath.Join(logsDir, name)
+	f, err := os.OpenFile(path, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0o644)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+	if _, err := f.WriteString(line); err != nil {
+		return err
+	}
+	return nil
 }
 
 func writeJSONError(w http.ResponseWriter, code int, msg string) {

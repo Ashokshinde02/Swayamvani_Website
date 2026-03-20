@@ -245,6 +245,9 @@
           <h3 data-i18n="customerTitle">Customer Account</h3>
           <button id="closeCustomerModal" class="close-cart-icon" type="button" aria-label="Close">×</button>
         </div>
+        <div class="customer-modal-actions">
+          <a href="#" id="showRegisterLink" class="text-link">Create account</a>
+        </div>
         <div class="customer-layout">
           <div class="customer-auth-grid">
             <form id="customerLoginForm" class="inquiry-form customer-form">
@@ -266,10 +269,45 @@
                   </button>
                 </span>
               </label>
-              <button type="submit" data-i18n="customerLogin">Login</button>
-              <p class="form-footnote">We’ll remember your cart and lesson credits.</p>
-              <a href="#" id="showRegisterLink" class="text-link">Create account</a>
+              <div class="auth-actions">
+                <button type="submit" data-i18n="customerLogin">Login</button>
+                <button type="button" id="customerForgotPassword" class="text-link" data-i18n="customerForgotPassword">Forgot password?</button>
+              </div>
             </form>
+            <div id="customerForgotPanel" class="customer-forgot hidden">
+              <h4 data-i18n="customerResetTitle">Reset password</h4>
+              <p class="form-footnote" data-i18n="customerForgotGuide">Enter your email and we will send a secure reset token.</p>
+              <form id="customerForgotRequestForm" class="inquiry-form customer-reset-form">
+                <label>
+                  <span data-i18n="labelEmail">Email</span>
+                  <input type="email" id="customerForgotEmail" required />
+                </label>
+                <button type="submit" data-i18n="customerForgotSend">Send reset link</button>
+              </form>
+              <p id="customerForgotStatus" class="form-status" aria-live="polite"></p>
+              <form id="customerResetForm" class="inquiry-form customer-reset-form hidden">
+                <label>
+                  <span data-i18n="labelEmail">Email</span>
+                  <input type="email" id="customerResetEmail" required />
+                </label>
+                <label>
+                  <span data-i18n="customerResetTokenLabel">Reset token</span>
+                  <input type="text" id="customerResetToken" required />
+                </label>
+                <label>
+                  <span data-i18n="customerResetPasswordLabel">New password</span>
+                  <input type="password" id="customerResetPassword" minlength="6" required />
+                </label>
+                <label>
+                  <span data-i18n="customerResetConfirmLabel">Confirm password</span>
+                  <input type="password" id="customerResetConfirmPassword" minlength="6" required />
+                </label>
+                <button type="submit" data-i18n="customerResetSubmit">Update password</button>
+              </form>
+              <p id="customerResetStatus" class="form-status" aria-live="polite"></p>
+              <button type="button" id="customerForgotBackLink" class="text-link" data-i18n="customerBackToLogin">Back to login</button>
+            </div>
+            <p id="customerAuthStatus" class="form-status" aria-live="polite"></p>
             <form id="customerRegisterForm" class="inquiry-form customer-form hidden">
               <h4 data-i18n="customerRegister">Create Account</h4>
               <label>

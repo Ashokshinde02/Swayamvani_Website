@@ -134,6 +134,19 @@ const translations = {
     customerLogout: "Logout",
     customerAuthSuccess: "You are logged in.",
     customerAuthFailed: "Customer authentication failed.",
+    customerForgotPassword: "Forgot password?",
+    customerForgotPasswordHelp: "Email shindeashok944@gmail.com (subject \"Reset password\") to request a reset link.",
+    customerResetTitle: "Reset password",
+    customerForgotGuide: "Enter your email and we will send a secure reset token.",
+    customerForgotSend: "Send reset link",
+    customerResetTokenLabel: "Reset token",
+    customerResetPasswordLabel: "New password",
+    customerResetConfirmLabel: "Confirm password",
+    customerResetSubmit: "Update password",
+    customerBackToLogin: "Back to login",
+    customerForgotSent: "Reset link sent. Check your inbox for the token.",
+    customerResetSuccess: "Password updated. Please login.",
+    customerResetFailed: "Failed to update password. Double-check the token.",
   offerTitle: "Exclusive Customer Offers",
   offerDesc: "Login now to unlock instant savings and complimentary guidance from our master craftsmen.",
   offerDiscountTitle: "",
@@ -221,6 +234,19 @@ const translations = {
     customerLogout: "लॉगआउट",
     customerAuthSuccess: "तुम्ही लॉगिन आहात.",
     customerAuthFailed: "ग्राहक प्रमाणीकरण अयशस्वी.",
+    customerForgotPassword: "पासवर्ड भूल गए?",
+    customerForgotPasswordHelp: "पासवर्ड रीसेट करने के लिए shindeashok944@gmail.com को \"Reset password\" सब्जेक्ट के साथ ईमेल करें।",
+    customerResetTitle: "पासवर्ड रीसेट",
+    customerForgotGuide: "अपना ईमेल डालें; हम उसके लिए सुरक्षित टोकन भेजेंगे.",
+    customerForgotSend: "रीसेट लिंक भेजें",
+    customerResetTokenLabel: "रीसेट टोकन",
+    customerResetPasswordLabel: "नया पासवर्ड",
+    customerResetConfirmLabel: "पासवर्ड पुष्टि करें",
+    customerResetSubmit: "पासवर्ड अपडेट करें",
+    customerBackToLogin: "लॉगिन पर वापस जाएं",
+    customerForgotSent: "रीसेट लिंक भेज दिया गया है। अपने ईमेल में टोकन देखें.",
+    customerResetSuccess: "पासवर्ड अपडेट हो गया है। कृपया लॉगिन करें.",
+    customerResetFailed: "रीसेट विफल रहा। टोकन की जाँच करें.",
     offerTitle: "ग्राहकांसाठी खास ऑफर्स",
   offerDesc: "लॉगिन करून तत्काळ सूट आणि आमच्या मास्टर कारीगरांच्या मार्गदर्शनाचा लाभ घ्या.",
   offerDiscountTitle: "",
@@ -378,9 +404,23 @@ const customerModal = document.getElementById("customerModal");
 const closeCustomerModal = document.getElementById("closeCustomerModal");
 const customerAuthStatus = document.getElementById("customerAuthStatus");
 const customerLoginForm = document.getElementById("customerLoginForm");
+const customerLoginEmailInput = document.getElementById("customerLoginEmail");
+const customerLoginPasswordInput = document.getElementById("customerLoginPassword");
 const customerRegisterForm = document.getElementById("customerRegisterForm");
 const showRegisterLink = document.getElementById("showRegisterLink");
 const backToLoginLink = document.getElementById("backToLoginLink");
+const customerForgotPasswordLink = document.getElementById("customerForgotPassword");
+const customerForgotPanel = document.getElementById("customerForgotPanel");
+const customerForgotRequestForm = document.getElementById("customerForgotRequestForm");
+const customerForgotEmailInput = document.getElementById("customerForgotEmail");
+const customerForgotStatus = document.getElementById("customerForgotStatus");
+const customerResetForm = document.getElementById("customerResetForm");
+const customerResetEmailInput = document.getElementById("customerResetEmail");
+const customerResetTokenInput = document.getElementById("customerResetToken");
+const customerResetPasswordInput = document.getElementById("customerResetPassword");
+const customerResetConfirmInput = document.getElementById("customerResetConfirmPassword");
+const customerResetStatus = document.getElementById("customerResetStatus");
+const customerForgotBackLink = document.getElementById("customerForgotBackLink");
 const videoGrid = document.getElementById("videoGrid");
 const productModal = document.getElementById("productModal");
 const closeProductModal = document.getElementById("closeProductModal");
@@ -427,6 +467,100 @@ showRegisterLink?.addEventListener("click", (e) => {
 backToLoginLink?.addEventListener("click", (e) => {
   e.preventDefault();
   toggleRegisterForm(false);
+});
+
+function showForgotPanel() {
+  if (!customerForgotPanel) return;
+  toggleRegisterForm(false);
+  customerLoginForm?.classList.add("hidden");
+  customerForgotPanel.classList.remove("hidden");
+  if (customerForgotEmailInput) {
+    customerForgotEmailInput.value = customerLoginEmailInput?.value || "";
+    customerForgotEmailInput.focus();
+  }
+  if (customerResetForm) {
+    customerResetForm.classList.add("hidden");
+  }
+  if (customerForgotStatus) customerForgotStatus.textContent = "";
+  if (customerResetStatus) customerResetStatus.textContent = "";
+}
+
+function hideForgotPanel() {
+  if (!customerForgotPanel) return;
+  customerForgotPanel.classList.add("hidden");
+  if (customerResetForm) customerResetForm.classList.add("hidden");
+  if (customerForgotStatus) customerForgotStatus.textContent = "";
+  if (customerResetStatus) customerResetStatus.textContent = "";
+}
+
+customerForgotPasswordLink?.addEventListener("click", (event) => {
+  event.preventDefault();
+  showForgotPanel();
+});
+
+customerForgotBackLink?.addEventListener("click", (event) => {
+  event.preventDefault();
+  hideForgotPanel();
+  customerLoginForm?.classList.remove("hidden");
+  customerLoginForm?.querySelector("input")?.focus();
+});
+
+customerForgotRequestForm?.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  const email = (customerForgotEmailInput?.value || "").trim();
+  if (!email) {
+    if (customerForgotStatus) customerForgotStatus.textContent = t("customerResetFailed");
+    return;
+  }
+  if (customerForgotStatus) customerForgotStatus.textContent = t("sending");
+  try {
+    const data = await apiJSON("/api/customer/forgot-password", {
+      method: "POST",
+      body: JSON.stringify({ email })
+    });
+    if (customerForgotStatus) customerForgotStatus.textContent = data.message || t("customerForgotSent");
+    if (customerResetForm) customerResetForm.classList.remove("hidden");
+    if (customerResetEmailInput) customerResetEmailInput.value = email;
+    if (customerResetTokenInput && data.reset_token) {
+      customerResetTokenInput.value = data.reset_token;
+    }
+  } catch (error) {
+    const logMessage = error.message || t("customerResetFailed");
+    frontendLog("error", logMessage, "forgot-password-request");
+    if (customerForgotStatus) customerForgotStatus.textContent = logMessage;
+  }
+});
+
+customerResetForm?.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  const email = (customerResetEmailInput?.value || customerForgotEmailInput?.value || "").trim();
+  const token = (customerResetTokenInput?.value || "").trim();
+  const password = (customerResetPasswordInput?.value || "").trim();
+  const confirm = (customerResetConfirmInput?.value || "").trim();
+  if (!email || !token || !password) {
+    if (customerResetStatus) customerResetStatus.textContent = t("customerResetFailed");
+    return;
+  }
+  if (password !== confirm) {
+    if (customerResetStatus) customerResetStatus.textContent = t("customerResetFailed");
+    return;
+  }
+  if (customerResetStatus) customerResetStatus.textContent = t("sending");
+  try {
+    await apiJSON("/api/customer/reset-password", {
+      method: "POST",
+      body: JSON.stringify({ email, token, password })
+    });
+    if (customerResetStatus) customerResetStatus.textContent = t("customerResetSuccess");
+    if (customerAuthStatus) customerAuthStatus.textContent = t("customerResetSuccess");
+    if (customerLoginEmailInput) customerLoginEmailInput.value = email;
+    hideForgotPanel();
+    customerLoginForm?.classList.remove("hidden");
+  } catch (error) {
+    const logMessage = error.message || t("customerResetFailed");
+    frontendLog("error", logMessage, "reset-password");
+    if (customerResetStatus) customerResetStatus.textContent = logMessage;
+  }
 });
 
 // initial state
@@ -537,6 +671,34 @@ function requireBackendPath(path) {
   }
   return path;
 }
+
+function frontendLog(level, message, source) {
+  if (!hasBackend || !message) return;
+  fetch(requireBackendPath("/api/frontend/log"), {
+    method: "POST",
+    credentials: "same-origin",
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({
+      level: level || "info",
+      message: String(message),
+      source: source || "client"
+    }),
+    keepalive: true
+  }).catch(() => {});
+}
+
+window.addEventListener("error", (event) => {
+  const msg = event.message || "Unknown script error";
+  const detail = event.filename ? ` ${event.filename}:${event.lineno}:${event.colno}` : "";
+  frontendLog("error", `${msg}${detail}`, "window-error");
+});
+
+window.addEventListener("unhandledrejection", (event) => {
+  const reason = event.reason ? String(event.reason) : "Unknown rejection";
+  frontendLog("error", `Unhandled rejection: ${reason}`, "unhandledrejection");
+});
 
 function getCookieValue(name) {
   const match = document.cookie.match(new RegExp(`(^|;)\\s*${name}=([^;]*)`));
@@ -774,7 +936,6 @@ function renderProducts() {
           ${discountPct > 0 ? `<span class="price-savings">You save ${formatINR(savings)}</span>` : ""}
         </div>
         <button class="product-cta" data-id="${product.id}"><span>${t("addToCart")}</span></button>
-        <button class="secondary-cta view-details" data-product-id="${product.id}">View details</button>
       </div>
     `;
     productGrid.appendChild(card);
@@ -810,7 +971,6 @@ function renderProducts() {
             ${discountPct > 0 ? `<span class="price-savings">You save ${formatINR(savings)}</span>` : ""}
           </div>
           <button class="product-cta" data-id="${product.id}"><span>${t("addToCart")}</span></button>
-          <button class="secondary-cta view-details" data-product-id="${product.id}">View details</button>
         </div>
       `;
       productGrid.appendChild(card);
@@ -1605,8 +1765,8 @@ customerLoginForm?.addEventListener("submit", async (event) => {
     const data = await apiJSON("/api/customer/login", {
       method: "POST",
       body: JSON.stringify({
-        email: document.getElementById("customerLoginEmail").value,
-        password: document.getElementById("customerLoginPassword").value
+        email: customerLoginEmailInput?.value || "",
+        password: customerLoginPasswordInput?.value || ""
       })
     });
 
@@ -1616,8 +1776,15 @@ customerLoginForm?.addEventListener("submit", async (event) => {
     customerLoginForm.reset();
     closeCustomerAuthModal();
   } catch (error) {
-    if (customerAuthStatus) customerAuthStatus.textContent = error.message || t("customerAuthFailed");
+    const logMessage = error.message || t("customerAuthFailed");
+    frontendLog("error", logMessage, "customer-login");
+    if (customerAuthStatus) customerAuthStatus.textContent = logMessage;
   }
+});
+
+customerForgotPasswordLink?.addEventListener("click", (event) => {
+  event.preventDefault();
+  showForgotPanel();
 });
 
 customerRegisterForm?.addEventListener("submit", async (event) => {
