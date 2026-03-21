@@ -65,6 +65,9 @@ function renderOrders(orders) {
 
 function openOrdersModal() {
   if (!ordersModal) return;
+  if (typeof closeCartPanel === "function") {
+    closeCartPanel();
+  }
   ordersModal.classList.add("open");
   ordersModal.setAttribute("aria-hidden", "false");
   loadOrders();
@@ -81,6 +84,14 @@ if (closeOrdersModal) {
 }
 if (customerOrdersBtn) {
   customerOrdersBtn.addEventListener("click", openOrdersModal);
+}
+
+if (ordersModal) {
+  ordersModal.addEventListener("click", (event) => {
+    if (event.target === ordersModal) {
+      closeOrders();
+    }
+  });
 }
 
 window.onOrderCreated = function () {

@@ -796,12 +796,14 @@ h3 {
 }
 
 .orders-modal-card {
-  width: min(820px, 100%);
+  width: min(520px, 95%);
   background: #fffaf3;
   border: 1px solid rgba(140, 96, 52, 0.18);
   border-radius: 18px;
   padding: 1.1rem;
   box-shadow: 0 16px 40px rgba(52, 26, 12, 0.16);
+  max-height: 75vh;
+  overflow: hidden;
 }
 
 .orders-head {
@@ -824,6 +826,9 @@ h3 {
 .orders-list {
   display: grid;
   gap: 0.75rem;
+  max-height: 60vh;
+  overflow-y: auto;
+  padding-right: 0.3rem;
 }
 
 .order-card {
@@ -1140,6 +1145,170 @@ h3 {
   padding-bottom: 0.25rem;
 }
 
+.modal-thumbs .modal-thumb {
+  flex: 0 0 auto;
+  border: 1px solid #dcd1c5;
+  border-radius: 8px;
+  padding: 0;
+  background: #fff;
+  width: 58px;
+  height: 58px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: border-color 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.modal-thumbs .modal-thumb.active {
+  border-color: #8a6a39;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12);
+}
+
+.modal-thumbs .modal-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 6px;
+}
+
+.modal-thumbs .modal-thumb:hover {
+  border-color: #b77f3d;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
+}
+
+.modal-main {
+  position: relative;
+  background: #fffdf9;
+  border-radius: 12px;
+  border: 1px solid #e2d3c2;
+  overflow: hidden;
+  min-height: 360px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.modal-maker-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding: 0.5rem;
+  background: linear-gradient(180deg, rgba(19, 11, 6, 0) 35%, rgba(19, 11, 6, 0.8));
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.25s ease;
+}
+
+.modal-main:hover .modal-maker-overlay,
+.modal-main:focus-within .modal-maker-overlay {
+  opacity: 1;
+}
+
+.modal-maker-cta {
+  pointer-events: auto;
+  border: none;
+  background: rgba(255, 255, 255, 0.92);
+  color: #2b1a12;
+  border-radius: 999px;
+  padding: 0.35rem 1rem;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  cursor: pointer;
+}
+
+.modal-maker-cta:focus-visible {
+  outline: 2px solid #b47b35;
+  outline-offset: 2px;
+}
+
+.modal-maker-icon {
+  font-size: 0.95rem;
+}
+
+.modal-main img {
+  width: 100%;
+  height: auto;
+  transition: transform 0.15s ease;
+  transform-origin: center center;
+  cursor: grab;
+}
+
+.modal-main img:active {
+  cursor: grabbing;
+}
+
+.modal-nav {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  border: none;
+  background: rgba(255, 255, 255, 0.9);
+  color: #2b1a12;
+  font-size: 1.8rem;
+  line-height: 1;
+  padding: 0.25rem 0.75rem;
+  border-radius: 999px;
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.15);
+  cursor: pointer;
+}
+
+.modal-nav:hover {
+  background: #fff;
+}
+
+.modal-nav-prev {
+  left: 0.75rem;
+}
+
+.modal-nav-next {
+  right: 0.75rem;
+}
+
+.modal-zoom-controls {
+  position: absolute;
+  bottom: 0.65rem;
+  right: 0.65rem;
+  display: flex;
+  gap: 0.35rem;
+  background: rgba(255, 255, 255, 0.92);
+  border-radius: 999px;
+  padding: 0.25rem 0.4rem;
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.15);
+}
+
+.modal-zoom-btn {
+  border: none;
+  background: transparent;
+  font-weight: 700;
+  color: #372714;
+  cursor: pointer;
+  padding: 0 0.45rem;
+  font-size: 1rem;
+  border-radius: 999px;
+}
+
+.modal-zoom-btn:focus-visible {
+  outline: 2px solid #7b5a33;
+}
+
+.modal-zoom-btn:hover {
+  color: #8a6a39;
+}
+
+.modal-gallery .modal-thumbs::-webkit-scrollbar {
+  height: 6px;
+}
+
+.modal-gallery .modal-thumbs::-webkit-scrollbar-thumb {
+  background: #a98e73;
+  border-radius: 999px;
+}
+
 .modal-thumb {
   border: 1px solid #e4d6c6;
   border-radius: 10px;
@@ -1168,6 +1337,26 @@ h3 {
 .modal-details {
   display: grid;
   gap: 0.5rem;
+  background: radial-gradient(circle at top right, rgba(255, 204, 153, 0.25), rgba(255, 255, 255, 0.95));
+  border: 1px solid rgba(255, 204, 153, 0.6);
+  border-radius: 14px;
+  padding: 0.9rem 1rem 1rem;
+  box-shadow: 0 15px 40px rgba(15, 8, 4, 0.2);
+  position: relative;
+  overflow: hidden;
+}
+
+.modal-details::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at 20% 20%, rgba(255, 255, 255, 0.55), transparent 55%);
+  pointer-events: none;
+  opacity: 0.9;
+}
+
+.modal-details > * {
+  position: relative;
 }
 
 .modal-price {
@@ -1191,7 +1380,22 @@ h3 {
 .modal-desc {
   margin: 0;
   color: #5a3a21;
-  line-height: 1.5;
+  line-height: 1.6;
+  font-size: 0.95rem;
+  letter-spacing: 0.01em;
+  font-style: italic;
+  text-shadow: 0 2px 4px rgba(255, 255, 255, 0.6);
+  display: block;
+}
+
+.modal-desc::before {
+  content: "Crafting note";
+  display: block;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.2em;
+  color: #b07b36;
+  margin-bottom: 0.25rem;
 }
 
 .product-modal-actions {

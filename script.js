@@ -1,4 +1,5 @@
 let products = [];
+let productGalleryKeyHandler = null;
 const fallbackProducts = [
   {
     id: 1,
@@ -7,6 +8,9 @@ const fallbackProducts = [
     price: 45999,
     details: "Teak wood, hand-carved jawari",
     images: ["assets/images/sitar_1.jpg"],
+    care: "Wipe bridges and strings after each practice, store in padded case, and keep humidity near 50%.",
+    sound: "Golden bass with shimmering drones and articulate mids designed for alap and jhala.",
+    story: "Carved in Kolkata by the Ravi family, embracing three generations of sitar craftsmanship.",
     video_url: "assets/videos/sitar-making.mp4"
   },
   {
@@ -16,6 +20,9 @@ const fallbackProducts = [
     price: 28999,
     details: "Sheesham dayan + copper bayan",
     images: ["assets/Tabla/tabla_1.jpg"],
+    care: "Keep heads dry, dust with soft cloth, and loosen straps slightly for storage.",
+    sound: "Cracking dayan slaps with thunderous bayan booms tuned for traditional thekas.",
+    story: "Miraj artisans sculpt the dayan from sheesham and copper for balanced resonance.",
     video_url: "assets/videos/tabla-making.mp4"
   },
   {
@@ -25,6 +32,9 @@ const fallbackProducts = [
     price: 37999,
     details: "Female pitch, polished toor wood",
     images: ["assets/images/tanpura.svg"],
+    care: "Store upright in silk cover, polish the bridge, and avoid impacts.",
+    sound: "Lush sympathetic drones that bloom underneath vocals and instruments.",
+    story: "Hand-assembled in Miraj with aged toor wood and sympathetic string tensioning.",
     video_url: "assets/videos/harmonium-making.mp4"
   },
   {
@@ -34,6 +44,9 @@ const fallbackProducts = [
     price: 3499,
     details: "Seasoned bamboo, concert tuning",
     images: ["assets/images/bansuri.svg"],
+    care: "Wipe dry, keep in padded sleeve, and avoid rain exposure.",
+    sound: "Clear, airy projection with warm bottom end and bright upper register.",
+    story: "Bamboo sourced from North India and tuned by Varanasi artisans for pro gigs.",
     video_url: "assets/videos/sitar-making.mp4"
   },
   {
@@ -43,6 +56,9 @@ const fallbackProducts = [
     price: 21999,
     details: "9 stopper, coupler, scale changer",
     images: ["assets/images/indian-scale-changer-harmonium.jpg"],
+    care: "Keep bellows dust-free, oil joints lightly, and store upright with key cover.",
+    sound: "Sympathetic bass, responsive treble, and lush sustain for accompaniment.",
+    story: "Built in a family workshop with double reed system and polished maple finish.",
     video_url: "assets/videos/harmonium-making.mp4"
   },
   {
@@ -52,6 +68,9 @@ const fallbackProducts = [
     price: 31999,
     details: "Hand-laced barrel, rich bass",
     images: ["assets/images/pakhawaj.svg"],
+    care: "Avoid temperature swings, keep lashings taut, and dust the shell regularly.",
+    sound: "Deep bass thud with crisp treble slaps tuned for dhrupad.",
+    story: "Hand-laced in Gwalior tradition for authentic tonal balance.",
     video_url: "assets/videos/tabla-making.mp4"
   }
 ];
@@ -149,7 +168,7 @@ const translations = {
     couponApplied: "Coupon applied.",
     couponInvalid: "Invalid coupon.",
     couponHint: "Use the admin coupon to save more.",
-    couponUnavailable: "No coupon available right now."
+    couponUnavailable: "No coupon available right now.",
   },
   mr: {
     navProducts: "उत्पादने",
@@ -237,7 +256,7 @@ const translations = {
     couponApplied: "कूपन लागू झाले.",
     couponInvalid: "कूपन चुकीचे आहे.",
     couponHint: "अधिक सवलतीसाठी कूपन वापरा.",
-    couponUnavailable: "सध्या कोणतेही कूपन नाही."
+    couponUnavailable: "सध्या कोणतेही कूपन नाही.",
   },
   hi: {
     navProducts: "उत्पाद",
@@ -324,7 +343,7 @@ const translations = {
     couponApplied: "कूपन लागू हो गया।",
     couponInvalid: "कूपन मान्य नहीं है।",
     couponHint: "अधिक छूट के लिए कूपन लगाएं।",
-    couponUnavailable: "इस समय कोई कूपन उपलब्ध नहीं है।"
+    couponUnavailable: "इस समय कोई कूपन उपलब्ध नहीं है।",
   }
 };
 
@@ -847,8 +866,15 @@ function ensureProductsVisible() {
   renderProducts();
 }
 
+
 function openProductModal(product) {
   if (!productModal || !productModalTitle || !productMediaList) return;
+  if (!productModal.hasAttribute("tabindex")) {
+    productModal.tabIndex = -1;
+  }
+  if (productModal.__clearDescriptionTypewriter) {
+    productModal.__clearDescriptionTypewriter();
+  }
   productModalTitle.textContent = product.name;
   const discountPct = getActiveDiscountPercent();
   const dealPrice = discountPct > 0 ? getCartItemFinalPrice(product) : product.price;
@@ -872,10 +898,93 @@ function openProductModal(product) {
   const mainWrap = document.createElement("div");
   mainWrap.className = "modal-main";
   const mainImg = document.createElement("img");
-  mainImg.src = images[0];
   mainImg.alt = product.name;
   mainImg.loading = "lazy";
-  mainWrap.appendChild(mainImg);
+  mainImg.draggable = false;
+
+  const MIN_ZOOM = 1;
+  const MAX_ZOOM = 3;
+  const ZOOM_STEP = 0.25;
+  let zoomLevel = MIN_ZOOM;
+  const resetZoom = () => {
+    zoomLevel = MIN_ZOOM;
+    mainImg.style.transform = `scale(${zoomLevel})`;
+    mainImg.dataset.zoom = zoomLevel.toFixed(2);
+  };
+  const applyZoom = (value) => {
+    zoomLevel = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, value));
+    mainImg.style.transform = `scale(${zoomLevel})`;
+    mainImg.dataset.zoom = zoomLevel.toFixed(2);
+  };
+  const adjustZoom = (value) => applyZoom(value);
+
+  const thumbButtons = [];
+  let currentIndex = 0;
+  const setImage = (targetIndex) => {
+    const normalizedIndex = ((targetIndex % images.length) + images.length) % images.length;
+    currentIndex = normalizedIndex;
+    const nextSrc = images[normalizedIndex];
+    mainImg.src = nextSrc;
+    mainImg.alt = `${product.name} (${normalizedIndex + 1}/${images.length})`;
+    thumbButtons.forEach((btn, idx) => btn.classList.toggle("active", idx === normalizedIndex));
+    resetZoom();
+  };
+  const showNextImage = () => setImage(currentIndex + 1);
+  const showPrevImage = () => setImage(currentIndex - 1);
+
+  const prevBtn = document.createElement("button");
+  prevBtn.type = "button";
+  prevBtn.className = "modal-nav modal-nav-prev";
+  prevBtn.setAttribute("aria-label", "Previous image");
+  prevBtn.innerHTML = "‹";
+  prevBtn.addEventListener("click", showPrevImage);
+
+  const nextBtn = document.createElement("button");
+  nextBtn.type = "button";
+  nextBtn.className = "modal-nav modal-nav-next";
+  nextBtn.setAttribute("aria-label", "Next image");
+  nextBtn.innerHTML = "›";
+  nextBtn.addEventListener("click", showNextImage);
+
+  const zoomControls = document.createElement("div");
+  zoomControls.className = "modal-zoom-controls";
+  const zoomInBtn = document.createElement("button");
+  zoomInBtn.type = "button";
+  zoomInBtn.className = "modal-zoom-btn";
+  zoomInBtn.setAttribute("aria-label", "Zoom in");
+  zoomInBtn.textContent = "+";
+  zoomInBtn.addEventListener("click", () => adjustZoom(zoomLevel + ZOOM_STEP));
+  const zoomOutBtn = document.createElement("button");
+  zoomOutBtn.type = "button";
+  zoomOutBtn.className = "modal-zoom-btn";
+  zoomOutBtn.setAttribute("aria-label", "Zoom out");
+  zoomOutBtn.textContent = "−";
+  zoomOutBtn.addEventListener("click", () => adjustZoom(zoomLevel - ZOOM_STEP));
+  const resetBtn = document.createElement("button");
+  resetBtn.type = "button";
+  resetBtn.className = "modal-zoom-btn";
+  resetBtn.setAttribute("aria-label", "Reset zoom");
+  resetBtn.textContent = "⟲";
+  resetBtn.addEventListener("click", resetZoom);
+  zoomControls.append(zoomOutBtn, resetBtn, zoomInBtn);
+
+  const makerOverlay = document.createElement("div");
+  makerOverlay.className = "modal-maker-overlay";
+  const makerBtn = document.createElement("button");
+  makerBtn.type = "button";
+  makerBtn.className = "modal-maker-cta";
+  makerBtn.setAttribute("aria-label", t("watchMakingVideo"));
+  makerBtn.innerHTML = `<span class="modal-maker-icon" aria-hidden="true">▶</span><span>${t(
+    "watchMakingVideo"
+  )}</span>`;
+  makerBtn.addEventListener("click", (event) => {
+    event.stopPropagation();
+    if (product.video_url) {
+      window.open(product.video_url, "_blank");
+    }
+  });
+  makerOverlay.appendChild(makerBtn);
+  mainWrap.append(prevBtn, mainImg, nextBtn, zoomControls, makerOverlay);
 
   const thumbs = document.createElement("div");
   thumbs.className = "modal-thumbs";
@@ -883,13 +992,9 @@ function openProductModal(product) {
     const btn = document.createElement("button");
     btn.type = "button";
     btn.className = "modal-thumb";
-    if (idx === 0) btn.classList.add("active");
     btn.innerHTML = `<img src="${src}" alt="${product.name} thumbnail ${idx + 1}" loading="lazy" />`;
-    btn.addEventListener("click", () => {
-      mainImg.src = src;
-      thumbs.querySelectorAll(".modal-thumb").forEach((el) => el.classList.remove("active"));
-      btn.classList.add("active");
-    });
+    btn.addEventListener("click", () => setImage(idx));
+    thumbButtons.push(btn);
     thumbs.appendChild(btn);
   });
 
@@ -904,12 +1009,120 @@ function openProductModal(product) {
     }</p>
     ${savings > 0 ? `<p class="modal-savings">${t("youSavedLabel")} ${formatINR(savings)}</p>` : ""}
     <p class="modal-category">${product.category || ""}</p>
-    <p class="modal-desc">${product.details || ""}</p>
+    <p class="modal-desc"></p>
   `;
+  const descElement = detailCol.querySelector(".modal-desc");
+  let typewriterTimer = null;
+  const stopTypewriter = () => {
+    if (typewriterTimer) {
+      clearInterval(typewriterTimer);
+      typewriterTimer = null;
+    }
+  };
+  const typeWriter = (element, text) => {
+    stopTypewriter();
+    if (!element) return;
+    element.textContent = "";
+    let index = 0;
+    typewriterTimer = setInterval(() => {
+      element.textContent += text[index] || "";
+      index += 1;
+      if (index >= text.length) {
+        stopTypewriter();
+      }
+    }, 28);
+  };
+  typeWriter(descElement, product.details || "");
 
   wrapper.appendChild(gallery);
   wrapper.appendChild(detailCol);
   productMediaList.appendChild(wrapper);
+
+  const SWIPE_THRESHOLD = 40;
+  let pointerStartX = 0;
+  let pointerStartY = 0;
+  let isPointerActive = false;
+  mainWrap.addEventListener("pointerdown", (event) => {
+    if (event.target !== mainImg) return;
+    pointerStartX = event.clientX;
+    pointerStartY = event.clientY;
+    isPointerActive = true;
+    try {
+      mainWrap.setPointerCapture(event.pointerId);
+    } catch (err) {
+      // ignore pointer capture errors
+    }
+  });
+  const handlePointerEnd = (event) => {
+    if (!isPointerActive) return;
+    isPointerActive = false;
+    if (event.pointerId) {
+      try {
+        mainWrap.releasePointerCapture(event.pointerId);
+      } catch (err) {
+        // swallow
+      }
+    }
+    const deltaX = event.clientX - pointerStartX;
+    const deltaY = event.clientY - pointerStartY;
+    if (Math.abs(deltaX) > SWIPE_THRESHOLD && Math.abs(deltaX) > Math.abs(deltaY)) {
+      if (deltaX < 0) {
+        showNextImage();
+      } else {
+        showPrevImage();
+      }
+    }
+  };
+  mainWrap.addEventListener("pointerup", handlePointerEnd);
+  mainWrap.addEventListener("pointercancel", () => {
+    isPointerActive = false;
+  });
+  mainWrap.addEventListener(
+    "wheel",
+    (event) => {
+      event.preventDefault();
+      adjustZoom(zoomLevel + (event.deltaY < 0 ? ZOOM_STEP : -ZOOM_STEP));
+    },
+    { passive: false }
+  );
+  mainWrap.addEventListener("dblclick", (event) => {
+    if (event.target !== mainImg) return;
+    resetZoom();
+  });
+
+  const handleSwipeClick = (event) => {
+    if (event.target !== mainImg) return;
+    if (event.clientX < mainImg.getBoundingClientRect().left + mainImg.clientWidth / 2) {
+      showPrevImage();
+    } else {
+      showNextImage();
+    }
+  };
+  mainWrap.addEventListener("click", handleSwipeClick);
+
+  setImage(0);
+
+  if (productModal) {
+    if (productGalleryKeyHandler) {
+      productModal.removeEventListener("keydown", productGalleryKeyHandler);
+    }
+    productGalleryKeyHandler = (event) => {
+      if (event.key === "ArrowRight") {
+        event.preventDefault();
+        showNextImage();
+      } else if (event.key === "ArrowLeft") {
+        event.preventDefault();
+        showPrevImage();
+      } else if (event.key === "Escape") {
+        event.preventDefault();
+        closeProductDetailsModal();
+      }
+    };
+    productModal.addEventListener("keydown", productGalleryKeyHandler);
+    productModal.focus();
+  }
+
+  productModal.__clearDescriptionTypewriter = stopTypewriter;
 
   productModalAddToCart.dataset.productId = String(product.id);
   productModalAddToCart.innerHTML = `<span>${t("addToCart")}</span>`;
@@ -917,10 +1130,24 @@ function openProductModal(product) {
   productModal.setAttribute("aria-hidden", "false");
 }
 
+
 function closeProductDetailsModal() {
   if (!productModal) return;
   productModal.classList.remove("open");
   productModal.setAttribute("aria-hidden", "true");
+  productModal.blur();
+  if (productGalleryKeyHandler) {
+    productModal.removeEventListener("keydown", productGalleryKeyHandler);
+    productGalleryKeyHandler = null;
+  }
+  if (productModal.__stop360Spin) {
+    productModal.__stop360Spin();
+    productModal.__stop360Spin = null;
+  }
+  if (productModal.__clearDescriptionTypewriter) {
+    productModal.__clearDescriptionTypewriter();
+    productModal.__clearDescriptionTypewriter = null;
+  }
 }
 
 function renderCart() {
@@ -1257,7 +1484,23 @@ function openCartPanel() {
   cartPanel.setAttribute("aria-hidden", "false");
 }
 
+if (cartPanel) {
+  cartPanel.addEventListener("click", (event) => {
+    if (event.target === cartPanel) {
+      closeCartPanel();
+    }
+  });
+}
+
+document.addEventListener("click", (event) => {
+  if (!cartPanel?.classList.contains("open") || !cartPanel) return;
+  if (cartPanel.contains(event.target)) return;
+  if (cartBtn && cartBtn.contains(event.target)) return;
+  closeCartPanel();
+});
+
 function openCustomerModal() {
+  closeCartPanel();
   customerModal?.classList.add("open");
   customerModal?.setAttribute("aria-hidden", "false");
 }
