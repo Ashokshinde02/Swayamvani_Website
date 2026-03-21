@@ -1880,18 +1880,22 @@ func (s *Server) handleCustomerRegister(w http.ResponseWriter, r *http.Request) 
 }
 
 func (s *Server) handleCustomerLogin(w http.ResponseWriter, r *http.Request) {
+	fmt.Println("In login")
 	if r.Method != http.MethodPost {
 		writeJSONError(w, http.StatusMethodNotAllowed, "method not allowed")
 		return
 	}
 	var payload CustomerLoginRequest
 	if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
+		fmt.Println("invalid Json payload")
 		writeJSONError(w, http.StatusBadRequest, "invalid JSON payload")
 		return
 	}
+	fmt.Println("payload", payload)
 	payload.Email = strings.ToLower(strings.TrimSpace(payload.Email))
 	payload.Password = strings.TrimSpace(payload.Password)
 	if payload.Email == "" || payload.Password == "" {
+		fmt.Println("Email and password required")
 		writeJSONError(w, http.StatusBadRequest, "email and password are required")
 		return
 	}

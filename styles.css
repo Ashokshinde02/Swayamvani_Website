@@ -1326,6 +1326,13 @@ h3 {
 .form-status {
   min-height: 1.1rem;
 }
+.customer-auth-status {
+  margin: 0 0 0.65rem;
+  font-size: 0.95rem;
+  color: #a22300;
+  font-weight: 600;
+  text-align: left;
+}
 
 .cart-panel {
   position: fixed;
@@ -1340,6 +1347,14 @@ h3 {
   flex-direction: column;
   transition: right 0.25s ease;
   z-index: 20; /* keep below sticky header (header z-index:30) */
+}
+
+.cart-alert {
+  color: #c26911;
+  font-weight: 700;
+  margin: 0;
+  padding: 0 1.1rem 0.35rem;
+  font-size: 0.95rem;
 }
 
 .cart-panel.open {

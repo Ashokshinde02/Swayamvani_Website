@@ -127,13 +127,14 @@ const translations = {
     paymentSuccess: "Payment success. We will contact you to confirm delivery.",
     checkoutUnavailable: "Razorpay checkout unavailable",
     checkoutFailed: "Checkout failed",
-    customerTitle: "Customer Account",
+  customerTitle: "Customer Account",
   customerLogin: "Login",
     customerRegister: "Create Account",
     customerPassword: "Password",
     customerLogout: "Logout",
     customerAuthSuccess: "You are logged in.",
     customerAuthFailed: "Customer authentication failed.",
+    cartDiscountGuestHint: "Exclusive discount around the corner—please login to claim it.",
   offerTitle: "Exclusive Customer Offers",
   offerDesc: "Login now to unlock instant savings and complimentary guidance from our master craftsmen.",
   offerDiscountTitle: "",
@@ -221,6 +222,7 @@ const translations = {
     customerLogout: "लॉगआउट",
     customerAuthSuccess: "तुम्ही लॉगिन आहात.",
     customerAuthFailed: "ग्राहक प्रमाणीकरण अयशस्वी.",
+    cartDiscountGuestHint: "कार्टमध्ये खास सूट आहे—कृपया लॉगिन करा.",
     offerTitle: "ग्राहकांसाठी खास ऑफर्स",
   offerDesc: "लॉगिन करून तत्काळ सूट आणि आमच्या मास्टर कारीगरांच्या मार्गदर्शनाचा लाभ घ्या.",
   offerDiscountTitle: "",
@@ -361,6 +363,7 @@ const closeCart = document.getElementById("closeCart");
 const cartItems = document.getElementById("cartItems");
 const cartTotal = document.getElementById("cartTotal");
 const cartSavingsEl = document.getElementById("cartSavings");
+const cartDiscountHintEl = document.getElementById("cartDiscountHint");
 const cartCount = document.getElementById("cartCount");
 const checkoutBtn = document.getElementById("checkoutBtn");
 const closeCartFooter = document.getElementById("closeCartFooter");
@@ -376,11 +379,14 @@ const customerAuthBtn = document.getElementById("customerAuthBtn");
 const customerGreeting = document.getElementById("customerGreeting");
 const customerModal = document.getElementById("customerModal");
 const closeCustomerModal = document.getElementById("closeCustomerModal");
-const customerAuthStatus = document.getElementById("customerAuthStatus");
 const customerLoginForm = document.getElementById("customerLoginForm");
 const customerRegisterForm = document.getElementById("customerRegisterForm");
 const showRegisterLink = document.getElementById("showRegisterLink");
 const backToLoginLink = document.getElementById("backToLoginLink");
+const customerLoginEmailInput = document.getElementById("customerLoginEmail");
+const customerLoginPasswordInput = document.getElementById("customerLoginPassword");
+const customerLoginStatus = document.getElementById("customerLoginStatus");
+const customerRegisterStatus = document.getElementById("customerRegisterStatus");
 const videoGrid = document.getElementById("videoGrid");
 const productModal = document.getElementById("productModal");
 const closeProductModal = document.getElementById("closeProductModal");
@@ -443,6 +449,7 @@ function firstNameFrom(name = "") {
 const CART_KEY_PREFIX = "sv_cart_v1";
 let pendingCartIds = null;
 let cartHydrated = false;
+let pendingCartMerge = [];
 
 function cartStorageKey() {
   const email = state.customer?.email ? state.customer.email.trim().toLowerCase() : null;
@@ -482,9 +489,26 @@ function hydrateCartWithProducts() {
   state.cart = pendingCartIds
     .map((id) => products.find((p) => p.id === id))
     .filter(Boolean);
+  mergePendingCart();
   cartHydrated = true;
   saveCart(); // ensure cleaned list persisted (drops missing products)
   renderCart();
+}
+
+function mergePendingCart() {
+  if (!pendingCartMerge.length) return;
+  pendingCartMerge.forEach(({ id, qty }) => {
+    const existing = state.cart.find((item) => item.id === id);
+    if (existing) {
+      existing.qty = Math.max(Number(existing.qty || 1), Number(qty || 1));
+      return;
+    }
+    const product = products.find((p) => p.id === id);
+    if (product) {
+      state.cart.push({ ...product, qty: Number(qty || 1) });
+    }
+  });
+  pendingCartMerge = [];
 }
 
 function clearCartAndStorage() {
@@ -774,7 +798,6 @@ function renderProducts() {
           ${discountPct > 0 ? `<span class="price-savings">You save ${formatINR(savings)}</span>` : ""}
         </div>
         <button class="product-cta" data-id="${product.id}"><span>${t("addToCart")}</span></button>
-        <button class="secondary-cta view-details" data-product-id="${product.id}">View details</button>
       </div>
     `;
     productGrid.appendChild(card);
@@ -810,7 +833,6 @@ function renderProducts() {
             ${discountPct > 0 ? `<span class="price-savings">You save ${formatINR(savings)}</span>` : ""}
           </div>
           <button class="product-cta" data-id="${product.id}"><span>${t("addToCart")}</span></button>
-          <button class="secondary-cta view-details" data-product-id="${product.id}">View details</button>
         </div>
       `;
       productGrid.appendChild(card);
@@ -1048,6 +1070,12 @@ function renderCart() {
     }
   }
 
+  if (cartDiscountHintEl) {
+    const showDiscountHint = state.activeOfferType === "discount" && !state.customer && state.cart.length > 0;
+    cartDiscountHintEl.textContent = showDiscountHint ? t("cartDiscountGuestHint") : "";
+    cartDiscountHintEl.style.display = showDiscountHint ? "block" : "none";
+  }
+
   syncCouponUIAvailability();
   if (state.coupon.applied && state.coupon.code) {
     setCouponStatus(`${t("couponApplied")} ${state.coupon.code} (${state.coupon.percent}% off)`);
@@ -1237,7 +1265,8 @@ function openCustomerModal() {
 function closeCustomerAuthModal() {
   customerModal?.classList.remove("open");
   customerModal?.setAttribute("aria-hidden", "true");
-  if (customerAuthStatus) customerAuthStatus.textContent = "";
+  if (customerLoginStatus) customerLoginStatus.textContent = "";
+  if (customerRegisterStatus) customerRegisterStatus.textContent = "";
 }
 
 function renderCustomerState() {
@@ -1525,7 +1554,7 @@ customerAuthBtn?.addEventListener("click", async () => {
     try {
       await performLogout();
     } catch (error) {
-      if (customerAuthStatus) customerAuthStatus.textContent = error.message || t("customerAuthFailed");
+      alert(error.message || t("customerAuthFailed"));
     }
     return;
   }
@@ -1593,36 +1622,47 @@ dropdownLogout?.addEventListener("click", async () => {
   try {
     await performLogout();
   } catch (error) {
-    if (customerAuthStatus) customerAuthStatus.textContent = error.message || t("customerAuthFailed");
+    alert(error.message || t("customerAuthFailed"));
   }
 });
 
 customerLoginForm?.addEventListener("submit", async (event) => {
   event.preventDefault();
-  if (customerAuthStatus) customerAuthStatus.textContent = t("sending");
+  if (customerLoginStatus) customerLoginStatus.textContent = t("sending");
+
+  const guestCartSnapshot = Object.entries(
+    state.cart.reduce((acc, item) => {
+      const qty = Number(item.qty || 1);
+      acc[item.id] = Math.max(acc[item.id] || 0, qty);
+      return acc;
+    }, {})
+  ).map(([id, qty]) => ({ id: Number(id), qty }));
 
   try {
     const data = await apiJSON("/api/customer/login", {
       method: "POST",
       body: JSON.stringify({
-        email: document.getElementById("customerLoginEmail").value,
-        password: document.getElementById("customerLoginPassword").value
+        email: customerLoginEmailInput?.value || "",
+        password: customerLoginPasswordInput?.value || ""
       })
     });
 
     state.customer = data.customer || null;
+    if (guestCartSnapshot.length) {
+      pendingCartMerge = guestCartSnapshot;
+    }
     applyStoredShipping(state.customer);
     renderCustomerState();
     customerLoginForm.reset();
     closeCustomerAuthModal();
   } catch (error) {
-    if (customerAuthStatus) customerAuthStatus.textContent = error.message || t("customerAuthFailed");
+    if (customerLoginStatus) customerLoginStatus.textContent = error.message || t("customerAuthFailed");
   }
 });
 
 customerRegisterForm?.addEventListener("submit", async (event) => {
   event.preventDefault();
-  if (customerAuthStatus) customerAuthStatus.textContent = t("sending");
+  if (customerRegisterStatus) customerRegisterStatus.textContent = t("sending");
 
   try {
     const rawName = document.getElementById("customerRegisterName").value.trim();
@@ -1645,7 +1685,7 @@ customerRegisterForm?.addEventListener("submit", async (event) => {
     customerRegisterForm.reset();
     closeCustomerAuthModal();
   } catch (error) {
-    if (customerAuthStatus) customerAuthStatus.textContent = error.message || t("customerAuthFailed");
+    if (customerRegisterStatus) customerRegisterStatus.textContent = error.message || t("customerAuthFailed");
   }
 });
 
