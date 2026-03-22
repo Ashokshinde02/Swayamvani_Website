@@ -49,7 +49,7 @@ func SendMail(customerName string, receiptantMailId string, subject string, body
 		return false, err
 	}*/
 
-	conn, err := net.Dial("tcp", fmt.Sprintf("%s:%s", localConfig.TitanSMTPHost, localConfig.TitanSMTPPort))
+	conn, err := net.Dial("tcp", net.JoinHostPort(localConfig.TitanSMTPHost, localConfig.TitanSMTPPort))
 	if err != nil {
 		return false, err
 	}

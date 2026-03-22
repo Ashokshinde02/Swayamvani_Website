@@ -1874,7 +1874,7 @@ func (s *Server) handleCustomerRegister(w http.ResponseWriter, r *http.Request) 
 	subject := "Welcome to Swayamvani! Your Account Has Been Created"
 	emailBody := mailer.CreateEmailBody(swayamVaniLogo, account.Name, account.Email, rawPassword)
 	if _, err := mailer.SendMail(account.Name, account.Email, subject, emailBody); err != nil {
-		writeJSONError(w, http.StatusInternalServerError, "failed to send welcome email")
+		writeJSONError(w, http.StatusInternalServerError, fmt.Sprintf("failed to send welcome email :- %v", err))
 		return
 	}
 
