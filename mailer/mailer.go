@@ -8,6 +8,7 @@ import (
 	"encoding/base64"
 	"fmt"
 	"io"
+	"net"
 	"net/smtp"
 
 	localConfig "swayamvani/config"
@@ -36,15 +37,20 @@ func SendMail(customerName string, receiptantMailId string, subject string, body
 		body
 
 	// Set up TLS config
-	tlsconfig := &tls.Config{
+	/*tlsconfig := &tls.Config{
 		InsecureSkipVerify: true,
 		ServerName:         localConfig.TitanSMTPHost,
 	}
-
+	*/
 	// Connect to the SMTP server
-	conn, err := tls.Dial("tcp", localConfig.TitanSMTPHost+":"+localConfig.TitanSMTPPort, tlsconfig)
+	/*conn, err := tls.Dial("tcp", localConfig.TitanSMTPHost+":"+localConfig.TitanSMTPPort, tlsconfig)
 	if err != nil {
 		fmt.Println("Dialing Error:", err)
+		return false, err
+	}*/
+
+	conn, err := net.Dial("tcp", fmt.Sprintf("%s:%s", localConfig.TitanSMTPHost, localConfig.TitanSMTPPort))
+	if err != nil {
 		return false, err
 	}
 
@@ -52,6 +58,12 @@ func SendMail(customerName string, receiptantMailId string, subject string, body
 	if err != nil {
 		fmt.Println("Client Error:", err)
 		return false, err
+	}
+
+	if ok, _ := c.Extension("STARTTLS"); ok {
+		if err := c.StartTLS(&tls.Config{ServerName: localConfig.TitanSMTPHost}); err != nil {
+			return false, err
+		}
 	}
 
 	// Auth

@@ -6,7 +6,7 @@ var (
 	DecriptionKey     = "thisis32bitlongpassphraseimusing"
 
 	TitanSMTPHost = "smtpout.secureserver.net"
-	TitanSMTPPort = "465"
+	TitanSMTPPort = "587"
 
 	LogoURL = "swayamvani/logo.jpeg"
 )
