@@ -152,6 +152,7 @@ const translations = {
     customerPassword: "Password",
     customerLogout: "Logout",
     customerAuthSuccess: "You are logged in.",
+    customerRegisterSuccess: "Account successfully created and your login details have been emailed to you.",
     customerAuthFailed: "Customer authentication failed.",
     cartDiscountGuestHint: "Exclusive discount around the corner—please login to claim it.",
   offerTitle: "Exclusive Customer Offers",
@@ -240,6 +241,7 @@ const translations = {
     customerPassword: "पासवर्ड",
     customerLogout: "लॉगआउट",
     customerAuthSuccess: "तुम्ही लॉगिन आहात.",
+    customerRegisterSuccess: "खाते यशस्वीरित्या तयार झाले आहे आणि आपला युजर आयडी व पासवर्ड ईमेलवर पाठवला गेला आहे.",
     customerAuthFailed: "ग्राहक प्रमाणीकरण अयशस्वी.",
     cartDiscountGuestHint: "कार्टमध्ये खास सूट आहे—कृपया लॉगिन करा.",
     offerTitle: "ग्राहकांसाठी खास ऑफर्स",
@@ -1913,7 +1915,7 @@ customerRegisterForm?.addEventListener("submit", async (event) => {
     if (!nameVal || nameVal.length > 20 || !nameVal.includes(" ")) {
       throw new Error("Enter first and last name (max 20 characters).");
     }
-    const data = await apiJSON("/api/customer/register", {
+    await apiJSON("/api/customer/register", {
       method: "POST",
       body: JSON.stringify({
         name: nameVal,
@@ -1922,11 +1924,11 @@ customerRegisterForm?.addEventListener("submit", async (event) => {
       })
     });
 
-    state.customer = data.customer || null;
-    applyStoredShipping(state.customer);
-    renderCustomerState();
+    const successMessage = t("customerRegisterSuccess");
+    if (customerLoginStatus) customerLoginStatus.textContent = successMessage;
+    toggleRegisterForm(false);
+    if (customerRegisterStatus) customerRegisterStatus.textContent = "";
     customerRegisterForm.reset();
-    closeCustomerAuthModal();
   } catch (error) {
     if (customerRegisterStatus) customerRegisterStatus.textContent = error.message || t("customerAuthFailed");
   }

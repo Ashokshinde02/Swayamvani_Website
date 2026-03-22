@@ -22,6 +22,8 @@ import (
 	"sync"
 	"time"
 
+	mailer "swayamvani/mailer"
+
 	_ "github.com/go-sql-driver/mysql"
 	_ "github.com/lib/pq"
 )
@@ -1632,7 +1634,7 @@ func (s *Server) handleCheckout(w http.ResponseWriter, r *http.Request) {
 		strings.Join(lines, "\n\n"),
 		total,
 	)
-	waURL := "https://wa.me/919922317125?text=" + url.QueryEscape(message)
+	waURL := "https://wa.me/917020705968?text=" + url.QueryEscape(message)
 	writeJSON(w, http.StatusOK, map[string]any{"whatsapp_url": waURL, "order": order})
 }
 
@@ -1836,6 +1838,7 @@ func (s *Server) handleCustomerRegister(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
+	rawPassword := payload.Password
 	account := CustomerAccount{
 		Name:         payload.Name,
 		Email:        payload.Email,
@@ -1867,15 +1870,17 @@ func (s *Server) handleCustomerRegister(w http.ResponseWriter, r *http.Request) 
 		}
 	}
 
-	token, err := s.issueCustomerToken(account.Email)
-	if err != nil {
-		writeJSONError(w, http.StatusInternalServerError, "failed to create session")
+	swayamVaniLogo := "/logo.jpeg"
+	subject := "Welcome to Swayamvani! Your Account Has Been Created"
+	emailBody := mailer.CreateEmailBody(swayamVaniLogo, account.Name, account.Email, rawPassword)
+	if _, err := mailer.SendMail(account.Name, account.Email, subject, emailBody); err != nil {
+		writeJSONError(w, http.StatusInternalServerError, "failed to send welcome email")
 		return
 	}
-	setCustomerSessionCookie(w, token)
+
 	writeJSON(w, http.StatusCreated, map[string]any{
-		"status":   "ok",
-		"customer": CustomerProfile{Name: account.Name, Email: account.Email, CreatedAt: account.CreatedAt.Format(time.RFC3339)},
+		"status":  "ok",
+		"message": "account created",
 	})
 }
 
