@@ -75,14 +75,41 @@ const fallbackProducts = [
   }
 ];
 
+const instrumentOptions = [
+  "Sitar",
+  "Tabla",
+  "Sarod",
+  "Tanpura",
+  "Bansuri",
+  "Harmonium",
+  "Mridangam",
+  "Violin",
+  "Santoor",
+  "Pakhawaj",
+  "Shehnai",
+  "Rudra Veena"
+];
+
 const defaultVideos = [
   { id: 1, titleKey: "videoSitar", url: "assets/videos/sitar-making.mp4" },
   { id: 2, titleKey: "videoTabla", url: "assets/videos/tabla-making.mp4" },
   { id: 3, titleKey: "videoHarmonium", url: "assets/videos/harmonium-making.mp4" }
 ];
 
+function escapeHtml(value) {
+  return String(value || "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
 const translations = {
   en: {
+    navInstrumentsTitle: "Instruments",
+    navOthersTitle: "Others",
+    navCustomizeProduct: "Customize your product",
     navProducts: "Products",
     navAbout: "About",
     navContact: "Contact",
@@ -130,6 +157,16 @@ const translations = {
     labelEmail: "Email",
     labelMessage: "Message",
     sendInquiry: "Send Inquiry",
+    customInstrumentTitle: "Customize your instrument",
+    customInstrumentDesc: "Share your dream tonal palette, preferred artist, or performance space and we will translate it into a crafted instrument within 24 hours.",
+    customInstrumentCopyDesc: "Our artisan partners in Miraj, Varanasi, Kolkata, and Gwalior can tune every dimension, material, and finish to your creative story.",
+    customInstrumentCopyPoint1: "Instrument sketching and tonal planning",
+    customInstrumentCopyPoint2: "Sympathetic string, skin, and reed tuning backed by reference recordings",
+    customInstrumentCopyPoint3: "Logistics, setup, and tuning guidance included",
+    customInstrumentLabelInstrument: "Instrument",
+    customInstrumentLabelRequirements: "Tell us your requirements",
+    customInstrumentSubmit: "Send Requirement",
+    customInstrumentSelectPlaceholder: "Choose an instrument",
     yourCart: "Your Cart",
     total: "Total",
     closeCart: "Close Cart",
@@ -172,6 +209,9 @@ const translations = {
     couponUnavailable: "No coupon available right now.",
   },
   mr: {
+    navInstrumentsTitle: "वाद्य",
+    navOthersTitle: "इतर",
+    navCustomizeProduct: "तुमचे वाद्य सानुकूल करा",
     navProducts: "उत्पादने",
     navAbout: "आमच्या बद्दल",
     navContact: "संपर्क",
@@ -219,6 +259,16 @@ const translations = {
     labelEmail: "ईमेल",
     labelMessage: "संदेश",
     sendInquiry: "चौकशी पाठवा",
+    customInstrumentTitle: "तुमचे वाद्य सानुकूल करा",
+    customInstrumentDesc: "तुमचे ध्वनी, कलाकार किंवा मैदानी वातावरण सांगा. आम्ही २४ तासांत एक सुस्पष्ट योजना तयार करून देऊ.",
+    customInstrumentCopyDesc: "मिरज, वाराणसी, कोलकाता आणि ग्वाल्हेरमधील कारागीर तुमच्या कल्पनांना आकार देतील.",
+    customInstrumentCopyPoint1: "वाद्य रचना आणि स्वर नियोजन",
+    customInstrumentCopyPoint2: "समान तार, डोक आणि रीड ट्यूनिंग रेकॉर्डिंग समर्थनासह",
+    customInstrumentCopyPoint3: "वहन, सेटअप आणि ट्यूनिंग मार्गदर्शन समाविष्ट",
+    customInstrumentLabelInstrument: "वाद्य",
+    customInstrumentLabelRequirements: "आपल्या मागण्या सांगा",
+    customInstrumentSubmit: "मागणी पाठवा",
+    customInstrumentSelectPlaceholder: "वाद्य निवडा",
     yourCart: "तुमचे कार्ट",
     total: "एकूण",
     closeCart: "कार्ट बंद करा",
@@ -261,6 +311,9 @@ const translations = {
     couponUnavailable: "सध्या कोणतेही कूपन नाही.",
   },
   hi: {
+    navInstrumentsTitle: "वाद्य",
+    navOthersTitle: "अन्य",
+    navCustomizeProduct: "अपने वाद्य को कस्टमाइज़ करें",
     navProducts: "उत्पाद",
     navAbout: "हमारे बारे में",
     navContact: "संपर्क",
@@ -308,6 +361,16 @@ const translations = {
     labelEmail: "ईमेल",
     labelMessage: "संदेश",
     sendInquiry: "चौकशी भेजें",
+    customInstrumentTitle: "अपने वाद्य को कस्टमाइज़ करें",
+    customInstrumentDesc: "अपनी ध्वनि, कलाकार या मंच बताएं; हम 24 घंटे में एक विशेष योजना भेजेंगे।",
+    customInstrumentCopyDesc: "हमारे कारिगर मिराज, वाराणसी, कोलकाता और ग्वालियर से आपके डिजाइन को आकार देंगे।",
+    customInstrumentCopyPoint1: "वाद्य की रूपरेखा और स्वर तैयारियाँ",
+    customInstrumentCopyPoint2: "तार, खाल और रीड ट्यूनिंग रिकॉर्डिंग के साथ",
+    customInstrumentCopyPoint3: "लॉजिस्टिक, सेटअप और ट्यूनिंग मार्गदर्शन शामिल",
+    customInstrumentLabelInstrument: "वाद्य",
+    customInstrumentLabelRequirements: "अपनी आवश्यकता बताएं",
+    customInstrumentSubmit: "आवश्यकता भेजें",
+    customInstrumentSelectPlaceholder: "वाद्य चुनें",
     yourCart: "आपका कार्ट",
     total: "कुल",
     closeCart: "कार्ट बंद करें",
@@ -418,6 +481,15 @@ const productModalAddToCart = document.getElementById("productModalAddToCart");
 const hasBackend = window.location.protocol === "http:" || window.location.protocol === "https:";
 const productDropdownButton = document.getElementById("productDropdownButton");
 const productDropdownMenu = document.getElementById("productDropdownMenu");
+const productNavDropdown = document.querySelector(".nav-dropdown");
+const customInstrumentForm = document.getElementById("customInstrumentForm");
+const customInstrumentSelect = document.getElementById("customInstrumentSelect");
+const customInstrumentStatus = document.getElementById("customInstrumentStatus");
+const customInstrumentRequirements = document.getElementById("customInstrumentRequirements");
+const customInstrumentNameInput = document.getElementById("customInstrumentName");
+const customInstrumentEmailInput = document.getElementById("customInstrumentEmail");
+const customInstrumentModal = document.getElementById("customInstrumentModal");
+const customInstrumentModalClose = document.querySelector('[data-modal-close="customInstrument"]');
 let isProductDropdownOpen = false;
 const customerProfileSection = document.getElementById("customerProfile");
 const customerProfileName = document.getElementById("customerProfileName");
@@ -740,6 +812,7 @@ function applyLanguage(lang) {
   renderCustomerState();
   renderVideos();
   applyOfferOverrides();
+  populateInstrumentSelect();
 }
 
 function normalizePrice(value) {
@@ -1742,11 +1815,124 @@ navLinks.forEach((link) => {
   });
 });
 
+function closeProductDropdown() {
+  if (!productDropdownMenu || !productDropdownButton) return;
+  isProductDropdownOpen = false;
+  productDropdownMenu.classList.remove("is-open");
+  productDropdownButton.setAttribute("aria-expanded", "false");
+  productDropdownButton.classList.remove("is-open");
+}
+
+function openProductDropdown() {
+  if (!productDropdownMenu || !productDropdownButton) return;
+  isProductDropdownOpen = true;
+  productDropdownMenu.classList.add("is-open");
+  productDropdownButton.setAttribute("aria-expanded", "true");
+  productDropdownButton.classList.add("is-open");
+}
+
+function populateInstrumentSelect() {
+  if (!customInstrumentSelect) return;
+  const placeholderText = t("customInstrumentSelectPlaceholder");
+  const options = instrumentOptions
+    .map((name) => `<option value="${escapeHtml(name)}">${escapeHtml(name)}</option>`)
+    .join("");
+  customInstrumentSelect.innerHTML = `<option value="" disabled selected>${escapeHtml(placeholderText)}</option>${options}`;
+}
+
+function openCustomInstrumentModal() {
+  customInstrumentModal?.classList.add("open");
+  customInstrumentModal?.setAttribute("aria-hidden", "false");
+  if (customInstrumentStatus) customInstrumentStatus.textContent = "";
+  populateInstrumentSelect();
+  if (customInstrumentSelect) {
+    customInstrumentSelect.value = "";
+  }
+  setTimeout(() => {
+    if (!customInstrumentNameInput?.value) {
+      customInstrumentNameInput?.focus();
+    } else {
+      customInstrumentRequirements?.focus();
+    }
+  }, 120);
+}
+
+function closeCustomInstrumentModal() {
+  if (!customInstrumentModal) return;
+  customInstrumentModal.classList.remove("open");
+  customInstrumentModal.setAttribute("aria-hidden", "true");
+}
+
+productDropdownButton?.addEventListener("click", (event) => {
+  event.preventDefault();
+  if (!productDropdownMenu) return;
+  if (isProductDropdownOpen) {
+    closeProductDropdown();
+  } else {
+    openProductDropdown();
+  }
+});
+
+productNavDropdown?.addEventListener("mouseenter", () => {
+  openProductDropdown();
+});
+
+productNavDropdown?.addEventListener("mouseleave", () => {
+  closeProductDropdown();
+});
+
+productDropdownMenu?.querySelectorAll("a").forEach((link) => {
+  link.addEventListener("click", (event) => {
+    const filter = link.dataset.filter;
+    const modalTarget = link.dataset.modalTarget;
+    if (filter) {
+      event.preventDefault();
+      event.stopPropagation();
+      state.filter = filter;
+      setActiveFilterButton(filter);
+      renderProducts();
+      const productsSection = document.querySelector("#products");
+      if (productsSection) {
+        window.requestAnimationFrame(() => {
+          productsSection.scrollIntoView({ behavior: "smooth" });
+        });
+      }
+    }
+    if (modalTarget === "customInstrument") {
+      event.preventDefault();
+      event.stopPropagation();
+      openCustomInstrumentModal();
+    }
+    closeProductDropdown();
+  });
+});
+
+productDropdownMenu?.querySelectorAll("[data-dropdown-toggle]").forEach((toggle) => {
+  toggle.addEventListener("click", () => {
+    const panelId = toggle.getAttribute("data-dropdown-toggle");
+    if (!panelId) return;
+    const panel = productDropdownMenu.querySelector(`[data-dropdown-panel="${panelId}"]`);
+    if (!panel) return;
+    const isOpen = panel.classList.toggle("is-open");
+    toggle.setAttribute("aria-expanded", String(isOpen));
+  });
+});
+
 // Fallback: close cart on any header/menu/CTA click (event delegation)
 document.addEventListener("click", (event) => {
   const navClick = event.target.closest(".main-nav a, .brand, .cta");
   if (navClick && cartPanel.classList.contains("open")) {
     closeCartPanel();
+  }
+  if (!isProductDropdownOpen) return;
+  if (event.target.closest(".nav-dropdown")) return;
+  closeProductDropdown();
+});
+
+document.addEventListener("keydown", (event) => {
+  if (event.key === "Escape") {
+    closeProductDropdown();
+    closeCustomInstrumentModal();
   }
 });
 
@@ -1769,6 +1955,11 @@ couponCodeInput?.addEventListener("keydown", (event) => {
 });
 couponCodeInput?.addEventListener("input", () => {
   setCouponStatus("", false, false);
+});
+
+customInstrumentModalClose?.addEventListener("click", closeCustomInstrumentModal);
+customInstrumentModal?.addEventListener("click", (event) => {
+  if (event.target === customInstrumentModal) closeCustomInstrumentModal();
 });
 productModalAddToCart?.addEventListener("click", () => {
   const id = Number(productModalAddToCart.dataset.productId || "0");
@@ -2085,14 +2276,61 @@ inquiryForm.addEventListener("submit", async (event) => {
   }
 });
 
+if (customInstrumentForm) {
+  customInstrumentForm.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    if (!customInstrumentStatus) return;
+    customInstrumentStatus.textContent = t("sending");
+    const name = (customInstrumentNameInput?.value || "").trim();
+    const email = (customInstrumentEmailInput?.value || "").trim();
+    const instrument = customInstrumentSelect?.value || "";
+    const requirements = (customInstrumentRequirements?.value || "").trim();
+
+    if (!name || !email || !instrument || !requirements) {
+      customInstrumentStatus.textContent = t("inquiryFailed");
+      return;
+    }
+
+    try {
+      const response = await fetch(requireBackendPath("/api/inquiry"), {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name,
+          email,
+          message: `Instrument: ${instrument}\nRequirements:\n${requirements}`
+        })
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.error || t("inquiryFailed"));
+      }
+
+      customInstrumentStatus.textContent = data.message || t("inquirySent");
+      customInstrumentForm.reset();
+      populateInstrumentSelect();
+      closeCustomInstrumentModal();
+    } catch (error) {
+      customInstrumentStatus.textContent = error.message || t("inquiryFailed");
+    }
+  });
+}
+
+function setActiveFilterButton(filter) {
+  document.querySelectorAll(".filter-btn").forEach((btn) => {
+    btn.classList.toggle("active", btn.dataset.filter === filter);
+  });
+}
+
 document.querySelectorAll(".filter-btn").forEach((btn) => {
   btn.addEventListener("click", () => {
-    document.querySelectorAll(".filter-btn").forEach((b) => b.classList.remove("active"));
-    btn.classList.add("active");
     state.filter = btn.dataset.filter;
+    setActiveFilterButton(state.filter);
     renderProducts();
   });
 });
+
+setActiveFilterButton(state.filter);
 
 async function loadProducts() {
   productGrid.innerHTML = `<p>${t("loadingInstruments")}</p>`;

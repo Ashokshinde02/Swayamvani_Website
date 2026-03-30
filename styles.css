@@ -100,6 +100,143 @@ h3 {
 .main-nav {
   display: flex;
   gap: 1.2rem;
+  align-items: center;
+}
+
+.main-nav > * {
+  flex: 0 0 auto;
+}
+
+.nav-dropdown {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.nav-dropdown-trigger {
+  border: none;
+  background: #fff;
+  color: #3a2a1a;
+  font-size: 1rem;
+  cursor: pointer;
+  padding: 0.35rem 0.6rem;
+  border-radius: 999px;
+  box-shadow: inset 0 0 0 1px rgba(58, 42, 26, 0.08);
+  transition: background 0.2s ease, color 0.2s ease;
+}
+
+.nav-dropdown-trigger:hover,
+.nav-dropdown-trigger:focus-visible {
+  background: #fffaf3;
+  color: var(--accent-dark);
+  outline: none;
+}
+
+.nav-dropdown-menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  min-width: 320px;
+  border-radius: 16px;
+  border: 1px solid rgba(230, 211, 191, 0.9);
+  background: #fffaf3;
+  box-shadow: 0 12px 35px rgba(52, 26, 12, 0.18);
+  display: none;
+  z-index: 60;
+}
+
+.nav-dropdown-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 0.85rem;
+  padding: 0.65rem;
+}
+
+.nav-dropdown-group {
+  display: flex;
+  flex-direction: column;
+  background: #fff;
+  border-radius: 14px;
+  border: 1px solid rgba(58, 42, 26, 0.08);
+  padding: 0.35rem 0.6rem 0.7rem;
+}
+
+.nav-dropdown-heading {
+  border: none;
+  background: transparent;
+  color: #3a2a1a;
+  font-weight: 700;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.35rem 0.9rem;
+  cursor: pointer;
+}
+
+.nav-dropdown-heading .nav-dropdown-angle {
+  font-size: 0.75rem;
+  transition: transform 0.2s ease;
+}
+
+.nav-dropdown-heading[aria-expanded="true"] .nav-dropdown-angle {
+  transform: rotate(-180deg);
+}
+
+.nav-dropdown-items {
+  display: none;
+  flex-direction: column;
+  gap: 0;
+  margin-top: 0.35rem;
+  padding-top: 0.15rem;
+  border-top: 1px solid rgba(58, 42, 26, 0.08);
+}
+
+.nav-dropdown-items.is-open {
+  display: flex;
+}
+
+.nav-dropdown-menu.is-open {
+  display: block;
+}
+
+.nav-dropdown-menu a {
+  display: block;
+  padding: 0.5rem 0.9rem;
+  color: #3a2a1a;
+  font-weight: 700;
+  font-size: 0.95rem;
+  border-radius: 8px;
+}
+
+.nav-dropdown-menu a:hover,
+.nav-dropdown-menu a:focus-visible {
+  background: #fff1dc;
+  color: var(--accent-dark);
+}
+
+.main-nav .nav-dropdown-trigger {
+  font-weight: 600;
+  background: #fff6ea;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 0.35rem 0.75rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+  cursor: pointer;
+  color: #3a2a1a;
+  font-size: 0.98rem;
+  box-shadow: none;
+}
+
+.nav-dropdown-trigger .nav-dropdown-angle {
+  font-size: 0.85rem;
+  transition: transform 0.2s ease;
+}
+
+.nav-dropdown-trigger.is-open .nav-dropdown-angle {
+  transform: rotate(-180deg);
 }
 
 .main-nav a {
@@ -107,6 +244,9 @@ h3 {
   color: #3a2a1a;
   font-weight: 600;
   transition: color 0.2s ease;
+  flex: 0 0 auto;
+  min-width: 110px;
+  border: none;
 }
 
 .main-nav a[data-i18n="navAdmin"] {
@@ -612,6 +752,109 @@ h3 {
   gap: 0.6rem;
 }
 
+.custom-instrument-modal {
+  position: fixed;
+  inset: 0;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem;
+  background: rgba(23, 15, 9, 0.45);
+  z-index: 110;
+}
+
+.custom-instrument-modal.open {
+  display: flex;
+}
+
+.custom-instrument-modal-card {
+  width: min(900px, 100%);
+  max-height: 90vh;
+  overflow: auto;
+  background: #fffaf3;
+  border-radius: 24px;
+  border: 1px solid rgba(222, 195, 154, 0.6);
+  padding: 2rem;
+  box-shadow: 0 20px 45px rgba(33, 19, 9, 0.25);
+  position: relative;
+}
+
+.custom-instrument-modal-close {
+  position: absolute;
+  top: 0.6rem;
+  right: 0.7rem;
+  border: none;
+  background: transparent;
+  font-size: 1.4rem;
+  color: #3a2a1a;
+  cursor: pointer;
+}
+
+.custom-instrument-modal-content {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 1.5rem;
+}
+
+.custom-instrument-modal-content .custom-instrument-copy {
+  border: 1px solid #f2d8bb;
+  border-radius: 18px;
+  padding: 1.5rem;
+  background: #fff7ed;
+  box-shadow: inset 0 0 0 1px rgba(58, 42, 26, 0.06);
+}
+
+.custom-instrument-modal-content h2 {
+  margin: 0 0 0.6rem;
+}
+
+.custom-instrument-modal-content ul {
+  padding-left: 1rem;
+  margin: 0.6rem 0 0;
+  color: #5a3b21;
+}
+
+.custom-instrument-form select {
+  border: 1px solid #d8c2a6;
+  background: #fff7f0;
+  color: #2a1e16;
+  border-radius: 10px;
+  padding: 0.65rem;
+  font: inherit;
+  width: 100%;
+  appearance: none;
+  background-image: linear-gradient(45deg, transparent 50%, #2a1e16 50%),
+    linear-gradient(135deg, #2a1e16 50%, transparent 50%);
+  background-position: calc(100% - 1rem) calc(50% - 6px), calc(100% - 0.5rem) calc(50% - 6px);
+  background-size: 6px 6px, 6px 6px;
+  background-repeat: no-repeat;
+}
+
+.custom-instrument-form select:focus {
+  outline: 2px solid #3c2a1c;
+  outline-offset: 1px;
+}
+
+.custom-instrument-form {
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  padding: 0;
+}
+
+.dropdown-label span {
+  display: block;
+  font-weight: 600;
+  margin-bottom: 0.35rem;
+}
+
+.dropdown-label select {
+  width: 100%;
+  border-radius: 12px;
+  border: 1px solid #d8c2a6;
+  padding: 0.6rem 0.9rem;
+  font: inherit;
+}
 .customer-modal-head {
   display: flex;
   align-items: center;
@@ -2622,17 +2865,37 @@ h3 {
     order: 4;
     width: 100%;
     gap: 0.45rem;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
     margin-top: 0.2rem;
+    overflow-x: auto;
   }
 
   .main-nav a {
     background: #fff6ea;
-    border: 1px solid var(--line);
     border-radius: 999px;
     padding: 0.3rem 0.7rem;
-    flex: 1 1 auto;
+    flex: 0 0 auto;
+    min-width: 110px;
     text-align: center;
+  }
+
+  .nav-dropdown {
+    flex: 0 0 auto;
+    max-width: 260px;
+  }
+
+  .nav-dropdown-trigger {
+    width: auto;
+    justify-content: space-between;
+    padding: 0.45rem 0.8rem;
+  }
+
+  .nav-dropdown-grid {
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  }
+
+  .nav-dropdown-group {
+    width: 100%;
   }
 
   .customer-greeting {
@@ -2763,8 +3026,8 @@ h3 {
     padding: 0.35rem 0.9rem;
     font-size: 0.98rem;
     background: #fff6ea;
-    border: 1px solid var(--line);
     border-radius: 999px;
+    min-width: 110px;
   }
 
   .cart-btn {

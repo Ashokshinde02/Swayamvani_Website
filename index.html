@@ -25,7 +25,63 @@
           <span id="brandText" class="brand-text">स्वयंवाणी</span>
         </a>
         <nav class="main-nav" aria-label="Main navigation">
-          <a href="#products" data-i18n="navProducts">Products</a>
+          <div class="nav-dropdown">
+            <button
+              id="productDropdownButton"
+              class="nav-dropdown-trigger"
+              aria-haspopup="true"
+              aria-expanded="false"
+              aria-controls="productDropdownMenu"
+              aria-label="Open Products menu"
+              type="button"
+            >
+              <span data-i18n="navProducts">Products</span>
+              <span aria-hidden="true" class="nav-dropdown-angle">▾</span>
+            </button>
+            <div id="productDropdownMenu" class="nav-dropdown-menu" role="menu" aria-label="Products submenu">
+              <div class="nav-dropdown-grid">
+                <div class="nav-dropdown-group">
+                  <button
+                    class="nav-dropdown-heading"
+                    type="button"
+                    aria-expanded="false"
+                    data-dropdown-toggle="instruments"
+                  >
+                    <span data-i18n="navInstrumentsTitle">Instruments</span>
+                    <span aria-hidden="true" class="nav-dropdown-angle">▾</span>
+                  </button>
+                  <div class="nav-dropdown-items" data-dropdown-panel="instruments">
+                    <a href="#products" role="menuitem" data-filter="all" data-i18n="filter_all">All</a>
+                    <a href="#products" role="menuitem" data-filter="string" data-i18n="filter_string">String</a>
+                    <a href="#products" role="menuitem" data-filter="percussion" data-i18n="filter_percussion">Percussion</a>
+                    <a href="#products" role="menuitem" data-filter="wind" data-i18n="filter_wind">Wind</a>
+                    <a href="#products" role="menuitem" data-filter="keyboard" data-i18n="filter_keyboard">Keyboard</a>
+                  </div>
+                </div>
+                <div class="nav-dropdown-group">
+                  <button
+                    class="nav-dropdown-heading"
+                    type="button"
+                    aria-expanded="false"
+                    data-dropdown-toggle="others"
+                  >
+                    <span data-i18n="navOthersTitle">Others</span>
+                    <span aria-hidden="true" class="nav-dropdown-angle">▾</span>
+                  </button>
+                  <div class="nav-dropdown-items" data-dropdown-panel="others">
+                    <a
+                      href="#customInstrumentModal"
+                      role="menuitem"
+                      data-modal-target="customInstrument"
+                      data-i18n="navCustomizeProduct"
+                    >
+                      Customize your product
+                    </a>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
           <a href="#about" data-i18n="navAbout">About</a>
           <a href="#contact" data-i18n="navContact">Contact</a>
           <!-- Admin link hidden on customer-facing site -->
@@ -193,6 +249,56 @@
           </form>
         </div>
       </section>
+      <div id="customInstrumentModal" class="custom-instrument-modal" aria-hidden="true">
+        <div class="custom-instrument-modal-card">
+          <button
+            type="button"
+            class="custom-instrument-modal-close"
+            aria-label="Close customize form"
+            data-modal-close="customInstrument"
+          >
+            ×
+          </button>
+          <div class="custom-instrument-modal-content">
+            <div class="custom-instrument-copy">
+              <h2 data-i18n="customInstrumentTitle">Customize Your Instrument</h2>
+              <p data-i18n="customInstrumentDesc">
+                Share your dream tonal palette, preferred artist, rig, or performance space. We will translate that into a crafted instrument within 24 hours.
+              </p>
+              <p data-i18n="customInstrumentCopyDesc">
+                Our artisan partners in Miraj, Varanasi, Kolkata, and Gwalior can tune every dimension, material, and finish to your creative story.
+              </p>
+              <ul>
+                <li data-i18n="customInstrumentCopyPoint1">Instrument sketching and tonal planning</li>
+                <li data-i18n="customInstrumentCopyPoint2">Sympathetic string, skin, and reed tuning backed by recordings</li>
+                <li data-i18n="customInstrumentCopyPoint3">Logistics, setup, and tuning guidance included</li>
+              </ul>
+            </div>
+            <form id="customInstrumentForm" class="inquiry-form custom-instrument-form">
+              <label>
+                <span data-i18n="labelName">Name</span>
+                <input type="text" id="customInstrumentName" required />
+              </label>
+              <label>
+                <span data-i18n="labelEmail">Email</span>
+                <input type="email" id="customInstrumentEmail" required />
+              </label>
+              <label>
+                <span data-i18n="customInstrumentLabelInstrument">Instrument</span>
+                <select id="customInstrumentSelect" required>
+                  <option value="" disabled selected data-placeholder></option>
+                </select>
+              </label>
+              <label>
+                <span data-i18n="customInstrumentLabelRequirements">Tell us your requirements</span>
+                <textarea id="customInstrumentRequirements" rows="4" required></textarea>
+              </label>
+              <button type="submit" data-i18n="customInstrumentSubmit">Send Requirement</button>
+              <p id="customInstrumentStatus" class="form-status" aria-live="polite"></p>
+            </form>
+          </div>
+        </div>
+      </div>
     </main>
 
     <aside id="cartPanel" class="cart-panel" aria-hidden="true">

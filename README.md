@@ -43,6 +43,8 @@ Default Docker admin credentials:
 - `DB_DSN` (database DSN)
 - `RAZORPAY_KEY_ID` (optional)
 - `RAZORPAY_KEY_SECRET` (optional)
+- `MAILER_WORKER_URL` (optional HTTP endpoint that delivers Titan SMTP emails)
+- `MAILER_WORKER_API_KEY` (optional shared secret expected by the worker)
 
 If `DB_VENDOR` or `DB_DSN` is missing, app runs with in-memory storage.
 
@@ -106,3 +108,13 @@ Product media rule:
 - Each product must have minimum 5 photo URLs (`images`) and 1 making video URL (`video_url`).
 
 Inquiries are also appended to `data/inquiries.log`.
+
+## Mailer worker (Cloud Run)
+
+- The `cloudrun-mailer` folder contains a self-contained Go worker that exposes `/send-welcome-mail` (POST) and reconnects to Titan SMTP via STARTTLS on port 587.
+- Deploy it to Cloud Run (paid project) and configure the following environment variables:
+  - `SMTP_HOST`, `SMTP_PORT` (e.g., `smtp.titan.email`, `587`)
+  - `SMTP_USER`, `SMTP_PASS`, `SMTP_FROM`
+  - `PORT` (Cloud Run default 8080)
+- Protect it with Cloud Run IAM or an API key; the Render app sends the customer data and optional `MAILER_WORKER_API_KEY` header to this worker so Titan credentials stay off Render.
+- When the worker succeeds it returns `200 OK`, otherwise it logs the SMTP error in Stackdriver and returns a 500 so the Render app can retry.

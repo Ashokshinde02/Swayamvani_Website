@@ -1870,11 +1870,9 @@ func (s *Server) handleCustomerRegister(w http.ResponseWriter, r *http.Request) 
 		}
 	}
 
-	swayamVaniLogo := "/logo.jpeg"
-	subject := "Welcome to Swayamvani! Your Account Has Been Created"
-	emailBody := mailer.CreateEmailBody(swayamVaniLogo, account.Name, account.Email, rawPassword)
-	if _, err := mailer.SendMail(account.Name, account.Email, subject, emailBody); err != nil {
-		writeJSONError(w, http.StatusInternalServerError, fmt.Sprintf("failed to send welcome email :- %v", err))
+	if err := s.sendWelcomeEmail(account, rawPassword); err != nil {
+		log.Printf("welcome email: %v", err)
+		writeJSONError(w, http.StatusInternalServerError, "failed to send welcome email")
 		return
 	}
 
@@ -1882,6 +1880,53 @@ func (s *Server) handleCustomerRegister(w http.ResponseWriter, r *http.Request) 
 		"status":  "ok",
 		"message": "account created",
 	})
+}
+
+func (s *Server) sendWelcomeEmail(account CustomerAccount, rawPassword string) error {
+	workerURL := strings.TrimSpace(os.Getenv("MAILER_WORKER_URL"))
+	if workerURL != "" {
+		return postWelcomeEmailToWorker(workerURL, account, rawPassword)
+	}
+
+	swayamVaniLogo := "/logo.jpeg"
+	subject := "Welcome to Swayamvani! Your Account Has Been Created"
+	emailBody := mailer.CreateEmailBody(swayamVaniLogo, account.Name, account.Email, rawPassword)
+	_, err := mailer.SendMail(account.Name, account.Email, subject, emailBody)
+	return err
+}
+
+func postWelcomeEmailToWorker(url string, account CustomerAccount, rawPassword string) error {
+	payload := map[string]string{
+		"name":     account.Name,
+		"email":    account.Email,
+		"password": rawPassword,
+	}
+	body, err := json.Marshal(payload)
+	if err != nil {
+		return fmt.Errorf("marshal payload: %w", err)
+	}
+
+	req, err := http.NewRequest(http.MethodPost, url, bytes.NewReader(body))
+	if err != nil {
+		return fmt.Errorf("build request: %w", err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+	if key := strings.TrimSpace(os.Getenv("MAILER_WORKER_API_KEY")); key != "" {
+		req.Header.Set("X-API-Key", key)
+	}
+
+	client := &http.Client{Timeout: 15 * time.Second}
+	resp, err := client.Do(req)
+	if err != nil {
+		return fmt.Errorf("call worker: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		bodyData, _ := io.ReadAll(resp.Body)
+		return fmt.Errorf("worker returned %d: %s", resp.StatusCode, strings.TrimSpace(string(bodyData)))
+	}
+	return nil
 }
 
 func (s *Server) handleCustomerLogin(w http.ResponseWriter, r *http.Request) {
