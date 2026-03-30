@@ -97,6 +97,15 @@ const translations = {
     profileTitle: "Your Profile",
     profileGreeting: "Welcome back,",
     profileSince: "Member since",
+    profileMobileLabel: "Mobile number",
+    profileAddressLabel: "Address",
+    profileSinceLabel: "Member since",
+    profileEditButton: "Edit profile",
+    profileEditTitle: "Edit profile",
+    profileSaveChanges: "Save changes",
+    profileUpdateSuccess: "Profile updated.",
+    profileUpdateError: "Unable to update profile.",
+    profileMissingValue: "Not added yet",
     featuredInstruments: "Featured Instruments",
     filter_all: "All",
     filter_string: "String",
@@ -146,21 +155,33 @@ const translations = {
     paymentSuccess: "Payment success. We will contact you to confirm delivery.",
     checkoutUnavailable: "Razorpay checkout unavailable",
     checkoutFailed: "Checkout failed",
-  customerTitle: "Customer Account",
-  customerLogin: "Login",
+    customerTitle: "Customer Account",
+    customerLogin: "Login",
     customerRegister: "Create Account",
     customerPassword: "Password",
+    customerForgotPassword: "Forgot password?",
+    customerForgotDesc: "Enter the email tied to your account and we will email you a temporary password.",
+    customerSendReset: "Send reset instructions",
+    customerBackToLogin: "Back to login",
+    customerUpdatePasswordLink: "Update password",
+    customerUpdatePassword: "Update password",
+    customerUpdatePasswordDesc: "Choose a strong new password and confirm it below.",
+    customerConfirmPassword: "Confirm password",
+    customerUpdatePasswordSuccess: "Password updated. Please log in again.",
+    customerUpdatePasswordError: "Could not update password.",
+    customerForgotPasswordSent: "If an account exists, we’ve emailed you a temporary password.",
+    customerForgotPasswordError: "Failed to send reset email.",
     customerLogout: "Logout",
     customerAuthSuccess: "You are logged in.",
     customerRegisterSuccess: "Account successfully created and your login details have been emailed to you.",
     customerAuthFailed: "Customer authentication failed.",
     cartDiscountGuestHint: "Exclusive discount around the corner—please login to claim it.",
-  offerTitle: "Exclusive Customer Offers",
-  offerDesc: "Login now to unlock instant savings and complimentary guidance from our master craftsmen.",
-  offerDiscountTitle: "",
-  offerDiscountDesc: "",
-  offerLessonsTitle: "",
-  offerLessonsDesc: "",
+    offerTitle: "Exclusive Customer Offers",
+    offerDesc: "Login now to unlock instant savings and complimentary guidance from our master craftsmen.",
+    offerDiscountTitle: "",
+    offerDiscountDesc: "",
+    offerLessonsTitle: "",
+    offerLessonsDesc: "",
     discountedPriceLabel: "Discounted price",
     youSavedLabel: "You saved",
     couponLabel: "Coupon",
@@ -169,7 +190,7 @@ const translations = {
     couponApplied: "Coupon applied.",
     couponInvalid: "Invalid coupon.",
     couponHint: "Use the admin coupon to save more.",
-    couponUnavailable: "No coupon available right now.",
+    couponUnavailable: "No coupon available right now."
   },
   mr: {
     navProducts: "उत्पादने",
@@ -239,10 +260,22 @@ const translations = {
     customerLogin: "ग्राहक लॉगिन",
     customerRegister: "खाते तयार करा",
     customerPassword: "पासवर्ड",
+    customerForgotPassword: "पासवर्ड भूल गए?",
+    customerForgotDesc: "आपल्या खात्याशी जोडलेला ईमेल द्या आणि आम्ही आपल्याला तात्पुरता पासवर्ड ईमेल करू.",
+    customerSendReset: "रीसेट सूचना पाठवा",
+    customerBackToLogin: "लॉगिनवर परत जा",
+    customerForgotPasswordSent: "खाते अस्तित्वात असल्यास, आम्ही आपल्याला तात्पुरता पासवर्ड ईमेल केला आहे.",
+    customerForgotPasswordError: "रीसेट ईमेल पाठवताना त्रुटी.",
     customerLogout: "लॉगआउट",
     customerAuthSuccess: "तुम्ही लॉगिन आहात.",
     customerRegisterSuccess: "खाते यशस्वीरित्या तयार झाले आहे आणि आपला युजर आयडी व पासवर्ड ईमेलवर पाठवला गेला आहे.",
     customerAuthFailed: "ग्राहक प्रमाणीकरण अयशस्वी.",
+    customerUpdatePasswordLink: "पासवर्ड अपडेट करा",
+    customerUpdatePassword: "पासवर्ड अपडेट करा",
+    customerUpdatePasswordDesc: "एक मजबूत नवीन पासवर्ड निवडा आणि तो खाली पुष्टी करा.",
+    customerConfirmPassword: "पासवर्ड पुष्टी करा",
+    customerUpdatePasswordSuccess: "पासवर्ड अद्ययावत झाला. कृपया पुन्हा लॉगिन करा.",
+    customerUpdatePasswordError: "पासवर्ड अद्ययावत करण्यात अयशस्वी.",
     cartDiscountGuestHint: "कार्टमध्ये खास सूट आहे—कृपया लॉगिन करा.",
     offerTitle: "ग्राहकांसाठी खास ऑफर्स",
   offerDesc: "लॉगिन करून तत्काळ सूट आणि आमच्या मास्टर कारीगरांच्या मार्गदर्शनाचा लाभ घ्या.",
@@ -275,6 +308,15 @@ const translations = {
     profileTitle: "आपकी प्रोफ़ाइल",
     profileGreeting: "फिर से स्वागत है,",
     profileSince: "सदस्यता प्रारंभ",
+    profileMobileLabel: "मोबाइल नंबर",
+    profileAddressLabel: "पता",
+    profileSinceLabel: "सदस्यता की तारीख",
+    profileEditButton: "प्रोफ़ाइल संपादित करें",
+    profileEditTitle: "प्रोफ़ाइल संपादित करें",
+    profileSaveChanges: "बदलाव सहेजें",
+    profileUpdateSuccess: "प्रोफ़ाइल अपडेट हो गई।",
+    profileUpdateError: "प्रोफ़ाइल अपडेट करने में विफल।",
+    profileMissingValue: "अभी नहीं जोड़ा गया",
     featuredInstruments: "विशेष वाद्य",
     filter_all: "सभी",
     filter_string: "तार वाद्य",
@@ -328,9 +370,21 @@ const translations = {
     customerLogin: "ग्राहक लॉगिन",
     customerRegister: "खाता बनाएं",
     customerPassword: "पासवर्ड",
+    customerForgotPassword: "पासवर्ड भूल गए?",
+    customerForgotDesc: "अपने खाते से जुड़ा ईमेल डालें; हम एक अस्थायी पासवर्ड ईमेल करेंगे।",
+    customerSendReset: "रीसेट निर्देश भेजें",
+    customerBackToLogin: "लॉगिन पर वापस जाएं",
+    customerForgotPasswordSent: "यदि खाता मौजूद है, तो हमने आपको एक अस्थायी पासवर्ड ईमेल कर दिया है।",
+    customerForgotPasswordError: "रीसेट ईमेल भेजने में त्रुटि।",
     customerLogout: "लॉगआउट",
     customerAuthSuccess: "आप लॉगिन हैं।",
     customerAuthFailed: "ग्राहक प्रमाणीकरण विफल।",
+    customerUpdatePasswordLink: "पासवर्ड अपडेट करें",
+    customerUpdatePassword: "पासवर्ड अपडेट करें",
+    customerUpdatePasswordDesc: "एक मजबूत नया पासवर्ड चुनें और नीचे पक्की करें।",
+    customerConfirmPassword: "पासवर्ड की पुष्टि करें",
+    customerUpdatePasswordSuccess: "पासवर्ड अपडेट हो गया। कृपया फिर लॉगिन करें।",
+    customerUpdatePasswordError: "पासवर्ड अपडेट करने में विफल।",
     offerTitle: "ग्राहक ऑफ़र",
   offerDesc: "अब लॉगिन करें और तुरंत बचत व हमारे मास्टर संगीतकारों की मार्गदर्शित सहायता पाएं।",
   offerDiscountTitle: "",
@@ -404,6 +458,16 @@ const customerLoginForm = document.getElementById("customerLoginForm");
 const customerRegisterForm = document.getElementById("customerRegisterForm");
 const showRegisterLink = document.getElementById("showRegisterLink");
 const backToLoginLink = document.getElementById("backToLoginLink");
+const customerUpdateForm = document.getElementById("customerUpdateForm");
+const customerNewPasswordInput = document.getElementById("customerNewPassword");
+const customerConfirmPasswordInput = document.getElementById("customerConfirmPassword");
+const customerUpdateStatus = document.getElementById("customerUpdateStatus");
+const backToLoginFromUpdate = document.getElementById("backToLoginFromUpdate");
+const customerForgotForm = document.getElementById("customerForgotForm");
+const forgotPasswordLink = document.getElementById("forgotPasswordLink");
+const customerForgotEmailInput = document.getElementById("customerForgotEmail");
+const customerForgotStatus = document.getElementById("customerForgotStatus");
+const backToLoginFromForgot = document.getElementById("backToLoginFromForgot");
 const customerLoginEmailInput = document.getElementById("customerLoginEmail");
 const customerLoginPasswordInput = document.getElementById("customerLoginPassword");
 const customerLoginStatus = document.getElementById("customerLoginStatus");
@@ -423,26 +487,74 @@ const customerProfileSection = document.getElementById("customerProfile");
 const customerProfileName = document.getElementById("customerProfileName");
 const customerProfileEmail = document.getElementById("customerProfileEmail");
 const customerProfileSince = document.getElementById("customerProfileSince");
+const customerProfileMobile = document.getElementById("customerProfileMobile");
+const customerProfileAddress = document.getElementById("customerProfileAddress");
 const customerProfileToggle = document.getElementById("customerProfileToggle");
 const profileMenu = document.getElementById("profileMenu");
 const profileDropdown = document.getElementById("profileDropdown");
 const dropdownOrders = document.getElementById("dropdownOrders");
 const dropdownLogout = document.getElementById("dropdownLogout");
 const navLinks = document.querySelectorAll(".main-nav a, .brand, .cta");
+const profileEditBtn = document.getElementById("profileEditBtn");
+const profileModal = document.getElementById("profileModal");
+const closeProfileModal = document.getElementById("closeProfileModal");
+const customerProfileForm = document.getElementById("customerProfileForm");
+const profileEmailInput = document.getElementById("profileEmailInput");
+const profileMobileInput = document.getElementById("profileMobileInput");
+const profileAddressInput = document.getElementById("profileAddressInput");
+const customerProfileStatusEl = document.getElementById("customerProfileStatus");
 let isCustomerProfileVisible = false;
 
+function showLoginForm() {
+  if (!customerLoginForm || !customerRegisterForm || !customerForgotForm || !customerUpdateForm) return;
+  customerLoginForm.classList.remove("hidden");
+  customerRegisterForm.classList.add("hidden");
+  customerForgotForm.classList.add("hidden");
+  customerUpdateForm.classList.add("hidden");
+  customerLoginForm.querySelector("input")?.focus();
+  if (customerForgotStatus) {
+    customerForgotStatus.textContent = "";
+  }
+  if (customerUpdateStatus) {
+    customerUpdateStatus.textContent = "";
+  }
+}
+
+function showForgotForm() {
+  if (!customerLoginForm || !customerRegisterForm || !customerForgotForm || !customerUpdateForm) return;
+  customerLoginForm.classList.add("hidden");
+  customerRegisterForm.classList.add("hidden");
+  customerForgotForm.classList.remove("hidden");
+  customerUpdateForm.classList.add("hidden");
+  customerForgotEmailInput?.focus();
+  if (customerForgotStatus) {
+    customerForgotStatus.textContent = "";
+  }
+}
+
+function showUpdatePasswordForm() {
+  if (!customerLoginForm || !customerRegisterForm || !customerForgotForm || !customerUpdateForm) return;
+  customerLoginForm.classList.add("hidden");
+  customerRegisterForm.classList.add("hidden");
+  customerForgotForm.classList.add("hidden");
+  customerUpdateForm.classList.remove("hidden");
+  customerNewPasswordInput?.focus();
+  if (customerUpdateStatus) {
+    customerUpdateStatus.textContent = "";
+  }
+}
+
 function toggleRegisterForm(show) {
-  if (!customerLoginForm || !customerRegisterForm) return;
+  if (!customerLoginForm || !customerRegisterForm || !customerForgotForm) return;
   const shouldShow = typeof show === "boolean" ? show : customerRegisterForm.classList.contains("hidden");
   if (shouldShow) {
     customerRegisterForm.classList.remove("hidden");
     customerLoginForm.classList.add("hidden");
+    customerForgotForm.classList.add("hidden");
     const firstField = document.getElementById("customerRegisterName");
     if (firstField) firstField.focus();
   } else {
-    customerRegisterForm.classList.add("hidden");
-    customerLoginForm.classList.remove("hidden");
-    customerLoginForm.querySelector("input")?.focus();
+    showLoginForm();
   }
 }
 
@@ -454,6 +566,16 @@ showRegisterLink?.addEventListener("click", (e) => {
 backToLoginLink?.addEventListener("click", (e) => {
   e.preventDefault();
   toggleRegisterForm(false);
+});
+
+forgotPasswordLink?.addEventListener("click", (event) => {
+  event.preventDefault();
+  showForgotForm();
+});
+
+backToLoginFromForgot?.addEventListener("click", (event) => {
+  event.preventDefault();
+  showLoginForm();
 });
 
 // initial state
@@ -1514,6 +1636,34 @@ function closeCustomerAuthModal() {
   if (customerRegisterStatus) customerRegisterStatus.textContent = "";
 }
 
+function showProfileModal() {
+  if (!profileModal || !state.customer) return;
+  if (profileEmailInput) {
+    profileEmailInput.value = state.customer.email || "";
+    profileEmailInput.focus();
+  }
+  if (profileMobileInput) {
+    profileMobileInput.value = state.customer.mobile || "";
+  }
+  if (profileAddressInput) {
+    profileAddressInput.value = state.customer.address || "";
+  }
+  if (customerProfileStatusEl) {
+    customerProfileStatusEl.textContent = "";
+  }
+  profileModal.classList.add("open");
+  profileModal.setAttribute("aria-hidden", "false");
+}
+
+function hideProfileModal() {
+  if (!profileModal) return;
+  profileModal.classList.remove("open");
+  profileModal.setAttribute("aria-hidden", "true");
+  if (customerProfileStatusEl) {
+    customerProfileStatusEl.textContent = "";
+  }
+}
+
 function renderCustomerState() {
   if (customerAuthBtn) {
     if (state.customer) {
@@ -1552,9 +1702,16 @@ function renderCustomerProfile() {
     customerProfileSection.hidden = true;
     return;
   }
-  const { name, email, created_at: createdAt } = state.customer;
+  const { name, email, created_at: createdAt, mobile, address } = state.customer;
   customerProfileName.textContent = name || "";
   customerProfileEmail.textContent = email || "";
+  const missingValue = t("profileMissingValue");
+  if (customerProfileMobile) {
+    customerProfileMobile.textContent = mobile || missingValue;
+  }
+  if (customerProfileAddress) {
+    customerProfileAddress.textContent = address || missingValue;
+  }
   if (customerProfileSince) {
     if (createdAt) {
       const date = new Date(createdAt);
@@ -1727,6 +1884,21 @@ customerProfileToggle?.addEventListener("click", () => {
   renderCustomerProfile();
 });
 
+profileEditBtn?.addEventListener("click", () => {
+  if (!state.customer) return;
+  showProfileModal();
+});
+
+closeProfileModal?.addEventListener("click", () => {
+  hideProfileModal();
+});
+
+profileModal?.addEventListener("click", (event) => {
+  if (event.target === profileModal) {
+    hideProfileModal();
+  }
+});
+
 navLinks.forEach((link) => {
   link.addEventListener("click", (event) => {
     const href = link.getAttribute("href");
@@ -1893,12 +2065,20 @@ customerLoginForm?.addEventListener("submit", async (event) => {
     });
 
     state.customer = data.customer || null;
+    const requiresUpdate = Boolean(data.updateRequired);
     if (guestCartSnapshot.length) {
       pendingCartMerge = guestCartSnapshot;
     }
     applyStoredShipping(state.customer);
     renderCustomerState();
     customerLoginForm.reset();
+    if (requiresUpdate) {
+      if (customerUpdateStatus) {
+        customerUpdateStatus.textContent = t("customerUpdatePasswordDesc");
+      }
+      showUpdatePasswordForm();
+      return;
+    }
     closeCustomerAuthModal();
   } catch (error) {
     if (customerLoginStatus) customerLoginStatus.textContent = error.message || t("customerAuthFailed");
@@ -1931,6 +2111,85 @@ customerRegisterForm?.addEventListener("submit", async (event) => {
     customerRegisterForm.reset();
   } catch (error) {
     if (customerRegisterStatus) customerRegisterStatus.textContent = error.message || t("customerAuthFailed");
+  }
+});
+
+customerForgotForm?.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  if (!customerForgotStatus) return;
+  customerForgotStatus.textContent = t("sending");
+
+  const email = (customerForgotEmailInput?.value || "").trim().toLowerCase();
+  if (!email) {
+    customerForgotStatus.textContent = t("customerForgotPasswordError");
+    return;
+  }
+
+  try {
+    await apiJSON("/api/customer/forgot-password", {
+      method: "POST",
+      body: JSON.stringify({ email })
+    });
+    customerForgotStatus.textContent = t("customerForgotPasswordSent");
+    customerForgotForm.reset();
+  } catch (error) {
+    customerForgotStatus.textContent = error.message || t("customerForgotPasswordError");
+  }
+});
+
+customerUpdateForm?.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  if (!customerUpdateStatus) return;
+  const newPassword = (customerNewPasswordInput?.value || "").trim();
+  const confirmPassword = (customerConfirmPasswordInput?.value || "").trim();
+  if (newPassword.length < 6) {
+    customerUpdateStatus.textContent = t("customerUpdatePasswordError");
+    return;
+  }
+  if (newPassword !== confirmPassword) {
+    customerUpdateStatus.textContent = t("customerUpdatePasswordError");
+    return;
+  }
+  customerUpdateStatus.textContent = t("sending");
+
+  try {
+    await apiJSON("/api/customer/update-password", {
+      method: "POST",
+      body: JSON.stringify({ password: newPassword })
+    });
+    customerUpdateStatus.textContent = t("customerUpdatePasswordSuccess");
+    if (customerNewPasswordInput) customerNewPasswordInput.value = "";
+    if (customerConfirmPasswordInput) customerConfirmPasswordInput.value = "";
+    await performLogout();
+    showLoginForm();
+  } catch (error) {
+    customerUpdateStatus.textContent = error.message || t("customerUpdatePasswordError");
+  }
+});
+
+customerProfileForm?.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  if (!customerProfileStatusEl) return;
+  customerProfileStatusEl.textContent = t("sending");
+  const payload = {
+    email: (profileEmailInput?.value || "").trim().toLowerCase(),
+    mobile: (profileMobileInput?.value || "").trim(),
+    address: (profileAddressInput?.value || "").trim()
+  };
+  try {
+    const data = await apiJSON("/api/customer/profile", {
+      method: "POST",
+      body: JSON.stringify(payload)
+    });
+    state.customer = data.customer || state.customer;
+    renderCustomerState();
+    customerProfileStatusEl.textContent = t("profileUpdateSuccess");
+    setTimeout(() => {
+      customerProfileStatusEl.textContent = "";
+      hideProfileModal();
+    }, 900);
+  } catch (error) {
+    customerProfileStatusEl.textContent = error.message || t("profileUpdateError");
   }
 });
 

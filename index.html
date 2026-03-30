@@ -98,13 +98,28 @@
                 <p data-i18n="profileGreeting">Welcome back,</p>
               </div>
               <div class="profile-details">
-                <p id="customerProfileName" class="profile-name"></p>
-                <p id="customerProfileEmail" class="profile-email"></p>
-                <p>
-                  <span data-i18n="profileSince">Member since</span>
-                  <span id="customerProfileSince" class="profile-since"></span>
-                </p>
+                <div class="profile-field">
+                  <span data-i18n="labelName">Name</span>
+                  <strong id="customerProfileName"></strong>
+                </div>
+                <div class="profile-field">
+                  <span data-i18n="labelEmail">Email</span>
+                  <strong id="customerProfileEmail"></strong>
+                </div>
+                <div class="profile-field">
+                  <span data-i18n="profileMobileLabel">Mobile number</span>
+                  <strong id="customerProfileMobile"></strong>
+                </div>
+                <div class="profile-field">
+                  <span data-i18n="profileAddressLabel">Address</span>
+                  <strong id="customerProfileAddress"></strong>
+                </div>
+                <div class="profile-field">
+                  <span data-i18n="profileSinceLabel">Member since</span>
+                  <strong id="customerProfileSince"></strong>
+                </div>
               </div>
+              <button id="profileEditBtn" type="button" class="cta profile-edit-btn" data-i18n="profileEditButton">Edit profile</button>
             </div>
           </div>
         </section>
@@ -281,6 +296,7 @@
               <button type="submit" data-i18n="customerLogin">Login</button>
               <p id="customerLoginStatus" class="form-status customer-auth-status" aria-live="polite"></p>
               <p class="form-footnote">We’ll remember your cart and lesson credits.</p>
+              <a href="#forgot-password" id="forgotPasswordLink" class="text-link" data-i18n="customerForgotPassword">Forgot password?</a>
               <a href="#" id="showRegisterLink" class="text-link">Create account</a>
             </form>
             <form id="customerRegisterForm" class="inquiry-form customer-form hidden">
@@ -317,10 +333,97 @@
               <button type="submit" data-i18n="customerRegister">Create Account</button>
               <p id="customerRegisterStatus" class="form-status customer-auth-status" aria-live="polite"></p>
               <p class="form-footnote">No spam. Only order updates and tuning tips.</p>
-              <a href="#" id="backToLoginLink" class="text-link">Back to login</a>
+              <a href="#" id="backToLoginLink" class="text-link" data-i18n="customerBackToLogin">Back to login</a>
+            </form>
+            <form id="customerForgotForm" class="inquiry-form customer-form hidden">
+              <h4 data-i18n="customerForgotPassword">Forgot password?</h4>
+              <p class="form-footnote" data-i18n="customerForgotDesc">
+                Enter the email tied to your account and we will email you a temporary password.
+              </p>
+              <label>
+                <span data-i18n="labelEmail">Email</span>
+                <input type="email" id="customerForgotEmail" required />
+              </label>
+              <button type="submit" data-i18n="customerSendReset">Send reset instructions</button>
+              <p id="customerForgotStatus" class="form-status customer-auth-status" aria-live="polite"></p>
+              <a href="#" id="backToLoginFromForgot" class="text-link" data-i18n="customerBackToLogin">Back to login</a>
+            </form>
+            <form id="customerUpdateForm" class="inquiry-form customer-form hidden">
+              <h4 data-i18n="customerUpdatePassword">Update password</h4>
+              <p class="form-footnote" data-i18n="customerUpdatePasswordDesc">
+                Choose a strong new password and confirm it below.
+              </p>
+              <label>
+                <span data-i18n="customerPassword">New password</span>
+                <span class="password-field">
+                  <input type="password" id="customerNewPassword" minlength="6" required />
+                  <button
+                    type="button"
+                    class="password-toggle"
+                    data-target="customerNewPassword"
+                    onclick="togglePasswordById('customerNewPassword', this)"
+                    aria-label="Show password"
+                    aria-pressed="false"
+                  >
+                    <svg class="password-eye" viewBox="0 0 24 24" aria-hidden="true">
+                      <path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6-10-6-10-6z" fill="none" stroke="currentColor" stroke-width="2"/>
+                      <circle cx="12" cy="12" r="3" fill="none" stroke="currentColor" stroke-width="2"/>
+                      <path class="password-eye-slash" d="M4 20L20 4" fill="none" stroke="currentColor" stroke-width="2"/>
+                    </svg>
+                  </button>
+                </span>
+              </label>
+              <label>
+                <span data-i18n="customerConfirmPassword">Confirm password</span>
+                <span class="password-field">
+                  <input type="password" id="customerConfirmPassword" minlength="6" required />
+                  <button
+                    type="button"
+                    class="password-toggle"
+                    data-target="customerConfirmPassword"
+                    onclick="togglePasswordById('customerConfirmPassword', this)"
+                    aria-label="Show password"
+                    aria-pressed="false"
+                  >
+                    <svg class="password-eye" viewBox="0 0 24 24" aria-hidden="true">
+                      <path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6-10-6-10-6z" fill="none" stroke="currentColor" stroke-width="2"/>
+                      <circle cx="12" cy="12" r="3" fill="none" stroke="currentColor" stroke-width="2"/>
+                      <path class="password-eye-slash" d="M4 20L20 4" fill="none" stroke="currentColor" stroke-width="2"/>
+                    </svg>
+                  </button>
+                </span>
+              </label>
+              <button type="submit" data-i18n="customerUpdatePassword">Update password</button>
+              <p id="customerUpdateStatus" class="form-status customer-auth-status" aria-live="polite"></p>
+              <a href="#" id="backToLoginFromUpdate" class="text-link" data-i18n="customerBackToLogin">Back to login</a>
             </form>
           </div>
+    </div>
+  </div>
+</div>
+
+    <div id="profileModal" class="customer-modal" aria-hidden="true">
+      <div class="customer-modal-card">
+        <div class="customer-modal-head">
+          <h3 data-i18n="profileEditTitle">Edit profile</h3>
+          <button id="closeProfileModal" class="close-cart-icon" type="button" aria-label="Close">×</button>
         </div>
+        <form id="customerProfileForm" class="inquiry-form customer-form">
+          <label>
+            <span data-i18n="labelEmail">Email</span>
+            <input type="email" id="profileEmailInput" required />
+          </label>
+          <label>
+            <span data-i18n="profileMobileLabel">Mobile number</span>
+            <input type="tel" id="profileMobileInput" />
+          </label>
+          <label>
+            <span data-i18n="profileAddressLabel">Address</span>
+            <textarea id="profileAddressInput" rows="3"></textarea>
+          </label>
+          <button type="submit" data-i18n="profileSaveChanges">Save changes</button>
+          <p id="customerProfileStatus" class="form-status customer-auth-status" aria-live="polite"></p>
+        </form>
       </div>
     </div>
 

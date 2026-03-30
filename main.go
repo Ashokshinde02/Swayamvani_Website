@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"crypto/rand"
 	"crypto/sha256"
 	"crypto/subtle"
 	"database/sql"
@@ -123,11 +124,17 @@ type CustomerLoginRequest struct {
 	Password string `json:"password"`
 }
 
+type CustomerForgotPasswordRequest struct {
+	Email string `json:"email"`
+}
+
 type CustomerAccount struct {
 	Name         string    `json:"name"`
 	Email        string    `json:"email"`
 	PasswordHash string    `json:"password_hash"`
 	CreatedAt    time.Time `json:"created_at"`
+	Mobile       string    `json:"mobile,omitempty"`
+	Address      string    `json:"address,omitempty"`
 }
 
 type CustomerProfile struct {
@@ -176,24 +183,26 @@ type SQLStorage struct {
 }
 
 type Server struct {
-	store             Storage
-	sqlStore          *SQLStorage
-	emailRegex        *regexp.Regexp
-	adminUser         string
-	adminPass         string
-	sessions          *SessionManager
-	customerSessions  *SessionManager
-	customerMu        sync.RWMutex
-	customers         map[string]CustomerAccount
-	customerDataPath  string
-	ordersStore       *orders.Store
-	offerConfig       OfferConfig
-	offerList         OffersFile
-	offerMu           sync.RWMutex
-	offerConfigPath   string
-	razorpayKeyID     string
-	razorpayKeySecret string
-	sessionSecret     []byte
+	store                Storage
+	sqlStore             *SQLStorage
+	emailRegex           *regexp.Regexp
+	adminUser            string
+	adminPass            string
+	sessions             *SessionManager
+	customerSessions     *SessionManager
+	customerMu           sync.RWMutex
+	customers            map[string]CustomerAccount
+	customerDataPath     string
+	ordersStore          *orders.Store
+	offerConfig          OfferConfig
+	offerList            OffersFile
+	offerMu              sync.RWMutex
+	offerConfigPath      string
+	razorpayKeyID        string
+	razorpayKeySecret    string
+	sessionSecret        []byte
+	passwordResetMu      sync.RWMutex
+	pendingPasswordReset map[string]bool
 }
 
 func main() {
@@ -213,20 +222,21 @@ func main() {
 	}
 
 	s := &Server{
-		store:             store,
-		sqlStore:          sqlStore,
-		emailRegex:        regexp.MustCompile(`^[^\s@]+@[^\s@]+\.[^\s@]+$`),
-		adminUser:         adminUser,
-		adminPass:         adminPass,
-		sessions:          newSessionManager(12 * time.Hour),
-		customerSessions:  newSessionManager(12 * time.Hour),
-		customers:         make(map[string]CustomerAccount),
-		customerDataPath:  filepath.Join("data", "customers.json"),
-		ordersStore:       orders.NewStore(filepath.Join("data")),
-		offerConfigPath:   filepath.Join("data", "offers.json"),
-		razorpayKeyID:     strings.TrimSpace(os.Getenv("RAZORPAY_KEY_ID")),
-		razorpayKeySecret: strings.TrimSpace(os.Getenv("RAZORPAY_KEY_SECRET")),
-		sessionSecret:     loadSessionSecret(),
+		store:                store,
+		sqlStore:             sqlStore,
+		emailRegex:           regexp.MustCompile(`^[^\s@]+@[^\s@]+\.[^\s@]+$`),
+		adminUser:            adminUser,
+		adminPass:            adminPass,
+		sessions:             newSessionManager(12 * time.Hour),
+		customerSessions:     newSessionManager(12 * time.Hour),
+		customers:            make(map[string]CustomerAccount),
+		customerDataPath:     filepath.Join("data", "customers.json"),
+		ordersStore:          orders.NewStore(filepath.Join("data")),
+		offerConfigPath:      filepath.Join("data", "offers.json"),
+		razorpayKeyID:        strings.TrimSpace(os.Getenv("RAZORPAY_KEY_ID")),
+		razorpayKeySecret:    strings.TrimSpace(os.Getenv("RAZORPAY_KEY_SECRET")),
+		sessionSecret:        loadSessionSecret(),
+		pendingPasswordReset: make(map[string]bool),
 	}
 	if err := s.loadCustomers(); err != nil {
 		log.Printf("warning: failed to load customers file: %v", err)
@@ -253,8 +263,11 @@ func main() {
 	mux.HandleFunc("/api/admin/me", s.handleAdminMe)
 	mux.HandleFunc("/api/customer/register", s.handleCustomerRegister)
 	mux.HandleFunc("/api/customer/login", s.handleCustomerLogin)
+	mux.HandleFunc("/api/customer/forgot-password", s.handleCustomerForgotPassword)
 	mux.HandleFunc("/api/customer/logout", s.handleCustomerLogout)
+	mux.HandleFunc("/api/customer/update-password", s.handleCustomerUpdatePassword)
 	mux.HandleFunc("/api/customer/me", s.handleCustomerMe)
+	mux.HandleFunc("/api/customer/profile", s.handleCustomerProfile)
 	mux.HandleFunc("/api/customer/orders", s.handleCustomerOrders)
 	mux.HandleFunc("/api/offers", s.handleGetOffers)
 	mux.HandleFunc("/api/coupon/use", s.handleCouponUse)
@@ -577,8 +590,12 @@ func schemaQueries(vendor string) []string {
 					name TEXT NOT NULL,
 					email TEXT NOT NULL UNIQUE,
 					password_hash TEXT NOT NULL,
+					mobile TEXT NOT NULL DEFAULT '',
+					address TEXT NOT NULL DEFAULT '',
 					created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 				)`,
+			`ALTER TABLE customers ADD COLUMN mobile TEXT NOT NULL DEFAULT ''`,
+			`ALTER TABLE customers ADD COLUMN address TEXT NOT NULL DEFAULT ''`,
 			`CREATE TABLE IF NOT EXISTS orders (
 					id SERIAL PRIMARY KEY,
 					customer_email TEXT NOT NULL,
@@ -592,9 +609,9 @@ func schemaQueries(vendor string) []string {
 					metadata JSONB,
 					created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 				)`,
-			`ALTER TABLE orders ADD COLUMN IF NOT EXISTS mobile TEXT NOT NULL DEFAULT ''`,
-			`ALTER TABLE orders ADD COLUMN IF NOT EXISTS address TEXT NOT NULL DEFAULT ''`,
-			`ALTER TABLE orders ADD COLUMN IF NOT EXISTS customer_name TEXT NOT NULL DEFAULT ''`,
+			`ALTER TABLE orders ADD COLUMN mobile TEXT NOT NULL DEFAULT ''`,
+			`ALTER TABLE orders ADD COLUMN address TEXT NOT NULL DEFAULT ''`,
+			`ALTER TABLE orders ADD COLUMN customer_name TEXT NOT NULL DEFAULT ''`,
 			`CREATE TABLE IF NOT EXISTS offers (
 						id SERIAL PRIMARY KEY,
 						active BOOLEAN NOT NULL DEFAULT FALSE,
@@ -639,12 +656,16 @@ func schemaQueries(vendor string) []string {
 				created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 			)`,
 		`CREATE TABLE IF NOT EXISTS customers (
-				id INT AUTO_INCREMENT PRIMARY KEY,
-				name VARCHAR(255) NOT NULL,
-				email VARCHAR(255) NOT NULL UNIQUE,
-				password_hash VARCHAR(255) NOT NULL,
-				created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
-			)`,
+					id INT AUTO_INCREMENT PRIMARY KEY,
+					name VARCHAR(255) NOT NULL,
+					email VARCHAR(255) NOT NULL UNIQUE,
+					password_hash VARCHAR(255) NOT NULL,
+					mobile VARCHAR(32) NOT NULL DEFAULT '',
+					address VARCHAR(512) NOT NULL DEFAULT '',
+					created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+				)`,
+		`ALTER TABLE customers ADD COLUMN mobile VARCHAR(32) NOT NULL DEFAULT ''`,
+		`ALTER TABLE customers ADD COLUMN address VARCHAR(512) NOT NULL DEFAULT ''`,
 		`CREATE TABLE IF NOT EXISTS orders (
 				id INT AUTO_INCREMENT PRIMARY KEY,
 				customer_email VARCHAR(255) NOT NULL,
@@ -908,19 +929,30 @@ func (s *SQLStorage) ActiveOffer() (OfferConfig, []OfferEntry, error) {
 
 func (s *SQLStorage) GetCustomerByEmail(email string) (CustomerAccount, error) {
 	var account CustomerAccount
-	err := s.db.QueryRow("SELECT name, email, password_hash, created_at FROM customers WHERE email = ?", email).
-		Scan(&account.Name, &account.Email, &account.PasswordHash, &account.CreatedAt)
+	var err error
+	if s.vendor == "postgres" {
+		err = s.db.QueryRow("SELECT name, email, password_hash, created_at, COALESCE(mobile, ''), COALESCE(address, '') FROM customers WHERE email = $1", email).
+			Scan(&account.Name, &account.Email, &account.PasswordHash, &account.CreatedAt, &account.Mobile, &account.Address)
+	} else {
+		err = s.db.QueryRow("SELECT name, email, password_hash, created_at, COALESCE(mobile, ''), COALESCE(address, '') FROM customers WHERE email = ?", email).
+			Scan(&account.Name, &account.Email, &account.PasswordHash, &account.CreatedAt, &account.Mobile, &account.Address)
+	}
 	return account, err
 }
 
 func (s *SQLStorage) CreateCustomer(account CustomerAccount) error {
-	_, err := s.db.Exec(`INSERT INTO customers (name, email, password_hash, created_at) VALUES (?,?,?,?)`,
-		account.Name, account.Email, account.PasswordHash, account.CreatedAt)
+	if s.vendor == "postgres" {
+		_, err := s.db.Exec(`INSERT INTO customers (name, email, password_hash, created_at, mobile, address) VALUES ($1,$2,$3,$4,$5,$6)`,
+			account.Name, account.Email, account.PasswordHash, account.CreatedAt, account.Mobile, account.Address)
+		return err
+	}
+	_, err := s.db.Exec(`INSERT INTO customers (name, email, password_hash, created_at, mobile, address) VALUES (?,?,?,?,?,?)`,
+		account.Name, account.Email, account.PasswordHash, account.CreatedAt, account.Mobile, account.Address)
 	return err
 }
 
 func (s *SQLStorage) ListCustomers() ([]CustomerAccount, error) {
-	rows, err := s.db.Query("SELECT name, email, password_hash, created_at FROM customers ORDER BY created_at DESC")
+	rows, err := s.db.Query("SELECT name, email, password_hash, created_at, COALESCE(mobile, ''), COALESCE(address, '') FROM customers ORDER BY created_at DESC")
 	if err != nil {
 		return nil, err
 	}
@@ -928,12 +960,32 @@ func (s *SQLStorage) ListCustomers() ([]CustomerAccount, error) {
 	var out []CustomerAccount
 	for rows.Next() {
 		var a CustomerAccount
-		if err := rows.Scan(&a.Name, &a.Email, &a.PasswordHash, &a.CreatedAt); err != nil {
+		if err := rows.Scan(&a.Name, &a.Email, &a.PasswordHash, &a.CreatedAt, &a.Mobile, &a.Address); err != nil {
 			return nil, err
 		}
 		out = append(out, a)
 	}
 	return out, nil
+}
+
+func (s *SQLStorage) UpdateCustomerPassword(email, hash string) error {
+	if s.vendor == "postgres" {
+		_, err := s.db.Exec("UPDATE customers SET password_hash = $1 WHERE email = $2", hash, email)
+		return err
+	}
+	_, err := s.db.Exec("UPDATE customers SET password_hash = ? WHERE email = ?", hash, email)
+	return err
+}
+
+func (s *SQLStorage) UpdateCustomerProfile(oldEmail string, account CustomerAccount) error {
+	if s.vendor == "postgres" {
+		_, err := s.db.Exec("UPDATE customers SET name=$1, email=$2, mobile=$3, address=$4 WHERE email=$5",
+			account.Name, account.Email, account.Mobile, account.Address, oldEmail)
+		return err
+	}
+	_, err := s.db.Exec("UPDATE customers SET name=?, email=?, mobile=?, address=? WHERE email=?",
+		account.Name, account.Email, account.Mobile, account.Address, oldEmail)
+	return err
 }
 
 func (s *SQLStorage) ListVideos() ([]Video, error) {
@@ -1624,7 +1676,7 @@ func (s *Server) handleCheckout(w http.ResponseWriter, r *http.Request) {
 	}
 	brandLine := "Swayamvani — Indian Classical Instruments\nwww.swayamvani.com\nLogo: https://www.swayamvani.com/logo.jpeg"
 	message := fmt.Sprintf(
-		"%s\n\nNew order%nOrder #: %d%nName: %s%nEmail: %s%nMobile: %s%nAddress: %s%n%nItems:%n%s%n%nTotal: Rs %d",
+		"%s\n\nNew order\nOrder #: %d\nName: %s\nEmail: %s\nMobile: %s\nAddress: %s\n\nItems:\n%s\n\nTotal: Rs %d",
 		brandLine,
 		order.ID,
 		accountName,
@@ -1934,16 +1986,106 @@ func (s *Server) handleCustomerLogin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	setCustomerSessionCookie(w, token)
-	mobile, address := s.latestShippingForCustomer(account.Email)
+	shippingMobile, shippingAddress := s.latestShippingForCustomer(account.Email)
+	requiresUpdate := s.isPasswordResetRequired(account.Email)
 	writeJSON(w, http.StatusOK, map[string]any{
 		"status": "ok",
 		"customer": CustomerProfile{
 			Name:      account.Name,
 			Email:     account.Email,
 			CreatedAt: account.CreatedAt.Format(time.RFC3339),
-			Mobile:    mobile,
-			Address:   address,
+			Mobile:    firstNonEmpty(account.Mobile, shippingMobile),
+			Address:   firstNonEmpty(account.Address, shippingAddress),
 		},
+		"updateRequired": requiresUpdate,
+	})
+}
+
+func (s *Server) handleCustomerForgotPassword(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		writeJSONError(w, http.StatusMethodNotAllowed, "method not allowed")
+		return
+	}
+	var payload CustomerForgotPasswordRequest
+	if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
+		writeJSONError(w, http.StatusBadRequest, "invalid JSON payload")
+		return
+	}
+	email := strings.ToLower(strings.TrimSpace(payload.Email))
+	if email == "" || !s.emailRegex.MatchString(email) {
+		writeJSONError(w, http.StatusBadRequest, "valid email is required")
+		return
+	}
+
+	account, ok := s.customerAccountByEmail(email)
+	if !ok {
+		writeJSON(w, http.StatusOK, map[string]any{
+			"status":  "ok",
+			"message": "password reset request received",
+		})
+		return
+	}
+
+	newPassword := generateTemporaryPassword()
+	if err := s.updateCustomerPassword(email, hashPassword(newPassword)); err != nil {
+		log.Printf("forgot password update: %v", err)
+		writeJSONError(w, http.StatusInternalServerError, "failed to reset password")
+		return
+	}
+
+	if err := s.sendPasswordResetEmail(account, newPassword); err != nil {
+		log.Printf("forgot password email: %v", err)
+		writeJSONError(w, http.StatusInternalServerError, "failed to send reset email")
+		return
+	}
+
+	s.markPasswordResetRequired(email)
+
+	writeJSON(w, http.StatusOK, map[string]any{
+		"status":  "ok",
+		"message": "password reset email sent",
+	})
+}
+
+type CustomerUpdatePasswordRequest struct {
+	Password string `json:"password"`
+}
+
+type CustomerProfileUpdateRequest struct {
+	Email   string `json:"email"`
+	Mobile  string `json:"mobile"`
+	Address string `json:"address"`
+}
+
+func (s *Server) handleCustomerUpdatePassword(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		writeJSONError(w, http.StatusMethodNotAllowed, "method not allowed")
+		return
+	}
+	email, ok := s.customerEmailFromRequest(r)
+	if !ok {
+		writeJSONError(w, http.StatusUnauthorized, "unauthorized")
+		return
+	}
+	var payload CustomerUpdatePasswordRequest
+	if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
+		writeJSONError(w, http.StatusBadRequest, "invalid JSON payload")
+		return
+	}
+	newPassword := strings.TrimSpace(payload.Password)
+	if len(newPassword) < 6 {
+		writeJSONError(w, http.StatusBadRequest, "password must be at least 6 characters")
+		return
+	}
+	if err := s.updateCustomerPassword(email, hashPassword(newPassword)); err != nil {
+		log.Printf("update password: %v", err)
+		writeJSONError(w, http.StatusInternalServerError, "failed to update password")
+		return
+	}
+	s.clearPasswordResetRequired(email)
+	writeJSON(w, http.StatusOK, map[string]any{
+		"status":  "ok",
+		"message": "password updated",
 	})
 }
 
@@ -1985,14 +2127,84 @@ func (s *Server) handleCustomerMe(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
-	mobile, address := s.latestShippingForCustomer(email)
+	shippingMobile, shippingAddress := s.latestShippingForCustomer(email)
 	writeJSON(w, http.StatusOK, map[string]any{
 		"customer": CustomerProfile{
 			Name:      account.Name,
 			Email:     account.Email,
 			CreatedAt: account.CreatedAt.Format(time.RFC3339),
-			Mobile:    mobile,
-			Address:   address,
+			Mobile:    firstNonEmpty(account.Mobile, shippingMobile),
+			Address:   firstNonEmpty(account.Address, shippingAddress),
+		},
+	})
+}
+
+func (s *Server) handleCustomerProfile(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		writeJSONError(w, http.StatusMethodNotAllowed, "method not allowed")
+		return
+	}
+	email, ok := s.customerEmailFromRequest(r)
+	if !ok {
+		writeJSONError(w, http.StatusUnauthorized, "unauthorized")
+		return
+	}
+
+	var payload CustomerProfileUpdateRequest
+	if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
+		writeJSONError(w, http.StatusBadRequest, "invalid JSON payload")
+		return
+	}
+
+	updatedEmail := normalizeCustomerEmail(payload.Email)
+	if updatedEmail == "" || !s.emailRegex.MatchString(updatedEmail) {
+		writeJSONError(w, http.StatusBadRequest, "valid email is required")
+		return
+	}
+
+	account, exists := s.customerAccountByEmail(email)
+	if !exists {
+		writeJSONError(w, http.StatusUnauthorized, "unauthorized")
+		return
+	}
+
+	if updatedEmail != email {
+		if _, already := s.customerAccountByEmail(updatedEmail); already {
+			writeJSONError(w, http.StatusBadRequest, "email already in use")
+			return
+		}
+	}
+
+	account.Email = updatedEmail
+	account.Mobile = strings.TrimSpace(payload.Mobile)
+	account.Address = strings.TrimSpace(payload.Address)
+
+	if err := s.updateCustomerProfile(email, account); err != nil {
+		log.Printf("update profile: %v", err)
+		writeJSONError(w, http.StatusInternalServerError, "failed to update profile")
+		return
+	}
+
+	if updatedEmail != email {
+		token, err := s.issueCustomerToken(updatedEmail)
+		if err != nil {
+			log.Printf("token refresh: %v", err)
+			writeJSONError(w, http.StatusInternalServerError, "failed to refresh session")
+			return
+		}
+		setCustomerSessionCookie(w, token)
+		s.movePasswordResetRequirement(email, updatedEmail)
+	}
+
+	shippingMobile, shippingAddress := s.latestShippingForCustomer(updatedEmail)
+	writeJSON(w, http.StatusOK, map[string]any{
+		"status": "ok",
+		"customer": CustomerProfile{
+			Name:      account.Name,
+			Email:     account.Email,
+			CreatedAt: account.CreatedAt.Format(time.RFC3339),
+			Mobile:    firstNonEmpty(account.Mobile, shippingMobile),
+			Address:   firstNonEmpty(account.Address, shippingAddress),
 		},
 	})
 }
@@ -2033,6 +2245,78 @@ func (s *Server) customerAccountByEmail(email string) (CustomerAccount, bool) {
 	acc, ok := s.customers[email]
 	s.customerMu.RUnlock()
 	return acc, ok
+}
+
+func (s *Server) markPasswordResetRequired(email string) {
+	s.passwordResetMu.Lock()
+	s.pendingPasswordReset[email] = true
+	s.passwordResetMu.Unlock()
+}
+
+func (s *Server) clearPasswordResetRequired(email string) {
+	s.passwordResetMu.Lock()
+	delete(s.pendingPasswordReset, email)
+	s.passwordResetMu.Unlock()
+}
+
+func (s *Server) movePasswordResetRequirement(oldEmail, newEmail string) {
+	if oldEmail == newEmail {
+		return
+	}
+	s.passwordResetMu.Lock()
+	if _, ok := s.pendingPasswordReset[oldEmail]; ok {
+		delete(s.pendingPasswordReset, oldEmail)
+		s.pendingPasswordReset[newEmail] = true
+	}
+	s.passwordResetMu.Unlock()
+}
+
+func (s *Server) isPasswordResetRequired(email string) bool {
+	s.passwordResetMu.RLock()
+	_, ok := s.pendingPasswordReset[email]
+	s.passwordResetMu.RUnlock()
+	return ok
+}
+
+func (s *Server) updateCustomerPassword(email, hash string) error {
+	if s.sqlStore != nil {
+		return s.sqlStore.UpdateCustomerPassword(email, hash)
+	}
+	s.customerMu.Lock()
+	account, ok := s.customers[email]
+	if !ok {
+		s.customerMu.Unlock()
+		return sql.ErrNoRows
+	}
+	account.PasswordHash = hash
+	s.customers[email] = account
+	snapshot := s.customerSnapshotLocked()
+	s.customerMu.Unlock()
+	return saveCustomerSnapshot(s.customerDataPath, snapshot)
+}
+
+func (s *Server) updateCustomerProfile(oldEmail string, updated CustomerAccount) error {
+	trueEmail := normalizeCustomerEmail(updated.Email)
+	updated.Email = trueEmail
+	if s.sqlStore != nil {
+		return s.sqlStore.UpdateCustomerProfile(oldEmail, updated)
+	}
+	s.customerMu.Lock()
+	if oldEmail != trueEmail {
+		delete(s.customers, oldEmail)
+	}
+	s.customers[trueEmail] = updated
+	snapshot := s.customerSnapshotLocked()
+	s.customerMu.Unlock()
+	return saveCustomerSnapshot(s.customerDataPath, snapshot)
+}
+
+func (s *Server) sendPasswordResetEmail(account CustomerAccount, password string) error {
+	swayamVaniLogo := "/logo.jpeg"
+	subject := "Swayamvani password reset"
+	body := mailer.CreatePasswordResetBody(swayamVaniLogo, account.Name, account.Email, password)
+	_, err := mailer.SendMail(account.Name, account.Email, subject, body)
+	return err
 }
 
 func (s *Server) latestShippingForCustomer(email string) (string, string) {
@@ -2757,6 +3041,19 @@ func hashPassword(password string) string {
 	return hex.EncodeToString(sum[:])
 }
 
+func generateTemporaryPassword() string {
+	const charset = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789"
+	const length = 10
+	buf := make([]byte, length)
+	if _, err := rand.Read(buf); err != nil {
+		return "Swayamvani123"
+	}
+	for i := range buf {
+		buf[i] = charset[int(buf[i])%len(charset)]
+	}
+	return string(buf)
+}
+
 func (s *Server) customerEmailFromRequest(r *http.Request) (string, bool) {
 	cookie, err := r.Cookie("customer_session")
 	if err != nil {
@@ -2788,6 +3085,19 @@ func sanitizeLog(v string) string {
 	v = strings.ReplaceAll(v, "\t", " ")
 	v = strings.ReplaceAll(v, "\n", " ")
 	return strings.TrimSpace(v)
+}
+
+func normalizeCustomerEmail(email string) string {
+	return strings.ToLower(strings.TrimSpace(email))
+}
+
+func firstNonEmpty(values ...string) string {
+	for _, v := range values {
+		if v != "" {
+			return v
+		}
+	}
+	return ""
 }
 
 func encodeImagesJSON(images []string) string {

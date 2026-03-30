@@ -36,20 +36,24 @@ func SendMail(customerName string, receiptantMailId string, subject string, body
 		"Content-Type: text/html; charset=\"UTF-8\";\r\n\r\n" +
 		body
 
-	// Set up TLS config
-	/*tlsconfig := &tls.Config{
-		InsecureSkipVerify: true,
-		ServerName:         localConfig.TitanSMTPHost,
-	}
-	*/
-	// Connect to the SMTP server
-	/*conn, err := tls.Dial("tcp", localConfig.TitanSMTPHost+":"+localConfig.TitanSMTPPort, tlsconfig)
-	if err != nil {
-		fmt.Println("Dialing Error:", err)
-		return false, err
-	}*/
+		// Set up TLS config
+		/*tlsconfig := &tls.Config{
+			InsecureSkipVerify: true,
+			ServerName:         localConfig.TitanSMTPHost,
+		}
+		*/
+		// Connect to the SMTP server
+		/*conn, err := tls.Dial("tcp", localConfig.TitanSMTPHost+":"+localConfig.TitanSMTPPort, tlsconfig)
+		if err != nil {
+			fmt.Println("Dialing Error:", err)
+			return false, err
+		}*/
 
-	conn, err := net.Dial("tcp", fmt.Sprintf("%s:%s", localConfig.TitanSMTPHost, localConfig.TitanSMTPPort))
+		/*conn, err := net.Dial("tcp", fmt.Sprintf("%s:%s", localConfig.TitanSMTPHost, localConfig.TitanSMTPPort))
+		if err != nil {
+			return false, err
+		}*/
+	conn, err := net.Dial("tcp", net.JoinHostPort(localConfig.TitanSMTPHost, localConfig.TitanSMTPPort))
 	if err != nil {
 		return false, err
 	}
@@ -185,5 +189,46 @@ func CreateEmailBody(swayamvaniLogo string, customerName string, customerEmail s
 </body>
 </html>
 `, swayamvaniLogo, customerName, customerName, customerEmail, customerPassword)
+	return emailBody
+}
+
+func CreatePasswordResetBody(swayamvaniLogo string, customerName string, customerEmail string, temporaryPassword string) string {
+	emailBody := fmt.Sprintf(`
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Your Password Has Been Reset</title>
+  <style>
+    body { font-family: Arial, sans-serif; background: #f9f9f9; margin: 0; padding: 0; }
+    .container { max-width: 500px; margin: 40px auto; background: #fff; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); padding: 32px; }
+    .logo { display: block; margin: 0 auto 20px auto; width: 120px; }
+    .brand { color: #2d7a2d; font-size: 28px; font-weight: bold; text-align: center; margin-bottom: 16px; }
+    .details { background: #f1f8e9; border-radius: 6px; padding: 16px; margin: 24px 0; }
+    .details strong { display: inline-block; width: 130px; }
+    .footer { text-align: center; color: #888; font-size: 13px; margin-top: 32px; }
+    .btn { display: inline-block; background: #2d7a2d; color: #fff; padding: 10px 24px; border-radius: 4px; text-decoration: none; margin-top: 18px; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <img src="%s" alt="Swayamvani Logo" class="logo">
+    <div class="brand">Swayamvani</div>
+    <h2>Hello, %s</h2>
+    <p>We received a request to reset the password for your Swayamvani account. Use the temporary password below to log in, then update it from your profile.</p>
+    <div class="details">
+      <p><strong>Email:</strong> %s</p>
+      <p><strong>Temporary password:</strong> %s</p>
+    </div>
+    <a href="https://swayamvani.com/login" class="btn">Sign in</a>
+    <p>If you did not ask for this, please contact our support team.</p>
+    <div class="footer">
+      &copy; 2026 Swayamvani. All rights reserved.<br>
+      <a href="https://swayamvani.com" style="color:#2d7a2d;text-decoration:none;">www.swayamvani.com</a>
+    </div>
+  </div>
+</body>
+</html>
+`, swayamvaniLogo, customerName, customerEmail, temporaryPassword)
 	return emailBody
 }
