@@ -2002,6 +2002,7 @@ func (s *Server) handleCustomerLogin(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) handleCustomerForgotPassword(w http.ResponseWriter, r *http.Request) {
+	log.Printf("IN handleCustomerForgotPassword")
 	if r.Method != http.MethodPost {
 		writeJSONError(w, http.StatusMethodNotAllowed, "method not allowed")
 		return
@@ -2032,7 +2033,7 @@ func (s *Server) handleCustomerForgotPassword(w http.ResponseWriter, r *http.Req
 		writeJSONError(w, http.StatusInternalServerError, "failed to reset password")
 		return
 	}
-
+	log.Printf("before send reset pass mail")
 	if err := s.sendPasswordResetEmail(account, newPassword); err != nil {
 		log.Printf("forgot password email: %v", err)
 		writeJSONError(w, http.StatusInternalServerError, "failed to send reset email")
@@ -2312,10 +2313,13 @@ func (s *Server) updateCustomerProfile(oldEmail string, updated CustomerAccount)
 }
 
 func (s *Server) sendPasswordResetEmail(account CustomerAccount, password string) error {
+	log.Printf("in send password reset mail")
 	swayamVaniLogo := "/logo.jpeg"
 	subject := "Swayamvani password reset"
 	body := mailer.CreatePasswordResetBody(swayamVaniLogo, account.Name, account.Email, password)
+	log.Printf("before sendmail %v,%v,%v", account.Email, subject, body)
 	_, err := mailer.SendMail(account.Name, account.Email, subject, body)
+	log.Printf("after send mail: %v", err)
 	return err
 }
 
