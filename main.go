@@ -2024,6 +2024,9 @@ func (s *Server) handleCustomerForgotPassword(w http.ResponseWriter, r *http.Req
 			"status":  "ok",
 			"message": "password reset request received",
 		})
+		//return
+	} else {
+		writeJSONError(w, http.StatusBadRequest, "Email Id Not Found")
 		return
 	}
 
@@ -2235,16 +2238,19 @@ func (s *Server) handleCustomerOrders(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) customerAccountByEmail(email string) (CustomerAccount, bool) {
+	var acc CustomerAccount
+	var ok bool
 	if s.sqlStore != nil {
 		acc, err := s.sqlStore.GetCustomerByEmail(email)
 		if err == nil {
 			return acc, true
 		}
-		return CustomerAccount{}, false
+		//return CustomerAccount{}, false
+	} else {
+		s.customerMu.RLock()
+		acc, ok = s.customers[email]
+		s.customerMu.RUnlock()
 	}
-	s.customerMu.RLock()
-	acc, ok := s.customers[email]
-	s.customerMu.RUnlock()
 	return acc, ok
 }
 
