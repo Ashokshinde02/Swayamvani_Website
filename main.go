@@ -2026,7 +2026,7 @@ func (s *Server) handleCustomerForgotPassword(w http.ResponseWriter, r *http.Req
 		})
 		//return
 	} else {
-		writeJSONError(w, http.StatusBadRequest, "Email Id Not Found")
+		writeJSONError(w, http.StatusBadRequest, "Email Id Not Found,Enter Valid Email Id")
 		return
 	}
 
@@ -2287,18 +2287,22 @@ func (s *Server) isPasswordResetRequired(email string) bool {
 
 func (s *Server) updateCustomerPassword(email, hash string) error {
 	if s.sqlStore != nil {
+		log.Printf("in sqlstore nill if")
 		return s.sqlStore.UpdateCustomerPassword(email, hash)
 	}
 	s.customerMu.Lock()
 	account, ok := s.customers[email]
 	if !ok {
+		log.Printf("log 1")
 		s.customerMu.Unlock()
 		return sql.ErrNoRows
 	}
+	log.Printf("log 2")
 	account.PasswordHash = hash
 	s.customers[email] = account
 	snapshot := s.customerSnapshotLocked()
 	s.customerMu.Unlock()
+	log.Printf("log 3 %v, %v", s.customerDataPath, snapshot)
 	return saveCustomerSnapshot(s.customerDataPath, snapshot)
 }
 
