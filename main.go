@@ -2295,6 +2295,7 @@ func (s *Server) updateCustomerPassword(email, hash string) error {
 	if !ok {
 		log.Printf("log 1")
 		s.customerMu.Unlock()
+		log.Printf("sql.ErrNoRows : %v", sql.ErrNoRows)
 		return sql.ErrNoRows
 	}
 	log.Printf("log 2")
