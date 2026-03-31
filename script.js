@@ -832,9 +832,18 @@ async function logCouponUsage(code) {
   }
 }
 
-function t(key) {
-  const group = translations[state.language] || translations.en;
-  return group[key] || translations.en[key] || key;
+function t(key, fallback) {
+  const activeGroup = translations[state.language] || translations.en;
+  if (activeGroup && Object.prototype.hasOwnProperty.call(activeGroup, key)) {
+    return activeGroup[key];
+  }
+  if (Object.prototype.hasOwnProperty.call(translations.en, key)) {
+    return translations.en[key];
+  }
+  if (fallback !== undefined) {
+    return fallback;
+  }
+  return key;
 }
 
 function applyLanguage(lang) {
@@ -850,7 +859,11 @@ function applyLanguage(lang) {
   }
 
   document.querySelectorAll("[data-i18n]").forEach((element) => {
-    element.textContent = t(element.dataset.i18n);
+    const key = element.dataset.i18n;
+    if (!element.dataset.i18nDefault) {
+      element.dataset.i18nDefault = element.textContent;
+    }
+    element.textContent = t(key, element.dataset.i18nDefault);
   });
 
   if (langSwitcher) {
