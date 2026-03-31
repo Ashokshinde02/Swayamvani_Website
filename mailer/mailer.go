@@ -15,12 +15,14 @@ import (
 )
 
 func SendMail(customerName string, receiptantMailId string, subject string, body string) (bool, error) {
+
+	fmt.Println("In Send Mail")
 	decryptedPassword, err := Decrypt(localConfig.EncryptedPassword, localConfig.DecriptionKey)
 	if err != nil {
 		fmt.Println("Decrypt error:", err)
 		return false, err
 	}
-	//fmt.Println("Decrypted:", decryptedPassword)
+	fmt.Println("Decrypted:", decryptedPassword)
 
 	//to := "shindeashok944@gmail.com"
 	//subject := "Test Email from Go"
@@ -35,64 +37,67 @@ func SendMail(customerName string, receiptantMailId string, subject string, body
 		"MIME-version: 1.0;\r\n" +
 		"Content-Type: text/html; charset=\"UTF-8\";\r\n\r\n" +
 		body
+	fmt.Println("message" + msg)
+	// Set up TLS config
+	/*tlsconfig := &tls.Config{
+		InsecureSkipVerify: true,
+		ServerName:         localConfig.TitanSMTPHost,
+	}
+	*/
+	// Connect to the SMTP server
+	/*conn, err := tls.Dial("tcp", localConfig.TitanSMTPHost+":"+localConfig.TitanSMTPPort, tlsconfig)
+	if err != nil {
+		fmt.Println("Dialing Error:", err)
+		return false, err
+	}*/
 
-		// Set up TLS config
-		/*tlsconfig := &tls.Config{
-			InsecureSkipVerify: true,
-			ServerName:         localConfig.TitanSMTPHost,
-		}
-		*/
-		// Connect to the SMTP server
-		/*conn, err := tls.Dial("tcp", localConfig.TitanSMTPHost+":"+localConfig.TitanSMTPPort, tlsconfig)
-		if err != nil {
-			fmt.Println("Dialing Error:", err)
-			return false, err
-		}*/
-
-		/*conn, err := net.Dial("tcp", fmt.Sprintf("%s:%s", localConfig.TitanSMTPHost, localConfig.TitanSMTPPort))
-		if err != nil {
-			return false, err
-		}*/
-	conn, err := net.Dial("tcp", net.JoinHostPort(localConfig.TitanSMTPHost, localConfig.TitanSMTPPort))
+	conn, err := net.Dial("tcp", fmt.Sprintf("%s:%s", localConfig.TitanSMTPHost, localConfig.TitanSMTPPort))
 	if err != nil {
 		return false, err
 	}
+	fmt.Println("after net dial", err)
+	/*conn, err := net.Dial("tcp", net.JoinHostPort(localConfig.TitanSMTPHost, localConfig.TitanSMTPPort))
+	if err != nil {
+		return false, err
+	}*/
 
 	c, err := smtp.NewClient(conn, localConfig.TitanSMTPHost)
 	if err != nil {
 		fmt.Println("Client Error:", err)
 		return false, err
 	}
-
+	fmt.Println("after new client")
 	if ok, _ := c.Extension("STARTTLS"); ok {
 		if err := c.StartTLS(&tls.Config{ServerName: localConfig.TitanSMTPHost}); err != nil {
 			return false, err
 		}
 	}
-
+	fmt.Println("Starttls")
 	// Auth
 	auth := smtp.PlainAuth("", localConfig.From, decryptedPassword, localConfig.TitanSMTPHost)
 	if err = c.Auth(auth); err != nil {
 		fmt.Println("Auth Error:", err)
 		return false, err
 	}
-
+	fmt.Println("after plain auth")
 	// Set sender and recipient
 	if err = c.Mail(localConfig.From); err != nil {
 		fmt.Println("Mail Error:", err)
 		return false, err
 	}
+	fmt.Println("set sender")
 	if err = c.Rcpt(receiptantMailId); err != nil {
 		fmt.Println("Rcpt Error:", err)
 		return false, err
 	}
-
+	fmt.Println("recpt")
 	// Send the email body
 	w, err := c.Data()
 	if err != nil {
 		fmt.Println("Data Error:", err)
 		return false, err
 	}
+	fmt.Println("send email body", w)
 	_, err = w.Write([]byte(msg))
 	if err != nil {
 		fmt.Println("Write Error:", err)
