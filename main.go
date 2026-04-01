@@ -583,8 +583,8 @@ func schemaQueries(vendor string) []string {
 				video_url TEXT NOT NULL DEFAULT '',
 				created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 			)`,
-			`ALTER TABLE products ADD COLUMN images_json TEXT NOT NULL DEFAULT '[]'`,
-			`ALTER TABLE products ADD COLUMN video_url TEXT NOT NULL DEFAULT ''`,
+			`ALTER TABLE products ADD COLUMN IF NOT EXISTS images_json TEXT NOT NULL DEFAULT '[]'`,
+			`ALTER TABLE products ADD COLUMN IF NOT EXISTS video_url TEXT NOT NULL DEFAULT ''`,
 			`CREATE TABLE videos (
 				id SERIAL PRIMARY KEY,
 				title TEXT NOT NULL,
@@ -607,8 +607,8 @@ func schemaQueries(vendor string) []string {
 					address TEXT NOT NULL DEFAULT '',
 					created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 				)`,
-			`ALTER TABLE customers ADD COLUMN mobile TEXT NOT NULL DEFAULT ''`,
-			`ALTER TABLE customers ADD COLUMN address TEXT NOT NULL DEFAULT ''`,
+			`ALTER TABLE customers ADD COLUMN IF NOT EXISTS mobile TEXT NOT NULL DEFAULT ''`,
+			`ALTER TABLE customers ADD COLUMN IF NOT EXISTS address TEXT NOT NULL DEFAULT ''`,
 			`CREATE TABLE IF NOT EXISTS orders (
 					id SERIAL PRIMARY KEY,
 					customer_email TEXT NOT NULL,
@@ -622,9 +622,9 @@ func schemaQueries(vendor string) []string {
 					metadata JSONB,
 					created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 				)`,
-			`ALTER TABLE orders ADD COLUMN mobile TEXT NOT NULL DEFAULT ''`,
-			`ALTER TABLE orders ADD COLUMN address TEXT NOT NULL DEFAULT ''`,
-			`ALTER TABLE orders ADD COLUMN customer_name TEXT NOT NULL DEFAULT ''`,
+			`ALTER TABLE orders ADD COLUMN IF NOT EXISTS mobile TEXT NOT NULL DEFAULT ''`,
+			`ALTER TABLE orders ADD COLUMN IF NOT EXISTS address TEXT NOT NULL DEFAULT ''`,
+			`ALTER TABLE orders ADD COLUMN IF NOT EXISTS customer_name TEXT NOT NULL DEFAULT ''`,
 			`CREATE TABLE IF NOT EXISTS offers (
 						id SERIAL PRIMARY KEY,
 						active BOOLEAN NOT NULL DEFAULT FALSE,
@@ -640,7 +640,7 @@ func schemaQueries(vendor string) []string {
 					coupon_enabled BOOLEAN NOT NULL DEFAULT TRUE,
 					created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 				)`,
-			`ALTER TABLE offers ADD COLUMN coupon_enabled BOOLEAN NOT NULL DEFAULT TRUE`,
+			`ALTER TABLE offers ADD COLUMN IF NOT EXISTS coupon_enabled BOOLEAN NOT NULL DEFAULT TRUE`,
 			`CREATE INDEX idx_offers_active ON offers(active)`,
 		}
 	}
@@ -677,8 +677,8 @@ func schemaQueries(vendor string) []string {
 					address VARCHAR(512) NOT NULL DEFAULT '',
 					created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 				)`,
-		`ALTER TABLE customers ADD COLUMN mobile VARCHAR(32) NOT NULL DEFAULT ''`,
-		`ALTER TABLE customers ADD COLUMN address VARCHAR(512) NOT NULL DEFAULT ''`,
+		`ALTER TABLE customers ADD COLUMN IF NOT EXISTS mobile VARCHAR(32) NOT NULL DEFAULT ''`,
+		`ALTER TABLE customers ADD COLUMN IF NOT EXISTS address VARCHAR(512) NOT NULL DEFAULT ''`,
 		`CREATE TABLE IF NOT EXISTS orders (
 				id INT AUTO_INCREMENT PRIMARY KEY,
 				customer_email VARCHAR(255) NOT NULL,
@@ -693,9 +693,9 @@ func schemaQueries(vendor string) []string {
 				created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
 				INDEX idx_orders_customer_email (customer_email)
 			)`,
-		`ALTER TABLE orders ADD COLUMN mobile VARCHAR(32) NOT NULL DEFAULT ''`,
-		`ALTER TABLE orders ADD COLUMN address TEXT NOT NULL`,
-		`ALTER TABLE orders ADD COLUMN customer_name VARCHAR(255) NOT NULL DEFAULT ''`,
+		`ALTER TABLE orders ADD COLUMN IF NOT EXISTS mobile VARCHAR(32) NOT NULL DEFAULT ''`,
+		`ALTER TABLE orders ADD COLUMN IF NOT EXISTS address TEXT NOT NULL`,
+		`ALTER TABLE orders ADD COLUMN IF NOT EXISTS customer_name VARCHAR(255) NOT NULL DEFAULT ''`,
 		`CREATE TABLE IF NOT EXISTS offers (
 				id INT AUTO_INCREMENT PRIMARY KEY,
 				active BOOLEAN NOT NULL DEFAULT FALSE,
@@ -711,7 +711,7 @@ func schemaQueries(vendor string) []string {
 			coupon_enabled BOOLEAN NOT NULL DEFAULT TRUE,
 			created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 		)`,
-		`ALTER TABLE offers ADD COLUMN coupon_enabled BOOLEAN NOT NULL DEFAULT TRUE`,
+		`ALTER TABLE offers ADD COLUMN IF NOT EXISTS coupon_enabled BOOLEAN NOT NULL DEFAULT TRUE`,
 	}
 }
 
