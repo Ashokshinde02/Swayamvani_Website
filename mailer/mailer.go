@@ -37,7 +37,7 @@ func SendMail(customerName string, receiptantMailId string, subject string, body
 		"MIME-version: 1.0;\r\n" +
 		"Content-Type: text/html; charset=\"UTF-8\";\r\n\r\n" +
 		body
-	fmt.Println("message" + msg)
+	//fmt.Println("message" + msg)
 	// Set up TLS config
 	/*tlsconfig := &tls.Config{
 		InsecureSkipVerify: true,

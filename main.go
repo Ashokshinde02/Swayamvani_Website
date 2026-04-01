@@ -2050,6 +2050,7 @@ func (s *Server) handleCustomerForgotPassword(w http.ResponseWriter, r *http.Req
 		return
 	}
 	log.Printf("before send reset pass mail")
+	log.Printf("Account %v", account)
 	if err := s.sendPasswordResetEmail(account, newPassword); err != nil {
 		log.Printf("forgot password email: %v", err)
 		writeJSONError(w, http.StatusInternalServerError, "failed to send reset email")
