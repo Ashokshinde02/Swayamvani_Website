@@ -312,8 +312,8 @@ func main() {
 
 func createStorage() (Storage, *SQLStorage, string, error) {
 	vendor := strings.ToLower(strings.TrimSpace(os.Getenv("DB_VENDOR")))
-	dsn := strings.TrimSpace(os.Getenv("DB_DSN"))
-
+	//dsn := strings.TrimSpace(os.Getenv("DB_DSN"))
+	dsn := os.Getenv("DATABASE_URL")
 	if vendor == "" || dsn == "" {
 		m := newMemoryStorage(defaultProducts())
 		return m, nil, "memory", nil
