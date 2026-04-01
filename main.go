@@ -313,13 +313,18 @@ func main() {
 func createStorage() (Storage, *SQLStorage, string, error) {
 	vendor := strings.ToLower(strings.TrimSpace(os.Getenv("DB_VENDOR")))
 	//dsn := strings.TrimSpace(os.Getenv("DB_DSN"))
+	log.Printf("Vendor : %v", vendor)
 	dsn := os.Getenv("DATABASE_URL")
 	log.Printf("DSN :- %v", dsn)
 	if vendor == "" || dsn == "" {
+		log.Printf("in vendor nill check")
 		m := newMemoryStorage(defaultProducts())
+		log.Printf("after new memory storage")
 		return m, nil, "memory", nil
 	}
+	log.Printf("log **")
 	if vendor != "postgres" && vendor != "mysql" {
+		log.Printf("check db vendor")
 		return nil, nil, "", fmt.Errorf("DB_VENDOR must be postgres or mysql")
 	}
 
