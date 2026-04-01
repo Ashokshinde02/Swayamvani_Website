@@ -323,21 +323,28 @@ func createStorage() (Storage, *SQLStorage, string, error) {
 		return nil, nil, "", fmt.Errorf("DB_VENDOR must be postgres or mysql")
 	}
 
+	log.Printf("log 1 *")
 	db, err := sql.Open(dbDriver(vendor), dsn)
+	log.Printf("log 2")
 	if err != nil {
+		log.Printf("log 3 %v", err)
 		return nil, nil, "", err
 	}
 	if err := db.Ping(); err != nil {
+		log.Printf("log 4 %v", err)
 		return nil, nil, "", err
 	}
-
+	log.Printf("log 5")
 	sqlStore := &SQLStorage{db: db, vendor: vendor}
 	if err := sqlStore.ensureSchema(); err != nil {
+		log.Printf("log 6 %v", err)
 		return nil, nil, "", err
 	}
 	if err := sqlStore.seedProducts(); err != nil {
+		log.Printf("log 7 %v", err)
 		return nil, nil, "", err
 	}
+	log.Printf("log 8 end")
 	return sqlStore, sqlStore, vendor, nil
 }
 
