@@ -2305,38 +2305,7 @@ async function fallbackWhatsAppCheckout() {
     window.onOrderCreated(data.order);
   }
   clearCartAfterOrder();
-  const shareOutcome = await shareOrderWithLogo(data.whatsapp_message || "");
-  if (shareOutcome === "shared" || shareOutcome === "cancelled") {
-    return;
-  }
   window.open(data.whatsapp_url, "_blank");
-}
-
-async function shareOrderWithLogo(message) {
-  if (!message || !navigator.share || !navigator.canShare || typeof File === "undefined") {
-    return "unsupported";
-  }
-
-  try {
-    const response = await fetch("/logo.jpeg");
-    if (!response.ok) return "unsupported";
-
-    const logo = new File([await response.blob()], "swayamvani-logo.jpeg", {
-      type: "image/jpeg"
-    });
-    const shareData = {
-      files: [logo],
-      title: "Swayamvani order",
-      text: message
-    };
-    if (!navigator.canShare(shareData)) return "unsupported";
-
-    await navigator.share(shareData);
-    return "shared";
-  } catch (error) {
-    if (error && error.name === "AbortError") return "cancelled";
-    return "unsupported";
-  }
 }
 
 checkoutBtn.addEventListener("click", async () => {

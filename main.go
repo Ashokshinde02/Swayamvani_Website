@@ -1688,7 +1688,7 @@ func (s *Server) handleCheckout(w http.ResponseWriter, r *http.Request) {
 		writeJSONError(w, http.StatusInternalServerError, "failed to save order")
 		return
 	}
-	brandLine := "Swayamvani — Indian Classical Instruments\nhttps://swayamvani.onrender.com"
+	brandLine := "Swayamvani — Indian Classical Instruments\nhttps://www.swayamvani.com\nLogo: https://www.swayamvani.com/logo.jpeg"
 	message := fmt.Sprintf(
 		"%s\n\nNew order\nOrder #: %d\nName: %s\nEmail: %s\nMobile: %s\nAddress: %s\n\nItems:\n%s\n\nTotal: Rs %d",
 		brandLine,
@@ -1701,7 +1701,7 @@ func (s *Server) handleCheckout(w http.ResponseWriter, r *http.Request) {
 		total,
 	)
 	waURL := "https://wa.me/917020705968?text=" + url.QueryEscape(message)
-	writeJSON(w, http.StatusOK, map[string]any{"whatsapp_url": waURL, "whatsapp_message": message, "order": order})
+	writeJSON(w, http.StatusOK, map[string]any{"whatsapp_url": waURL, "order": order})
 }
 
 func publicAssetURL(asset string) string {
@@ -1709,7 +1709,7 @@ func publicAssetURL(asset string) string {
 	if asset == "" || strings.HasPrefix(asset, "https://") || strings.HasPrefix(asset, "http://") {
 		return asset
 	}
-	return "https://swayamvani.onrender.com/" + strings.TrimLeft(asset, "/")
+	return "https://www.swayamvani.com/" + strings.TrimLeft(asset, "/")
 }
 
 func (s *Server) handleCreateRazorpayOrder(w http.ResponseWriter, r *http.Request) {
