@@ -646,7 +646,7 @@ func schemaQueries(vendor string) []string {
 	}
 	return []string{
 		`CREATE TABLE IF NOT EXISTS products (
-			id INT AUTO_INCREMENT PRIMARY KEY,
+			id INT SERIAL PRIMARY KEY,
 			name VARCHAR(255) NOT NULL,
 			category VARCHAR(64) NOT NULL,
 			price INT NOT NULL,
@@ -656,20 +656,20 @@ func schemaQueries(vendor string) []string {
 			created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 		)`,
 		`CREATE TABLE IF NOT EXISTS videos (
-			id INT AUTO_INCREMENT PRIMARY KEY,
+			id INT SERIAL PRIMARY KEY,
 			title VARCHAR(255) NOT NULL,
 			url TEXT NOT NULL,
 				created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 			)`,
 		`CREATE TABLE IF NOT EXISTS inquiries (
-				id INT AUTO_INCREMENT PRIMARY KEY,
+				id INT SERIAL PRIMARY KEY,
 				name VARCHAR(255) NOT NULL,
 				email VARCHAR(255) NOT NULL,
 				message TEXT NOT NULL,
 				created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 			)`,
 		`CREATE TABLE IF NOT EXISTS customers (
-					id INT AUTO_INCREMENT PRIMARY KEY,
+					id INT SERIAL PRIMARY KEY,
 					name VARCHAR(255) NOT NULL,
 					email VARCHAR(255) NOT NULL UNIQUE,
 					password_hash VARCHAR(255) NOT NULL,
@@ -680,7 +680,7 @@ func schemaQueries(vendor string) []string {
 		`ALTER TABLE customers ADD COLUMN IF NOT EXISTS mobile VARCHAR(32) NOT NULL DEFAULT ''`,
 		`ALTER TABLE customers ADD COLUMN IF NOT EXISTS address VARCHAR(512) NOT NULL DEFAULT ''`,
 		`CREATE TABLE IF NOT EXISTS orders (
-				id INT AUTO_INCREMENT PRIMARY KEY,
+				id INT SERIAL PRIMARY KEY,
 				customer_email VARCHAR(255) NOT NULL,
 				customer_name VARCHAR(255) NOT NULL DEFAULT '',
 				items_json JSON NOT NULL,
