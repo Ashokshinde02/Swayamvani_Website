@@ -585,7 +585,7 @@ func schemaQueries(vendor string) []string {
 			)`,
 			`ALTER TABLE products ADD COLUMN IF NOT EXISTS images_json TEXT NOT NULL DEFAULT '[]'`,
 			`ALTER TABLE products ADD COLUMN IF NOT EXISTS video_url TEXT NOT NULL DEFAULT ''`,
-			`CREATE TABLE videos (
+			`CREATE TABLE IF NOT EXISTS videos (
 				id SERIAL PRIMARY KEY,
 				title TEXT NOT NULL,
 				url TEXT NOT NULL,
