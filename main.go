@@ -2041,12 +2041,6 @@ func (s *Server) handleCustomerForgotPassword(w http.ResponseWriter, r *http.Req
 
 	account, ok := s.customerAccountByEmail(email)
 	if !ok {
-		writeJSON(w, http.StatusOK, map[string]any{
-			"status":  "ok",
-			"message": "password reset request received",
-		})
-		//return
-	} else {
 		writeJSONError(w, http.StatusBadRequest, "Email Id Not Found,Enter Valid Email Id")
 		return
 	}
@@ -2058,7 +2052,6 @@ func (s *Server) handleCustomerForgotPassword(w http.ResponseWriter, r *http.Req
 		return
 	}
 	log.Printf("before send reset pass mail")
-	log.Printf("Account %v", account)
 	if err := s.sendPasswordResetEmail(account, newPassword); err != nil {
 		log.Printf("forgot password email: %v", err)
 		writeJSONError(w, http.StatusInternalServerError, "failed to send reset email")
