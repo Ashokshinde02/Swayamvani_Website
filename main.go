@@ -1688,7 +1688,7 @@ func (s *Server) handleCheckout(w http.ResponseWriter, r *http.Request) {
 		writeJSONError(w, http.StatusInternalServerError, "failed to save order")
 		return
 	}
-	brandLine := "Swayamvani — Indian Classical Instruments\nhttps://swayamvani.onrender.com\nLogo: https://swayamvani.onrender.com/logo.jpeg"
+	brandLine := "Swayamvani — Indian Classical Instruments\nhttps://swayamvani.onrender.com"
 	message := fmt.Sprintf(
 		"%s\n\nNew order\nOrder #: %d\nName: %s\nEmail: %s\nMobile: %s\nAddress: %s\n\nItems:\n%s\n\nTotal: Rs %d",
 		brandLine,
@@ -1701,7 +1701,7 @@ func (s *Server) handleCheckout(w http.ResponseWriter, r *http.Request) {
 		total,
 	)
 	waURL := "https://wa.me/917020705968?text=" + url.QueryEscape(message)
-	writeJSON(w, http.StatusOK, map[string]any{"whatsapp_url": waURL, "order": order})
+	writeJSON(w, http.StatusOK, map[string]any{"whatsapp_url": waURL, "whatsapp_message": message, "order": order})
 }
 
 func publicAssetURL(asset string) string {
