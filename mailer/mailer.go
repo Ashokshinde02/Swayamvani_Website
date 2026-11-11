@@ -22,7 +22,6 @@ func SendMail(customerName string, receiptantMailId string, subject string, body
 		fmt.Println("Decrypt error:", err)
 		return false, err
 	}
-	fmt.Println("Decrypted:", decryptedPassword)
 
 	//to := "shindeashok944@gmail.com"
 	//subject := "Test Email from Go"
@@ -154,7 +153,7 @@ func Decrypt(encryptedText, key string) (string, error) {
 	return string(plainText), nil
 }
 
-func CreateEmailBody(swayamvaniLogo string, customerName string, customerEmail string, customerPassword string) string {
+func CreateEmailBody(swayamvaniLogo string, customerName string, customerEmail string) string {
 
 	emailBody := fmt.Sprintf(`
 <!DOCTYPE html>
@@ -182,7 +181,6 @@ func CreateEmailBody(swayamvaniLogo string, customerName string, customerEmail s
     <div class="details">
       <p><strong>Name:</strong> %s</p>
       <p><strong>Email:</strong> %s</p>
-      <p><strong>Password:</strong> %s</p>
     </div>
     <a href="https://swayamvani.com/login" class="btn">Login to Your Account</a>
     <p>If you did not request this account, please contact our support team immediately.</p>
@@ -193,7 +191,7 @@ func CreateEmailBody(swayamvaniLogo string, customerName string, customerEmail s
   </div>
 </body>
 </html>
-`, swayamvaniLogo, customerName, customerName, customerEmail, customerPassword)
+`, swayamvaniLogo, customerName, customerName, customerEmail)
 	return emailBody
 }
 

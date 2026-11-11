@@ -1673,7 +1673,7 @@ func (s *Server) handleCheckout(w http.ResponseWriter, r *http.Request) {
 		total += item.Price
 		img := strings.TrimSpace(item.Image)
 		if img != "" {
-			lines = append(lines, fmt.Sprintf("%s (Rs %d)\nImage: %s", name, item.Price, img))
+			lines = append(lines, fmt.Sprintf("%s (Rs %d)\nImage: %s", name, item.Price, publicAssetURL(img)))
 		} else {
 			lines = append(lines, fmt.Sprintf("%s (Rs %d)", name, item.Price))
 		}
@@ -1688,7 +1688,7 @@ func (s *Server) handleCheckout(w http.ResponseWriter, r *http.Request) {
 		writeJSONError(w, http.StatusInternalServerError, "failed to save order")
 		return
 	}
-	brandLine := "Swayamvani — Indian Classical Instruments\nwww.swayamvani.com\nLogo: https://www.swayamvani.com/logo.jpeg"
+	brandLine := "Swayamvani — Indian Classical Instruments\nhttps://swayamvani.onrender.com\nLogo: https://swayamvani.onrender.com/logo.jpeg"
 	message := fmt.Sprintf(
 		"%s\n\nNew order\nOrder #: %d\nName: %s\nEmail: %s\nMobile: %s\nAddress: %s\n\nItems:\n%s\n\nTotal: Rs %d",
 		brandLine,
@@ -1702,6 +1702,14 @@ func (s *Server) handleCheckout(w http.ResponseWriter, r *http.Request) {
 	)
 	waURL := "https://wa.me/917020705968?text=" + url.QueryEscape(message)
 	writeJSON(w, http.StatusOK, map[string]any{"whatsapp_url": waURL, "order": order})
+}
+
+func publicAssetURL(asset string) string {
+	asset = strings.TrimSpace(asset)
+	if asset == "" || strings.HasPrefix(asset, "https://") || strings.HasPrefix(asset, "http://") {
+		return asset
+	}
+	return "https://swayamvani.onrender.com/" + strings.TrimLeft(asset, "/")
 }
 
 func (s *Server) handleCreateRazorpayOrder(w http.ResponseWriter, r *http.Request) {
@@ -1904,7 +1912,6 @@ func (s *Server) handleCustomerRegister(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	rawPassword := payload.Password
 	account := CustomerAccount{
 		Name:         payload.Name,
 		Email:        payload.Email,
@@ -1936,9 +1943,9 @@ func (s *Server) handleCustomerRegister(w http.ResponseWriter, r *http.Request) 
 		}
 	}
 
-	swayamVaniLogo := "/logo.jpeg"
+	swayamVaniLogo := "https://swayamvani.onrender.com/logo.jpeg"
 	subject := "Welcome to Swayamvani! Your Account Has Been Created"
-	emailBody := mailer.CreateEmailBody(swayamVaniLogo, account.Name, account.Email, rawPassword)
+	emailBody := mailer.CreateEmailBody(swayamVaniLogo, account.Name, account.Email)
 	if _, err := mailer.SendMail(account.Name, account.Email, subject, emailBody); err != nil {
 		writeJSONError(w, http.StatusInternalServerError, "failed to send welcome email")
 		return
@@ -2340,12 +2347,10 @@ func (s *Server) updateCustomerProfile(oldEmail string, updated CustomerAccount)
 
 func (s *Server) sendPasswordResetEmail(account CustomerAccount, password string) error {
 	log.Printf("in send password reset mail")
-	swayamVaniLogo := "/logo.jpeg"
+	swayamVaniLogo := "https://swayamvani.onrender.com/logo.jpeg"
 	subject := "Swayamvani password reset"
 	body := mailer.CreatePasswordResetBody(swayamVaniLogo, account.Name, account.Email, password)
-	log.Printf("before sendmail %v,%v,%v", account.Email, subject, body)
 	_, err := mailer.SendMail(account.Name, account.Email, subject, body)
-	log.Printf("after send mail: %v", err)
 	return err
 }
 
