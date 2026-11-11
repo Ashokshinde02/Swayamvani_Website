@@ -641,7 +641,7 @@ func schemaQueries(vendor string) []string {
 					created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 				)`,
 			`ALTER TABLE offers ADD COLUMN IF NOT EXISTS coupon_enabled BOOLEAN NOT NULL DEFAULT TRUE`,
-			`CREATE INDEX idx_offers_active ON offers(active)`,
+			`CREATE INDEX IF NOT EXISTS idx_offers_active ON offers(active)`,
 		}
 	}
 	return []string{
@@ -669,7 +669,7 @@ func schemaQueries(vendor string) []string {
 				created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 			)`,
 		`CREATE TABLE IF NOT EXISTS customers (
-					id INT SERIAL PRIMARY KEY,
+					id INT AUTO_INCREMENT PRIMARY KEY,
 					name VARCHAR(255) NOT NULL,
 					email VARCHAR(255) NOT NULL UNIQUE,
 					password_hash VARCHAR(255) NOT NULL,
@@ -688,13 +688,14 @@ func schemaQueries(vendor string) []string {
 				status VARCHAR(32) NOT NULL,
 				payment_ref VARCHAR(255) NOT NULL DEFAULT '',
 				mobile VARCHAR(32) NOT NULL DEFAULT '',
-				address TEXT NOT NULL,
+				address TEXT NOT NULL DEFAULT '',
 				metadata JSON NULL,
 				created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
 				INDEX idx_orders_customer_email (customer_email)
 			)`,
+		`CREATE INDEX idx_orders_customer_email ON orders(customer_email)`,
 		`ALTER TABLE orders ADD COLUMN IF NOT EXISTS mobile VARCHAR(32) NOT NULL DEFAULT ''`,
-		`ALTER TABLE orders ADD COLUMN IF NOT EXISTS address TEXT NOT NULL`,
+		`ALTER TABLE orders ADD COLUMN IF NOT EXISTS address TEXT NOT NULL DEFAULT ''`,
 		`ALTER TABLE orders ADD COLUMN IF NOT EXISTS customer_name VARCHAR(255) NOT NULL DEFAULT ''`,
 		`CREATE TABLE IF NOT EXISTS offers (
 				id INT AUTO_INCREMENT PRIMARY KEY,
