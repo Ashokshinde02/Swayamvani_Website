@@ -73,16 +73,24 @@ type CheckoutRequest struct {
 }
 
 type OfferConfig struct {
-	Title         string `json:"title"`
-	Desc          string `json:"desc"`
-	DiscountTitle string `json:"discountTitle"`
-	DiscountDesc  string `json:"discountDesc"`
-	LessonsTitle  string `json:"lessonsTitle"`
-	LessonsDesc   string `json:"lessonsDesc"`
-	CouponCode    string `json:"couponCode"`
-	CouponPercent int    `json:"couponPercent"`
-	OfferType     string `json:"offerType"`
-	CouponEnabled bool   `json:"couponEnabled"`
+	Title           string `json:"title"`
+	Desc            string `json:"desc"`
+	DiscountTitle   string `json:"discountTitle"`
+	DiscountDesc    string `json:"discountDesc"`
+	DiscountPercent int    `json:"discountPercent"`
+	LessonsTitle    string `json:"lessonsTitle"`
+	LessonsDesc     string `json:"lessonsDesc"`
+	CouponCode      string `json:"couponCode"`
+	CouponPercent   int    `json:"couponPercent"`
+	OfferType       string `json:"offerType"`
+	CouponEnabled   bool   `json:"couponEnabled"`
+}
+
+func normalizeOfferConfig(config OfferConfig) OfferConfig {
+	if config.OfferType == "discount" && config.DiscountPercent == 0 {
+		config.DiscountPercent = 10
+	}
+	return config
 }
 
 type OfferEntry struct {
@@ -316,10 +324,12 @@ func main() {
 
 func createStorage() (Storage, *SQLStorage, string, error) {
 	vendor := strings.ToLower(strings.TrimSpace(os.Getenv("DB_VENDOR")))
-	//dsn := strings.TrimSpace(os.Getenv("DB_DSN"))
-	log.Printf("Vendor : %v", vendor)
-	dsn := os.Getenv("DATABASE_URL")
-	log.Printf("DSN :- %v", dsn)
+	dsn := strings.TrimSpace(os.Getenv("DB_DSN"))
+	if dsn == "" {
+		dsn = strings.TrimSpace(os.Getenv("DATABASE_URL"))
+	}
+	log.Printf("Database vendor: %s", vendor)
+	log.Printf("Database connection configured: %t", dsn != "")
 	if vendor == "" || dsn == "" {
 		log.Printf("in vendor nill check")
 		m := newMemoryStorage(defaultProducts())
@@ -599,6 +609,7 @@ func schemaQueries(vendor string) []string {
 					descr TEXT NOT NULL,
 					discount_title TEXT NOT NULL DEFAULT '',
 					discount_desc TEXT NOT NULL DEFAULT '',
+					discount_percent INT NOT NULL DEFAULT 10,
 					lessons_title TEXT NOT NULL DEFAULT '',
 					lessons_desc TEXT NOT NULL DEFAULT '',
 					coupon_code TEXT NOT NULL DEFAULT '',
@@ -607,6 +618,7 @@ func schemaQueries(vendor string) []string {
 					created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 				)`,
 			`ALTER TABLE offers ADD COLUMN IF NOT EXISTS coupon_enabled BOOLEAN NOT NULL DEFAULT TRUE`,
+			`ALTER TABLE offers ADD COLUMN IF NOT EXISTS discount_percent INT NOT NULL DEFAULT 10`,
 			`CREATE INDEX IF NOT EXISTS idx_offers_active ON offers(active)`,
 		}
 	}
@@ -673,6 +685,7 @@ func schemaQueries(vendor string) []string {
 			descr TEXT NOT NULL,
 			discount_title VARCHAR(255) NOT NULL DEFAULT '',
 			discount_desc TEXT NOT NULL,
+			discount_percent INT NOT NULL DEFAULT 10,
 			lessons_title VARCHAR(255) NOT NULL DEFAULT '',
 			lessons_desc TEXT NOT NULL,
 			coupon_code VARCHAR(64) NOT NULL DEFAULT '',
@@ -681,6 +694,7 @@ func schemaQueries(vendor string) []string {
 			created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 		)`,
 		`ALTER TABLE offers ADD COLUMN IF NOT EXISTS coupon_enabled BOOLEAN NOT NULL DEFAULT TRUE`,
+		`ALTER TABLE offers ADD COLUMN IF NOT EXISTS discount_percent INT NOT NULL DEFAULT 10`,
 	}
 }
 
@@ -713,64 +727,44 @@ func (s *SQLStorage) seedOffers() error {
 	if err := s.db.QueryRow("SELECT COUNT(*) FROM offers").Scan(&count); err != nil {
 		return err
 	}
-	// Always upsert the two baseline offers in MySQL so they exist for admin editing.
+	// Seed baseline offers once. Preserve admin-managed offers on later startups.
 	if s.vendor == "mysql" {
+		if count > 0 {
+			return nil
+		}
 		_, _ = s.db.Exec(`
 			INSERT INTO offers
-			(id, active, offer_type, title, descr, discount_title, discount_desc, lessons_title, lessons_desc, coupon_code, coupon_percent)
+			(id, active, offer_type, title, descr, discount_title, discount_desc, discount_percent, lessons_title, lessons_desc, coupon_code, coupon_percent)
 			VALUES
 			(1, TRUE, 'discount', '10% off every instrument',
-			 'Logged-in shoppers receive automatic 10% savings on each instrument in their cart.',
+			 'Save 10% on every instrument during our launch offer.',
 			 '10% off every instrument',
-			 'Logged-in shoppers receive automatic 10% savings on each instrument in their cart.',
+			 'Save 10% on every instrument during our launch offer.', 10,
 			 '', '', '', 0)
-			ON DUPLICATE KEY UPDATE
-				active=VALUES(active),
-				offer_type=VALUES(offer_type),
-				title=VALUES(title),
-				descr=VALUES(descr),
-				discount_title=VALUES(discount_title),
-				discount_desc=VALUES(discount_desc),
-				lessons_title=VALUES(lessons_title),
-				lessons_desc=VALUES(lessons_desc),
-				coupon_code=VALUES(coupon_code),
-				coupon_percent=VALUES(coupon_percent)
 		`)
 		_, _ = s.db.Exec(`
 			INSERT INTO offers
-			(id, active, offer_type, title, descr, discount_title, discount_desc, lessons_title, lessons_desc, coupon_code, coupon_percent)
+			(id, active, offer_type, title, descr, discount_title, discount_desc, discount_percent, lessons_title, lessons_desc, coupon_code, coupon_percent)
 			VALUES
 			(2, FALSE, 'lessons', 'First 4 lessons free',
 			 'After purchase, unlock four complimentary one-on-one learning sessions with our expert musicians.',
 			 '', '',
-			 'First 4 lessons free',
+			 0, 'First 4 lessons free',
 			 'After purchase, unlock four complimentary one-on-one learning sessions with our expert musicians.',
 			 '', 0)
-			ON DUPLICATE KEY UPDATE
-				active=VALUES(active),
-				offer_type=VALUES(offer_type),
-				title=VALUES(title),
-				descr=VALUES(descr),
-				discount_title=VALUES(discount_title),
-				discount_desc=VALUES(discount_desc),
-				lessons_title=VALUES(lessons_title),
-				lessons_desc=VALUES(lessons_desc),
-				coupon_code=VALUES(coupon_code),
-				coupon_percent=VALUES(coupon_percent)
 		`)
-		// Ensure only offer 1 is active
-		_, _ = s.db.Exec("UPDATE offers SET active = (id = 1)")
 		return nil
 	}
 
 	if count == 0 {
 		_, _ = s.UpsertOffer(0, OfferConfig{
-			OfferType:     "discount",
-			Title:         "10% off every instrument",
-			Desc:          "Logged-in shoppers receive automatic 10% savings on each instrument in their cart.",
-			DiscountTitle: "10% off every instrument",
-			DiscountDesc:  "Logged-in shoppers receive automatic 10% savings on each instrument in their cart.",
-			CouponEnabled: true,
+			OfferType:       "discount",
+			Title:           "10% off every instrument",
+			Desc:            "Save 10% on every instrument during our launch offer.",
+			DiscountTitle:   "10% off every instrument",
+			DiscountDesc:    "Save 10% on every instrument during our launch offer.",
+			DiscountPercent: 10,
+			CouponEnabled:   true,
 		})
 		_, _ = s.UpsertOffer(0, OfferConfig{
 			OfferType:     "lessons",
@@ -827,7 +821,7 @@ func (s *SQLStorage) ListProducts() ([]Product, error) {
 }
 
 func (s *SQLStorage) ListOffers() ([]OfferEntry, error) {
-	rows, err := s.db.Query("SELECT id, active, offer_type, title, descr, discount_title, discount_desc, lessons_title, lessons_desc, coupon_code, coupon_percent, coupon_enabled FROM offers ORDER BY id")
+	rows, err := s.db.Query("SELECT id, active, offer_type, title, descr, discount_title, discount_desc, discount_percent, lessons_title, lessons_desc, coupon_code, coupon_percent, coupon_enabled FROM offers ORDER BY id")
 	if err != nil {
 		return nil, err
 	}
@@ -836,7 +830,7 @@ func (s *SQLStorage) ListOffers() ([]OfferEntry, error) {
 	for rows.Next() {
 		var entry OfferEntry
 		var cfg OfferConfig
-		if err := rows.Scan(&entry.ID, &entry.Active, &cfg.OfferType, &cfg.Title, &cfg.Desc, &cfg.DiscountTitle, &cfg.DiscountDesc, &cfg.LessonsTitle, &cfg.LessonsDesc, &cfg.CouponCode, &cfg.CouponPercent, &cfg.CouponEnabled); err != nil {
+		if err := rows.Scan(&entry.ID, &entry.Active, &cfg.OfferType, &cfg.Title, &cfg.Desc, &cfg.DiscountTitle, &cfg.DiscountDesc, &cfg.DiscountPercent, &cfg.LessonsTitle, &cfg.LessonsDesc, &cfg.CouponCode, &cfg.CouponPercent, &cfg.CouponEnabled); err != nil {
 			return nil, err
 		}
 		entry.Config = cfg
@@ -847,16 +841,16 @@ func (s *SQLStorage) ListOffers() ([]OfferEntry, error) {
 
 func (s *SQLStorage) UpsertOffer(id int, cfg OfferConfig) (int, error) {
 	if id == 0 {
-		res, err := s.db.Exec(`INSERT INTO offers (active, offer_type, title, descr, discount_title, discount_desc, lessons_title, lessons_desc, coupon_code, coupon_percent, coupon_enabled) VALUES (FALSE, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-			cfg.OfferType, cfg.Title, cfg.Desc, cfg.DiscountTitle, cfg.DiscountDesc, cfg.LessonsTitle, cfg.LessonsDesc, cfg.CouponCode, cfg.CouponPercent, cfg.CouponEnabled)
+		res, err := s.db.Exec(`INSERT INTO offers (active, offer_type, title, descr, discount_title, discount_desc, discount_percent, lessons_title, lessons_desc, coupon_code, coupon_percent, coupon_enabled) VALUES (FALSE, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+			cfg.OfferType, cfg.Title, cfg.Desc, cfg.DiscountTitle, cfg.DiscountDesc, cfg.DiscountPercent, cfg.LessonsTitle, cfg.LessonsDesc, cfg.CouponCode, cfg.CouponPercent, cfg.CouponEnabled)
 		if err != nil {
 			return 0, err
 		}
 		newID, _ := res.LastInsertId()
 		return int(newID), nil
 	}
-	_, err := s.db.Exec(`UPDATE offers SET offer_type=?, title=?, descr=?, discount_title=?, discount_desc=?, lessons_title=?, lessons_desc=?, coupon_code=?, coupon_percent=?, coupon_enabled=? WHERE id=?`,
-		cfg.OfferType, cfg.Title, cfg.Desc, cfg.DiscountTitle, cfg.DiscountDesc, cfg.LessonsTitle, cfg.LessonsDesc, cfg.CouponCode, cfg.CouponPercent, cfg.CouponEnabled, id)
+	_, err := s.db.Exec(`UPDATE offers SET offer_type=?, title=?, descr=?, discount_title=?, discount_desc=?, discount_percent=?, lessons_title=?, lessons_desc=?, coupon_code=?, coupon_percent=?, coupon_enabled=? WHERE id=?`,
+		cfg.OfferType, cfg.Title, cfg.Desc, cfg.DiscountTitle, cfg.DiscountDesc, cfg.DiscountPercent, cfg.LessonsTitle, cfg.LessonsDesc, cfg.CouponCode, cfg.CouponPercent, cfg.CouponEnabled, id)
 	return id, err
 }
 
@@ -2593,6 +2587,10 @@ func (s *Server) handleAdminOffers(w http.ResponseWriter, r *http.Request) {
 			writeJSONError(w, http.StatusBadRequest, "invalid JSON payload")
 			return
 		}
+		if payload.Config.OfferType == "discount" && (payload.Config.DiscountPercent < 1 || payload.Config.DiscountPercent > 90) {
+			writeJSONError(w, http.StatusBadRequest, "discount percent must be between 1 and 90")
+			return
+		}
 		if s.sqlStore != nil {
 			id, err := s.sqlStore.UpsertOffer(payload.ID, payload.Config)
 			if err != nil {
@@ -2899,7 +2897,7 @@ func loadOfferConfig(path string) (OfferConfig, error) {
 	if err := json.Unmarshal(data, &config); err != nil {
 		return config, err
 	}
-	return config, nil
+	return normalizeOfferConfig(config), nil
 }
 
 func saveOfferConfig(path string, config OfferConfig) error {
@@ -2946,6 +2944,9 @@ func loadOffersFile(path string) (OffersFile, error) {
 	}
 	if err := json.Unmarshal(data, &file); err != nil {
 		return file, err
+	}
+	for i := range file.Offers {
+		file.Offers[i].Config = normalizeOfferConfig(file.Offers[i].Config)
 	}
 	return file, nil
 }

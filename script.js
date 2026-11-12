@@ -680,7 +680,6 @@ const offersSection = document.querySelector(".offers-section");
 const offerGrid = document.querySelector(".offer-grid");
 const offerGridDynamic = document.getElementById("offerGridDynamic");
 let offerOverrides = {};
-const LOYALTY_DISCOUNT_RATE = 0.1;
 
 function requireBackendPath(path) {
   if (!hasBackend) {
@@ -702,10 +701,10 @@ function getActiveDiscountPercent() {
     return Math.min(90, Math.max(0, Number(state.coupon.percent) || 0));
   }
   if (state.activeOfferType === "discount") {
-    return Math.round(LOYALTY_DISCOUNT_RATE * 100);
+    return Math.min(90, Math.max(0, Number(offerOverrides.discountPercent) || 0));
   }
-  if (state.customer && state.activeOfferType !== "lessons") {
-    return Math.round(LOYALTY_DISCOUNT_RATE * 100);
+  if (state.activeOfferType === "lessons") {
+    return 0;
   }
   return 0;
 }
@@ -714,7 +713,7 @@ function getActiveDiscountLabel() {
   if (state.activeOfferType === "coupon" && state.coupon?.applied && state.coupon.code) {
     return `${state.coupon.code} coupon`;
   }
-  if (state.activeOfferType === "discount" && state.customer) return t("offerDiscountTitle");
+  if (state.activeOfferType === "discount") return offerOverrides.discountTitle || t("offerDiscountTitle");
   return "";
 }
 
@@ -1000,8 +999,6 @@ function renderProducts() {
           ${discountPct > 0 ? `<span class="price-savings">You save ${formatINR(savings)}</span>` : ""}
         </div>
         <button class="product-cta" data-id="${product.id}" ${product.availability === "out_of_stock" ? "disabled" : ""}><span>${product.availability === "out_of_stock" ? "Out of stock" : t("addToCart")}</span></button>
-        <button type="button" class="harmonium-view-details">Photos &amp; details</button>
-        <a class="harmonium-inquiry-link" href="#contact">Ask about this model</a>
       </div>
     `;
     productGrid.appendChild(card);
@@ -1475,6 +1472,7 @@ function applyOfferOverrides(overrides = null) {
     desc: offerOverrides.desc || t("offerDesc"),
     discountTitle: offerOverrides.discountTitle || t("offerDiscountTitle"),
     discountDesc: offerOverrides.discountDesc || t("offerDiscountDesc"),
+    discountPercent: Number(offerOverrides.discountPercent ?? 10),
     lessonsTitle: offerOverrides.lessonsTitle || t("offerLessonsTitle"),
     lessonsDesc: offerOverrides.lessonsDesc || t("offerLessonsDesc"),
     couponCode: offerOverrides.couponCode || "",
@@ -1542,6 +1540,8 @@ function applyOfferOverrides(overrides = null) {
     state.coupon = { applied: false, code: null, percent: 0 };
   }
   syncCouponUIAvailability();
+  renderProducts();
+  renderCart();
   updateOfferVisibility();
 }
 
@@ -1549,6 +1549,8 @@ async function loadOffers() {
   if (!hasBackend) {
     state.activeOfferType = null;
     if (offerGridDynamic) offerGridDynamic.innerHTML = "";
+    renderProducts();
+    renderCart();
     updateOfferVisibility();
     return;
   }
@@ -1559,6 +1561,8 @@ async function loadOffers() {
     if (!config.offerType) {
       state.activeOfferType = null;
       if (offerGridDynamic) offerGridDynamic.innerHTML = "";
+      renderProducts();
+      renderCart();
       updateOfferVisibility();
       return;
     }
@@ -1568,6 +1572,7 @@ async function loadOffers() {
       desc: config.desc,
       discountTitle: config.discountTitle,
       discountDesc: config.discountDesc,
+      discountPercent: config.discountPercent,
       lessonsTitle: config.lessonsTitle,
       lessonsDesc: config.lessonsDesc,
       couponCode: config.couponCode,
@@ -1578,6 +1583,8 @@ async function loadOffers() {
     console.warn("Failed to load offers", error);
     state.activeOfferType = null;
     if (offerGridDynamic) offerGridDynamic.innerHTML = "";
+    renderProducts();
+    renderCart();
     updateOfferVisibility();
   }
 }

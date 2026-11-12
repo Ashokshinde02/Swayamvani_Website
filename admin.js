@@ -120,6 +120,13 @@ function createOffersFormHtml(current = {}, list = [], errorMessage = "") {
         <input name="discountTitle" type="text" maxlength="120" required value="${escapeHtml(current.discountTitle || "")}" />
       </label>
       <label data-offer-section="discount">
+        Discount percent
+        <input name="discountPercent" type="number" min="1" max="90" step="1" required value="${escapeHtml(
+          current.discountPercent ?? 10
+        )}" />
+      </label>
+      <p class="form-hint offer-discount-hint" data-offer-section="discount">Applied automatically while this discount offer is active. Use coupon offers for coupon campaigns.</p>
+      <label data-offer-section="discount">
         Discount description
         <textarea name="discountDesc" rows="3" required>${escapeHtml(current.discountDesc || "")}</textarea>
       </label>
@@ -190,6 +197,7 @@ function bindOffersForm(form) {
     };
     setRequired("discountTitle", selected === "discount");
     setRequired("discountDesc", selected === "discount");
+    setRequired("discountPercent", selected === "discount");
     setRequired("lessonsTitle", selected === "lessons");
     setRequired("lessonsDesc", selected === "lessons");
     setRequired("couponCode", selected === "coupon");
@@ -204,6 +212,7 @@ function bindOffersForm(form) {
     form.elements.desc.value = offer.desc || "";
     form.elements.discountTitle.value = offer.discountTitle || "";
     form.elements.discountDesc.value = offer.discountDesc || "";
+    form.elements.discountPercent.value = offer.discountPercent || 10;
     form.elements.lessonsTitle.value = offer.lessonsTitle || "";
     form.elements.lessonsDesc.value = offer.lessonsDesc || "";
     form.elements.couponCode.value = offer.couponCode || "";
@@ -258,6 +267,7 @@ function bindOffersForm(form) {
       desc: (form.elements.desc?.value || "").trim(),
       discountTitle: (form.elements.discountTitle?.value || "").trim(),
       discountDesc: (form.elements.discountDesc?.value || "").trim(),
+      discountPercent: Number(form.elements.discountPercent?.value || 10),
       lessonsTitle: (form.elements.lessonsTitle?.value || "").trim(),
       lessonsDesc: (form.elements.lessonsDesc?.value || "").trim(),
       couponCode: (form.elements.couponCode?.value || "").trim(),
@@ -685,7 +695,7 @@ async function checkSession() {
   try {
     await api("/api/admin/me", { method: "GET" });
     loginSection.style.display = "none";
-    adminSection.style.display = "block";
+    adminSection.style.display = "grid";
     adminStatus.textContent = "Logged in.";
     toggleLogoutButton(true);
     toggleAdminHeaderActions(true);
@@ -966,6 +976,17 @@ document.addEventListener("click", async (event) => {
       adminStatus.textContent = error.message || "Failed to update product.";
     }
   }
+});
+
+document.querySelectorAll("[data-admin-nav]").forEach((link) => {
+  link.addEventListener("click", () => {
+    document.querySelectorAll("[data-admin-nav]").forEach((item) => {
+      item.classList.remove("is-active");
+      item.removeAttribute("aria-current");
+    });
+    link.classList.add("is-active");
+    link.setAttribute("aria-current", "location");
+  });
 });
 
 checkSession();

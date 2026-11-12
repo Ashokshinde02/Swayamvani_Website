@@ -4,9 +4,9 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>स्वयंवाणी Admin</title>
-    <link rel="stylesheet" href="styles.css?v=20261112catalog5" />
+    <link rel="stylesheet" href="styles.css?v=20261113admindash2" />
   </head>
-  <body>
+  <body class="admin-dashboard-page">
     <header class="site-header">
       <div class="container nav-wrap">
         <a href="/" class="brand" aria-label="स्वयंवाणी Home">
@@ -17,23 +17,20 @@
             <nav class="main-nav" aria-label="Admin navigation">
               <a href="/">Storefront</a>
             </nav>
-            <div class="admin-header-actions" aria-hidden="true">
-              <button type="button" id="refreshInquiriesBtn" class="filter-btn">Inquiry Customers</button>
-              <button type="button" id="refreshCustomersBtn" class="filter-btn">Login Customers</button>
-              <button type="button" id="editOffersBtn" class="auth-btn">Edit Offers</button>
-              <button type="button" id="refreshOrdersBtn" class="auth-btn">Orders</button>
-            </div>
             <button id="logoutBtn" type="button" class="auth-btn logout-hidden">Logout</button>
           </div>
       </div>
     </header>
 
-    <main class="products-section">
-      <div class="container">
-        <h1>Admin Panel</h1>
-        <p>Login to manage products and review inquiries.</p>
+    <main class="products-section admin-page-main">
+      <div class="container admin-page-container">
+        <div class="admin-welcome">
+          <p class="admin-eyebrow">स्वयंवाणी · STORE MANAGEMENT</p>
+          <h1>Admin studio</h1>
+          <p>Manage instruments, offers, videos, and customer activity.</p>
+        </div>
 
-        <section id="loginSection" class="about-note" style="margin-top: 1rem">
+        <section id="loginSection" class="about-note admin-login-card">
           <h3>Admin Login</h3>
           <form id="loginForm" class="inquiry-form">
             <label>Username <input id="username" value="admin" required /></label>
@@ -54,16 +51,41 @@
           </form>
         </section>
 
-          <section id="adminSection" style="display: none; margin-top: 1rem">
-            <div class="about-note" style="margin-bottom: 1rem">
-              <h3>Session</h3>
-              <p id="adminStatus" class="form-status" aria-live="polite"></p>
+        <section id="adminSection" class="admin-workspace" style="display: none">
+          <aside class="admin-sidebar">
+            <div class="admin-sidebar-brand">
+              <span class="admin-sidebar-mark">स्व</span>
+              <div><strong>Control room</strong><small>Store administration</small></div>
             </div>
+            <p class="admin-sidebar-label">MENU</p>
+            <nav class="admin-sidebar-nav" aria-label="Admin menu">
+              <a href="#adminOverview" data-admin-nav><span>⌂</span> Overview</a>
+              <a href="#productsAdminSection" data-admin-nav><span>♫</span> Instruments</a>
+              <a href="#videosAdminSection" data-admin-nav><span>▷</span> Making videos</a>
+              <a href="#inquiriesAdminSection" data-admin-nav><span>✉</span> Inquiries</a>
+              <a href="#customersAdminSection" data-admin-nav><span>♙</span> Customers</a>
+            </nav>
+            <p class="admin-sidebar-label admin-sidebar-tools-label">STORE TOOLS</p>
+            <div class="admin-header-actions" aria-hidden="true">
+              <button type="button" id="refreshOrdersBtn" class="auth-btn">Orders</button>
+              <button type="button" id="editOffersBtn" class="auth-btn">Offers &amp; coupons</button>
+              <button type="button" id="refreshInquiriesBtn" class="filter-btn">Refresh inquiries</button>
+              <button type="button" id="refreshCustomersBtn" class="filter-btn">Refresh customers</button>
+            </div>
+            <div class="admin-sidebar-note"><span>✦</span><p>Keep your instrument collection fresh and your customers in tune.</p></div>
+          </aside>
 
-          <section class="contact-section" style="padding-top: 1.2rem">
-            <div class="contact-grid">
+          <div class="admin-main-content">
+            <header class="admin-page-head" id="adminOverview">
+              <div><p class="admin-eyebrow">YOUR STOREFRONT AT A GLANCE</p><h2>Welcome back</h2></div>
+              <div class="admin-session-status"><span class="admin-live-dot"></span><span id="adminStatus" aria-live="polite">Checking session…</span></div>
+            </header>
+
+          <section id="productsAdminSection" class="admin-content-section">
+            <div class="admin-section-heading"><div><p class="admin-eyebrow">CATALOG</p><h2>Instruments</h2></div><p>Add products and organize your instrument collection.</p></div>
+            <div class="contact-grid admin-product-grid">
               <form id="productForm" class="inquiry-form">
-                <h3>Add Product</h3>
+                <h3>Add an instrument</h3>
                 <label>Name <input id="pName" required /></label>
                 <label>Instrument type
                   <input id="pCategory" list="instrumentTypeOptions" value="harmonium" placeholder="harmonium" required />
@@ -88,7 +110,7 @@
                 <button type="submit">Create Product</button>
               </form>
 
-              <div class="about-note">
+              <div class="about-note admin-catalog-card">
                 <h3>Instrument catalog</h3>
                 <p>Each product belongs to an instrument type. Add a product to introduce a type; delete its products to remove that type from the storefront.</p>
                 <div id="adminInstrumentTypes" class="admin-instrument-types" aria-live="polite"></div>
@@ -97,8 +119,8 @@
             </div>
           </section>
 
-          <section class="about-note" style="margin-bottom: 1rem">
-            <h3>Making Videos</h3>
+          <section id="videosAdminSection" class="about-note admin-content-section">
+            <div class="admin-section-heading"><div><p class="admin-eyebrow">CRAFT &amp; PROCESS</p><h2>Making videos</h2></div><p>Show customers how each instrument comes to life.</p></div>
             <form id="videoForm" class="video-form">
               <label>Video Title <input id="vTitle" required /></label>
               <label>Video URL <input id="vUrl" placeholder="assets/videos/my-video.mp4" required /></label>
@@ -107,15 +129,16 @@
             <div id="adminVideos" class="video-grid" style="margin-top: 0.8rem"></div>
           </section>
 
-          <section class="about-note">
-            <h3>Recent Inquiries</h3>
+          <section id="inquiriesAdminSection" class="about-note admin-content-section">
+            <div class="admin-section-heading"><div><p class="admin-eyebrow">CUSTOMER MESSAGES</p><h2>Recent inquiries</h2></div><p>Questions from visitors and prospective buyers.</p></div>
             <div id="adminInquiries"></div>
           </section>
 
-          <section class="about-note">
-            <h3>Customers</h3>
+          <section id="customersAdminSection" class="about-note admin-content-section">
+            <div class="admin-section-heading"><div><p class="admin-eyebrow">COMMUNITY</p><h2>Customers</h2></div><p>Registered customers who are part of the Swayamvani community.</p></div>
             <div id="adminCustomers" class="customer-card-grid"></div>
           </section>
+          </div>
         </section>
       </div>
     </main>
@@ -188,6 +211,6 @@
       </div>
     </div>
     <script src="offer/offers.js"></script>
-    <script src="admin.js?v=20261112catalog1"></script>
+    <script src="admin.js?v=20261113admindash2"></script>
   </body>
 </html>
