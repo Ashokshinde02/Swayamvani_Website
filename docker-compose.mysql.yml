@@ -1,7 +1,6 @@
 services:
   db:
     image: mysql:8.0
-    container_name: swayamvani-mysql
     environment:
       MYSQL_ROOT_PASSWORD: swayamvani
       MYSQL_DATABASE: swayamvani
@@ -20,7 +19,6 @@ services:
 
   app:
     build: .
-    container_name: swayamvani-app
     depends_on:
       db:
         condition: service_healthy

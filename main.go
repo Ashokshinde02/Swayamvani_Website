@@ -30,13 +30,14 @@ import (
 )
 
 type Product struct {
-	ID       int      `json:"id"`
-	Name     string   `json:"name"`
-	Category string   `json:"category"`
-	Price    int      `json:"price"`
-	Details  string   `json:"details"`
-	Images   []string `json:"images"`
-	VideoURL string   `json:"video_url"`
+	ID           int      `json:"id"`
+	Name         string   `json:"name"`
+	Category     string   `json:"category"`
+	Price        int      `json:"price"`
+	Details      string   `json:"details"`
+	Images       []string `json:"images"`
+	VideoURL     string   `json:"video_url"`
+	Availability string   `json:"availability"`
 }
 
 type Video struct {
@@ -95,12 +96,13 @@ type OffersFile struct {
 }
 
 type ProductInput struct {
-	Name     string   `json:"name"`
-	Category string   `json:"category"`
-	Price    int      `json:"price"`
-	Details  string   `json:"details"`
-	Images   []string `json:"images"`
-	VideoURL string   `json:"video_url"`
+	Name         string   `json:"name"`
+	Category     string   `json:"category"`
+	Price        int      `json:"price"`
+	Details      string   `json:"details"`
+	Images       []string `json:"images"`
+	VideoURL     string   `json:"video_url"`
+	Availability string   `json:"availability"`
 }
 
 type VideoInput struct {
@@ -284,6 +286,8 @@ func main() {
 	mux.HandleFunc("/", s.handleHome)
 	mux.Handle("/styles.css", http.FileServer(http.Dir(".")))
 	mux.Handle("/script.js", http.FileServer(http.Dir(".")))
+	mux.Handle("/inventory.js", http.FileServer(http.Dir(".")))
+	mux.Handle("/comparison.js", http.FileServer(http.Dir(".")))
 	mux.Handle("/demo.js", http.FileServer(http.Dir(".")))
 	mux.Handle("/admin.js", http.FileServer(http.Dir(".")))
 	mux.Handle("/offer/", http.StripPrefix("/", http.FileServer(http.Dir("."))))
@@ -363,68 +367,26 @@ func dbDriver(vendor string) string {
 func defaultProducts() []Product {
 	return []Product{
 		{
-			ID:       1,
-			Name:     "Ravi Style Sitar",
-			Category: "string",
-			Price:    45999,
-			Details:  "Teak wood, hand-carved jawari",
-			Images:   []string{"assets/images/sitar.svg"},
-			VideoURL: "assets/videos/sitar-making.mp4",
-		},
-		{
-			ID:       2,
-			Name:     "Concert Tabla Set",
-			Category: "percussion",
-			Price:    28999,
-			Details:  "Sheesham dayan + copper bayan",
-			Images:   []string{"assets/Tabla/tabla_1.jpg"},
-			VideoURL: "assets/videos/tabla-making.mp4",
-		},
-		{
-			ID:       3,
-			Name:     "Miraj Tanpura",
-			Category: "string",
-			Price:    37999,
-			Details:  "Female pitch, polished toor wood",
-			Images:   []string{"assets/images/tanpura.svg"},
-			VideoURL: "assets/videos/harmonium-making.mp4",
-		},
-		{
-			ID:       4,
-			Name:     "Bansuri Pro C",
-			Category: "wind",
-			Price:    3499,
-			Details:  "Seasoned bamboo, concert tuning",
-			Images:   []string{"assets/images/bansuri.svg"},
-			VideoURL: "assets/videos/sitar-making.mp4",
-		},
-		{
 			ID:       5,
 			Name:     "Portable Harmonium",
-			Category: "keyboard",
+			Category: "harmonium",
 			Price:    21999,
-			Details:  "9 stopper, coupler, scale changer",
-			Images:   []string{"assets/images/harmonium.svg"},
-			VideoURL: "assets/videos/harmonium-making.mp4",
-		},
-		{
-			ID:       6,
-			Name:     "Pakhawaj Heritage",
-			Category: "percussion",
-			Price:    31999,
-			Details:  "Hand-laced barrel, rich bass",
-			Images:   []string{"assets/images/pakhawaj.svg"},
-			VideoURL: "assets/videos/tabla-making.mp4",
+			Details:  "9 stop knobs, coupler, integrated scale changer",
+			Images: []string{
+				"assets/images/harmonium_1.jpg",
+				"assets/images/harmonium_2.jpg",
+				"assets/images/harmonium_3.webp",
+				"assets/images/harmonium_4.jpg",
+				"assets/images/harmonium_5.avif",
+			},
+			VideoURL:     "assets/videos/harmonium-making.mp4",
+			Availability: "available",
 		},
 	}
 }
 
 func defaultVideos() []Video {
-	return []Video{
-		{ID: 1, Title: "Sitar Making Process", URL: "assets/videos/sitar-making.mp4"},
-		{ID: 2, Title: "Tabla Skin & Tuning Craft", URL: "assets/videos/tabla-making.mp4"},
-		{ID: 3, Title: "Harmonium Reed Setup", URL: "assets/videos/harmonium-making.mp4"},
-	}
+	return []Video{{ID: 1, Title: "Harmonium Making Process", URL: "assets/videos/harmonium-making.mp4"}}
 }
 
 func newMemoryStorage(seed []Product) *MemoryStorage {
@@ -497,13 +459,14 @@ func (m *MemoryStorage) CreateProduct(in ProductInput) (Product, error) {
 	images := make([]string, len(in.Images))
 	copy(images, in.Images)
 	p := Product{
-		ID:       m.nextProduct,
-		Name:     in.Name,
-		Category: in.Category,
-		Price:    in.Price,
-		Details:  in.Details,
-		Images:   images,
-		VideoURL: in.VideoURL,
+		ID:           m.nextProduct,
+		Name:         in.Name,
+		Category:     in.Category,
+		Price:        in.Price,
+		Details:      in.Details,
+		Images:       images,
+		VideoURL:     in.VideoURL,
+		Availability: in.Availability,
 	}
 	m.nextProduct++
 	m.products = append(m.products, p)
@@ -522,6 +485,7 @@ func (m *MemoryStorage) UpdateProduct(id int, in ProductInput) (Product, error) 
 			m.products[i].Images = make([]string, len(in.Images))
 			copy(m.products[i].Images, in.Images)
 			m.products[i].VideoURL = in.VideoURL
+			m.products[i].Availability = in.Availability
 			return m.products[i], nil
 		}
 	}
@@ -581,10 +545,12 @@ func schemaQueries(vendor string) []string {
 				details TEXT NOT NULL,
 				images_json TEXT NOT NULL DEFAULT '[]',
 				video_url TEXT NOT NULL DEFAULT '',
+				availability TEXT NOT NULL DEFAULT 'available',
 				created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 			)`,
 			`ALTER TABLE products ADD COLUMN IF NOT EXISTS images_json TEXT NOT NULL DEFAULT '[]'`,
 			`ALTER TABLE products ADD COLUMN IF NOT EXISTS video_url TEXT NOT NULL DEFAULT ''`,
+			`ALTER TABLE products ADD COLUMN IF NOT EXISTS availability TEXT NOT NULL DEFAULT 'available'`,
 			`CREATE TABLE IF NOT EXISTS videos (
 				id SERIAL PRIMARY KEY,
 				title TEXT NOT NULL,
@@ -653,6 +619,7 @@ func schemaQueries(vendor string) []string {
 			details TEXT NOT NULL,
 			images_json TEXT NOT NULL,
 			video_url VARCHAR(255) NOT NULL DEFAULT '',
+			availability VARCHAR(32) NOT NULL DEFAULT 'available',
 			created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 		)`,
 		`CREATE TABLE IF NOT EXISTS videos (
@@ -694,6 +661,7 @@ func schemaQueries(vendor string) []string {
 				INDEX idx_orders_customer_email (customer_email)
 			)`,
 		`CREATE INDEX idx_orders_customer_email ON orders(customer_email)`,
+		`ALTER TABLE products ADD COLUMN IF NOT EXISTS availability VARCHAR(32) NOT NULL DEFAULT 'available'`,
 		`ALTER TABLE orders ADD COLUMN IF NOT EXISTS mobile VARCHAR(32) NOT NULL DEFAULT ''`,
 		`ALTER TABLE orders ADD COLUMN IF NOT EXISTS address TEXT NOT NULL DEFAULT ''`,
 		`ALTER TABLE orders ADD COLUMN IF NOT EXISTS customer_name VARCHAR(255) NOT NULL DEFAULT ''`,
@@ -723,7 +691,7 @@ func (s *SQLStorage) seedProducts() error {
 	}
 	if count == 0 {
 		for _, p := range defaultProducts() {
-			if _, err := s.CreateProduct(ProductInput{Name: p.Name, Category: p.Category, Price: p.Price, Details: p.Details}); err != nil {
+			if _, err := s.CreateProduct(ProductInput{Name: p.Name, Category: p.Category, Price: p.Price, Details: p.Details, Images: p.Images, VideoURL: p.VideoURL, Availability: "available"}); err != nil {
 				return err
 			}
 		}
@@ -839,7 +807,7 @@ func (s *SQLStorage) seedVideos() error {
 }
 
 func (s *SQLStorage) ListProducts() ([]Product, error) {
-	rows, err := s.db.Query("SELECT id, name, category, price, details, images_json, video_url FROM products ORDER BY id")
+	rows, err := s.db.Query("SELECT id, name, category, price, details, images_json, video_url, availability FROM products ORDER BY id")
 	if err != nil {
 		return nil, err
 	}
@@ -849,7 +817,7 @@ func (s *SQLStorage) ListProducts() ([]Product, error) {
 	for rows.Next() {
 		var p Product
 		var imagesJSON string
-		if err := rows.Scan(&p.ID, &p.Name, &p.Category, &p.Price, &p.Details, &imagesJSON, &p.VideoURL); err != nil {
+		if err := rows.Scan(&p.ID, &p.Name, &p.Category, &p.Price, &p.Details, &imagesJSON, &p.VideoURL, &p.Availability); err != nil {
 			return nil, err
 		}
 		p.Images = decodeImagesJSON(imagesJSON)
@@ -1072,16 +1040,16 @@ func (s *SQLStorage) CreateProduct(in ProductInput) (Product, error) {
 	var id int
 	if s.vendor == "postgres" {
 		err := s.db.QueryRow(
-			"INSERT INTO products (name, category, price, details, images_json, video_url) VALUES ($1, $2, $3, $4, $5, $6) RETURNING id",
-			in.Name, in.Category, in.Price, in.Details, encodeImagesJSON(in.Images), in.VideoURL,
+			"INSERT INTO products (name, category, price, details, images_json, video_url, availability) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id",
+			in.Name, in.Category, in.Price, in.Details, encodeImagesJSON(in.Images), in.VideoURL, in.Availability,
 		).Scan(&id)
 		if err != nil {
 			return Product{}, err
 		}
 	} else {
 		res, err := s.db.Exec(
-			"INSERT INTO products (name, category, price, details, images_json, video_url) VALUES (?, ?, ?, ?, ?, ?)",
-			in.Name, in.Category, in.Price, in.Details, encodeImagesJSON(in.Images), in.VideoURL,
+			"INSERT INTO products (name, category, price, details, images_json, video_url, availability) VALUES (?, ?, ?, ?, ?, ?, ?)",
+			in.Name, in.Category, in.Price, in.Details, encodeImagesJSON(in.Images), in.VideoURL, in.Availability,
 		)
 		if err != nil {
 			return Product{}, err
@@ -1093,13 +1061,14 @@ func (s *SQLStorage) CreateProduct(in ProductInput) (Product, error) {
 		id = int(lastID)
 	}
 	return Product{
-		ID:       id,
-		Name:     in.Name,
-		Category: in.Category,
-		Price:    in.Price,
-		Details:  in.Details,
-		Images:   in.Images,
-		VideoURL: in.VideoURL,
+		ID:           id,
+		Name:         in.Name,
+		Category:     in.Category,
+		Price:        in.Price,
+		Details:      in.Details,
+		Images:       in.Images,
+		VideoURL:     in.VideoURL,
+		Availability: in.Availability,
 	}, nil
 }
 
@@ -1108,13 +1077,13 @@ func (s *SQLStorage) UpdateProduct(id int, in ProductInput) (Product, error) {
 	var err error
 	if s.vendor == "postgres" {
 		res, err = s.db.Exec(
-			"UPDATE products SET name = $1, category = $2, price = $3, details = $4, images_json = $5, video_url = $6 WHERE id = $7",
-			in.Name, in.Category, in.Price, in.Details, encodeImagesJSON(in.Images), in.VideoURL, id,
+			"UPDATE products SET name = $1, category = $2, price = $3, details = $4, images_json = $5, video_url = $6, availability = $7 WHERE id = $8",
+			in.Name, in.Category, in.Price, in.Details, encodeImagesJSON(in.Images), in.VideoURL, in.Availability, id,
 		)
 	} else {
 		res, err = s.db.Exec(
-			"UPDATE products SET name = ?, category = ?, price = ?, details = ?, images_json = ?, video_url = ? WHERE id = ?",
-			in.Name, in.Category, in.Price, in.Details, encodeImagesJSON(in.Images), in.VideoURL, id,
+			"UPDATE products SET name = ?, category = ?, price = ?, details = ?, images_json = ?, video_url = ?, availability = ? WHERE id = ?",
+			in.Name, in.Category, in.Price, in.Details, encodeImagesJSON(in.Images), in.VideoURL, in.Availability, id,
 		)
 	}
 	if err != nil {
@@ -1128,13 +1097,14 @@ func (s *SQLStorage) UpdateProduct(id int, in ProductInput) (Product, error) {
 		return Product{}, sql.ErrNoRows
 	}
 	return Product{
-		ID:       id,
-		Name:     in.Name,
-		Category: in.Category,
-		Price:    in.Price,
-		Details:  in.Details,
-		Images:   in.Images,
-		VideoURL: in.VideoURL,
+		ID:           id,
+		Name:         in.Name,
+		Category:     in.Category,
+		Price:        in.Price,
+		Details:      in.Details,
+		Images:       in.Images,
+		VideoURL:     in.VideoURL,
+		Availability: in.Availability,
 	}, nil
 }
 
@@ -1688,7 +1658,7 @@ func (s *Server) handleCheckout(w http.ResponseWriter, r *http.Request) {
 		writeJSONError(w, http.StatusInternalServerError, "failed to save order")
 		return
 	}
-	brandLine := "Swayamvani — Indian Classical Instruments\nhttps://www.swayamvani.com\nLogo: https://www.swayamvani.com/logo.jpeg"
+	brandLine := "Swayamvani Harmoniums\nhttps://www.swayamvani.com\nLogo: https://www.swayamvani.com/logo.jpeg"
 	message := fmt.Sprintf(
 		"%s\n\nNew order\nOrder #: %d\nName: %s\nEmail: %s\nMobile: %s\nAddress: %s\n\nItems:\n%s\n\nTotal: Rs %d",
 		brandLine,
@@ -2755,6 +2725,7 @@ func normalizeProductInput(in ProductInput) ProductInput {
 	in.Category = strings.ToLower(strings.TrimSpace(in.Category))
 	in.Details = strings.TrimSpace(in.Details)
 	in.VideoURL = strings.TrimSpace(in.VideoURL)
+	in.Availability = normalizeAvailability(in.Availability)
 	images := make([]string, 0, len(in.Images))
 	for _, img := range in.Images {
 		img = strings.TrimSpace(img)
@@ -2764,6 +2735,17 @@ func normalizeProductInput(in ProductInput) ProductInput {
 	}
 	in.Images = images
 	return in
+}
+
+func normalizeAvailability(value string) string {
+	switch strings.ToLower(strings.TrimSpace(value)) {
+	case "made_to_order":
+		return "made_to_order"
+	case "out_of_stock":
+		return "out_of_stock"
+	default:
+		return "available"
+	}
 }
 
 func validateProductInput(in ProductInput) error {

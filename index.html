@@ -3,10 +3,10 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>स्वयंवाणी Instruments | Indian Classical Instruments</title>
+    <title>स्वयंवाणी Harmoniums | Harmoniums for Riyaaz</title>
     <meta
       name="description"
-      content="Buy authentic Indian classical instruments: sitar, tabla, tanpura, flute and more."
+      content="Explore harmoniums for riyaaz, bhajan, and accompaniment. Browse photos, listed features, and harmonium making videos at स्वयंवाणी."
     />
     <link rel="icon" href="/logo.jpeg" type="image/jpeg" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -15,18 +15,18 @@
       href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;700&family=Manrope:wght@400;600;700&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="styles.css?v=20260322v1" />
+    <link rel="stylesheet" href="styles.css?v=20261112catalog4" />
   </head>
   <body>
     <header class="site-header">
       <div class="container nav-wrap">
-        <a href="#" class="brand" aria-label="स्वयंवाणी Home">
-          <img src="logo.jpeg" alt="स्वयंवाणी logo" class="brand-logo" onerror="this.style.display='none'" />
+        <a href="#" class="brand" aria-label="स्वयंवाणी Harmoniums home">
+          <img src="logo.jpeg" alt="स्वयंवाणी Harmoniums" class="brand-logo" onerror="this.style.display='none'" />
           <span id="brandText" class="brand-text">स्वयंवाणी</span>
         </a>
         <nav class="main-nav" aria-label="Main navigation">
-          <a href="#products" data-i18n="navProducts">Products</a>
-          <a href="#about" data-i18n="navAbout">About</a>
+          <a href="#products" data-i18n="navProducts">Harmoniums</a>
+          <a href="#about" data-i18n="navAbout">Our approach</a>
           <a href="#contact" data-i18n="navContact">Contact</a>
           <!-- Admin link hidden on customer-facing site -->
         </nav>
@@ -73,19 +73,20 @@
     </div>
 
       <main>
-        <section class="hero">
+        <section class="hero harmonium-hero">
           <div class="container hero-grid">
             <div>
-              <p class="eyebrow" data-i18n="heroEyebrow">Handcrafted in India</p>
-              <h1 data-i18n="heroTitle">Indian Classical Instruments for Every Riyaaz</h1>
+              <p class="eyebrow" data-i18n="heroEyebrow">A tradition carried in every note</p>
+              <h1 data-i18n="heroTitle">Find your voice in the harmonium</h1>
               <p data-i18n="heroDesc">
-                Discover concert-grade sitars, tablas, tanpuras, harmoniums, and flutes crafted by trusted artisans.
+                Explore harmoniums for daily riyaaz, bhajan, and accompaniment. Browse the available model, its photos, and features.
               </p>
               <a class="cta" href="#products" data-i18n="shopInstruments">Shop Instruments</a>
             </div>
             <div class="hero-card">
-              <h2 data-i18n="heroCardTitle">Free Tuning + Setup</h2>
-              <p data-i18n="heroCardDesc">Every order includes pre-delivery quality check and tuning guidance from our experts.</p>
+              <h2 data-i18n="heroCardTitle">Choose for your music</h2>
+              <p data-i18n="heroCardDesc">Compare the listed features, browse instrument photos, or ask us about the setup that suits your music.</p>
+              <a class="hero-text-link" href="#contact">Talk to us <span aria-hidden="true">↗</span></a>
             </div>
           </div>
         </section>
@@ -124,43 +125,40 @@
           </div>
         </section>
 
-        <section class="offers-section">
-          <div class="container">
-            <div class="section-head">
-              <h2 id="offerTitleText" data-i18n="offerTitle">Exclusive Customer Offers</h2>
-              <p id="offerDescText" data-i18n="offerDesc">
-                Login now to unlock instant savings and complimentary guidance from our master craftsmen.
-              </p>
-            </div>
-            <div class="offer-grid" id="offerGridDynamic"></div>
-          </div>
-        </section>
-
       <section id="products" class="products-section">
         <div class="container">
           <div class="section-head">
-            <h2 data-i18n="featuredInstruments">Featured Instruments</h2>
-            <div class="filters" role="group" aria-label="Product filters">
-              <button class="filter-btn active" data-filter="all" data-i18n="filter_all">All</button>
-              <button class="filter-btn" data-filter="string" data-i18n="filter_string">String</button>
-              <button class="filter-btn" data-filter="percussion" data-i18n="filter_percussion">Percussion</button>
-              <button class="filter-btn" data-filter="wind" data-i18n="filter_wind">Wind</button>
-              <button class="filter-btn" data-filter="keyboard" data-i18n="filter_keyboard">Keyboard</button>
+            <div>
+              <p class="eyebrow section-eyebrow" data-i18n="collectionEyebrow">Made for your music</p>
+              <h2 id="catalogTitle" data-i18n="featuredInstruments">The Harmonium Collection</h2>
+              <p id="catalogIntro" class="section-intro" data-i18n="collectionIntro">Explore the current model, its details, and instrument photos.</p>
             </div>
+            <div class="filters" id="catalogFilters" role="group" aria-label="Instrument categories"></div>
           </div>
           <div id="productGrid" class="product-grid"></div>
+        </div>
+      </section>
+
+      <section class="offers-section">
+        <div class="container">
+          <div class="section-head">
+            <h2 id="offerTitleText" data-i18n="offerTitle">Exclusive Customer Offers</h2>
+            <p id="offerDescText" data-i18n="offerDesc">Login to see available customer offers.</p>
+          </div>
+          <div class="offer-grid" id="offerGridDynamic"></div>
         </div>
       </section>
 
       <section id="about" class="about-section">
         <div class="container about-grid">
           <div>
-            <h2 data-i18n="aboutTitle">Why Musicians Choose स्वयंवाणी</h2>
+            <p class="eyebrow section-eyebrow">A closer look</p>
+            <h2 data-i18n="aboutTitle">A harmonium for your music</h2>
             <ul>
-              <li data-i18n="aboutPoint1">Verified artisan network across Kolkata, Miraj, and Varanasi</li>
-              <li data-i18n="aboutPoint2">Careful climate-safe packaging for domestic and international shipping</li>
-              <li data-i18n="aboutPoint3">Video quality checks before dispatch</li>
-              <li data-i18n="aboutPoint4">Dedicated support for beginners and professional performers</li>
+              <li data-i18n="aboutPoint1">See the available model and its listed features in one place</li>
+              <li data-i18n="aboutPoint2">Browse detailed product photos before you decide</li>
+              <li data-i18n="aboutPoint3">Watch the harmonium making video</li>
+              <li data-i18n="aboutPoint4">Ask us if you need help understanding the setup</li>
             </ul>
           </div>
           <div class="about-note">
@@ -175,9 +173,10 @@
       <section id="videos" class="videos-section">
         <div class="container">
           <div class="section-head">
-            <h2 data-i18n="videosTitle">Instrument Making Videos</h2>
+            <p class="eyebrow section-eyebrow">From workshop to riyaaz</p>
+            <h2 id="videosSectionTitle" data-i18n="videosTitle">Harmonium Making</h2>
           </div>
-          <p class="videos-intro" data-i18n="videosDesc">Watch how our artisans shape, tune, and finish each instrument.</p>
+          <p id="videosSectionDesc" class="videos-intro" data-i18n="videosDesc">Take a closer look at the craft behind the harmonium.</p>
           <div id="videoGrid" class="video-grid"></div>
         </div>
       </section>
@@ -431,11 +430,11 @@
       <div class="container footer-grid">
         <div>
           <p class="footer-brand">स्वयंवाणी</p>
-          <p class="footer-copy">Handcrafted Indian classical instruments for every riyaaz.</p>
+          <p class="footer-copy">Harmoniums for riyaaz, bhajan, and accompaniment.</p>
         </div>
         <div>
           <p class="footer-title">Quick Links</p>
-          <p><a href="#products">Products</a> · <a href="#about">About</a> · <a href="#contact">Contact</a></p>
+          <p><a href="#products">Harmoniums</a> · <a href="#about">Our approach</a> · <a href="#contact">Contact</a></p>
         </div>
         <div>
           <p class="footer-title">Support</p>
@@ -486,7 +485,9 @@
     </footer>
 
     <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
-    <script src="script.js?v=20260322v1"></script>
+    <script src="script.js?v=20261112catalog4"></script>
+    <script src="inventory.js?v=20261112harmonium1"></script>
+    <script src="comparison.js?v=20261112v1"></script>
     <script src="assets/orders/orders.js?v=20260322v1"></script>
   </body>
 </html>

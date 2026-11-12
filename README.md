@@ -1,5 +1,7 @@
 # स्वयंवाणी Website (Go Backend + Admin)
 
+The storefront is currently seeded with harmoniums. Products and videos added or removed in the admin panel are reflected in the public catalog, including instruments added later.
+
 Branding note:
 - Place your uploaded logo at `logo.jpeg` to show it in header across storefront, demo, and admin.
 
@@ -101,8 +103,13 @@ Admin data (session cookie required):
 - `POST /api/admin/videos`
 - `DELETE /api/admin/videos/:id`
 - `GET /api/admin/inquiries`
+- `GET /api/admin/orders` (supports `?status=pending`, `?status=confirmed`, etc.)
+- `PATCH /api/admin/orders/:id` (update order status)
 
 Product media rule:
 - Each product must have minimum 5 photo URLs (`images`) and 1 making video URL (`video_url`).
+- Product availability is managed in the admin panel: `available`, `made_to_order`, or `out_of_stock`.
+- The storefront disables add-to-cart for out-of-stock products and lets customers compare up to three instruments.
+- The public catalog reflects all products and videos managed through the admin panel. The initial sample product is a harmonium.
 
 Inquiries are also appended to `data/inquiries.log`.

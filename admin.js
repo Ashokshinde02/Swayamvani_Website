@@ -6,6 +6,8 @@ const productForm = document.getElementById("productForm");
 const videoForm = document.getElementById("videoForm");
 const adminStatus = document.getElementById("adminStatus");
 const productsEl = document.getElementById("adminProducts");
+const instrumentTypesEl = document.getElementById("adminInstrumentTypes");
+const instrumentTypeOptions = document.getElementById("instrumentTypeOptions");
 const videosEl = document.getElementById("adminVideos");
 const inquiriesEl = document.getElementById("adminInquiries");
 const customersEl = document.getElementById("adminCustomers");
@@ -366,6 +368,25 @@ async function api(path, options = {}) {
 }
 
 function renderProducts(products) {
+  const typeCounts = products.reduce((counts, product) => {
+    const type = String(product.category || "").trim();
+    if (type) counts[type] = (counts[type] || 0) + 1;
+    return counts;
+  }, {});
+  const instrumentTypes = Object.entries(typeCounts).sort(([a], [b]) => a.localeCompare(b));
+  if (instrumentTypesEl) {
+    instrumentTypesEl.innerHTML = instrumentTypes.length
+      ? instrumentTypes.map(([type, count]) => `<span class="admin-instrument-type"><strong>${escapeHtml(type)}</strong><small>${count} ${count === 1 ? "product" : "products"}</small></span>`).join("")
+      : '<p class="form-status">No instrument types yet. Add a product to create the first one.</p>';
+  }
+  if (instrumentTypeOptions) {
+    instrumentTypeOptions.replaceChildren(...instrumentTypes.map(([type]) => {
+      const option = document.createElement("option");
+      option.value = type;
+      return option;
+    }));
+  }
+
   if (!products.length) {
     productsEl.innerHTML = "<p>No products found.</p>";
     return;
@@ -376,10 +397,11 @@ function renderProducts(products) {
       (p) => `
       <div class="cart-item">
         <strong>${p.name}</strong>
-        <p>${p.category} | Rs ${new Intl.NumberFormat("en-IN").format(p.price)}</p>
+        <p>${escapeHtml(p.category)} | Rs ${new Intl.NumberFormat("en-IN").format(p.price)}</p>
+        <p>Availability: ${escapeHtml(({available: "In stock", made_to_order: "Made to order", out_of_stock: "Out of stock"})[p.availability] || "In stock")}</p>
         <p>${p.details}</p>
         <p>Photos: ${(p.images || []).length} | <a href="${p.video_url || "#"}" target="_blank" rel="noopener noreferrer">Video</a></p>
-        <button data-edit="${p.id}" data-name="${encodeURIComponent(p.name)}" data-category="${encodeURIComponent(p.category)}" data-price="${p.price}" data-details="${encodeURIComponent(p.details)}" data-images="${encodeURIComponent(JSON.stringify(p.images || []))}" data-video="${encodeURIComponent(p.video_url || "")}">Edit</button>
+        <button data-edit="${p.id}" data-name="${encodeURIComponent(p.name)}" data-category="${encodeURIComponent(p.category)}" data-price="${p.price}" data-details="${encodeURIComponent(p.details)}" data-images="${encodeURIComponent(JSON.stringify(p.images || []))}" data-video="${encodeURIComponent(p.video_url || "")}" data-availability="${p.availability || "available"}">Edit</button>
         <button data-delete="${p.id}">Delete</button>
       </div>
     `
@@ -604,7 +626,7 @@ async function openOffersModal() {
   }
 }
 
-async function openOrdersModal(status = "pending") {
+async function openOrdersModal(status = "all") {
   openAdminModal("Orders", "<p class=\"form-status\">Loading orders…</p>");
   try {
     const queryStatus = status && status !== "all" ? status : "";
@@ -757,7 +779,8 @@ productForm.addEventListener("submit", async (event) => {
           document.getElementById("pImage4").value,
           document.getElementById("pImage5").value
         ],
-        video_url: document.getElementById("pVideoUrl").value
+        video_url: document.getElementById("pVideoUrl").value,
+        availability: document.getElementById("pAvailability").value
       })
     });
 
@@ -800,7 +823,7 @@ refreshCustomersBtn?.addEventListener("click", async () => {
   openAdminModal("Login Customers", content);
 });
 editOffersBtn?.addEventListener("click", openOffersModal);
-refreshOrdersBtn?.addEventListener("click", () => openOrdersModal("pending"));
+refreshOrdersBtn?.addEventListener("click", () => openOrdersModal("all"));
 
 adminModalOverlay?.addEventListener("click", (event) => {
   if (event.target === adminModalOverlay) {
@@ -819,14 +842,17 @@ adminModalBody?.addEventListener("change", async (event) => {
   if (!(target instanceof HTMLSelectElement)) return;
   const orderId = target.getAttribute("data-order-id");
   if (!orderId) return;
-  const prev = target.value;
+  const order = latestOrders.find((item) => String(item.id) === String(orderId));
+  const prev = order?.status || "pending";
+  const next = target.value;
   target.disabled = true;
   try {
     await api(`/api/admin/orders/${orderId}`, {
       method: "PATCH",
-      body: JSON.stringify({ status: target.value })
+      body: JSON.stringify({ status: next })
     });
-    if (adminStatus) adminStatus.textContent = `Order #${orderId} updated to ${target.value}.`;
+    if (order) order.status = next;
+    if (adminStatus) adminStatus.textContent = `Order #${orderId} updated to ${next}.`;
   } catch (error) {
     target.value = prev;
     if (adminStatus) adminStatus.textContent = error.message || "Failed to update order.";
@@ -918,6 +944,8 @@ document.addEventListener("click", async (event) => {
     if (image5 === null) return;
     const videoURL = window.prompt("Making Video URL", decodeURIComponent(event.target.getAttribute("data-video") || ""));
     if (videoURL === null) return;
+    const availability = window.prompt("Availability (available, made_to_order, out_of_stock)", event.target.getAttribute("data-availability") || "available");
+    if (availability === null) return;
 
     try {
       await api(`/api/admin/products/${editId}`, {
@@ -928,7 +956,8 @@ document.addEventListener("click", async (event) => {
           price: Number(priceValue),
           details,
           images: [image1, image2, image3, image4, image5],
-          video_url: videoURL
+          video_url: videoURL,
+          availability
         })
       });
       adminStatus.textContent = "Product updated.";

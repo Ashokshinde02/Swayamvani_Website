@@ -1,99 +1,42 @@
 let products = [];
+let productsLoaded = false;
 let productGalleryKeyHandler = null;
 const fallbackProducts = [
   {
-    id: 1,
-    name: "Ravi Style Sitar",
-    category: "string",
-    price: 45999,
-    details: "Teak wood, hand-carved jawari",
-    images: ["assets/images/sitar_1.jpg"],
-    care: "Wipe bridges and strings after each practice, store in padded case, and keep humidity near 50%.",
-    sound: "Golden bass with shimmering drones and articulate mids designed for alap and jhala.",
-    story: "Carved in Kolkata by the Ravi family, embracing three generations of sitar craftsmanship.",
-    video_url: "assets/videos/sitar-making.mp4"
-  },
-  {
-    id: 2,
-    name: "Concert Tabla Set",
-    category: "percussion",
-    price: 28999,
-    details: "Sheesham dayan + copper bayan",
-    images: ["assets/Tabla/tabla_1.jpg"],
-    care: "Keep heads dry, dust with soft cloth, and loosen straps slightly for storage.",
-    sound: "Cracking dayan slaps with thunderous bayan booms tuned for traditional thekas.",
-    story: "Miraj artisans sculpt the dayan from sheesham and copper for balanced resonance.",
-    video_url: "assets/videos/tabla-making.mp4"
-  },
-  {
-    id: 3,
-    name: "Miraj Tanpura",
-    category: "string",
-    price: 37999,
-    details: "Female pitch, polished toor wood",
-    images: ["assets/images/tanpura.svg"],
-    care: "Store upright in silk cover, polish the bridge, and avoid impacts.",
-    sound: "Lush sympathetic drones that bloom underneath vocals and instruments.",
-    story: "Hand-assembled in Miraj with aged toor wood and sympathetic string tensioning.",
-    video_url: "assets/videos/harmonium-making.mp4"
-  },
-  {
-    id: 4,
-    name: "Bansuri Pro C",
-    category: "wind",
-    price: 3499,
-    details: "Seasoned bamboo, concert tuning",
-    images: ["assets/images/bansuri.svg"],
-    care: "Wipe dry, keep in padded sleeve, and avoid rain exposure.",
-    sound: "Clear, airy projection with warm bottom end and bright upper register.",
-    story: "Bamboo sourced from North India and tuned by Varanasi artisans for pro gigs.",
-    video_url: "assets/videos/sitar-making.mp4"
-  },
-  {
     id: 5,
     name: "Portable Harmonium",
-    category: "keyboard",
+    category: "harmonium",
     price: 21999,
-    details: "9 stopper, coupler, scale changer",
-    images: ["assets/images/indian-scale-changer-harmonium.jpg"],
-    care: "Keep bellows dust-free, oil joints lightly, and store upright with key cover.",
-    sound: "Sympathetic bass, responsive treble, and lush sustain for accompaniment.",
-    story: "Built in a family workshop with double reed system and polished maple finish.",
+    details: "9 stop knobs, coupler, integrated scale changer",
+    availability: "available",
+    images: [
+      "assets/images/harmonium_1.jpg",
+      "assets/images/harmonium_2.jpg",
+      "assets/images/harmonium_3.webp",
+      "assets/images/harmonium_4.jpg",
+      "assets/images/harmonium_5.avif"
+    ],
     video_url: "assets/videos/harmonium-making.mp4"
-  },
-  {
-    id: 6,
-    name: "Pakhawaj Heritage",
-    category: "percussion",
-    price: 31999,
-    details: "Hand-laced barrel, rich bass",
-    images: ["assets/images/pakhawaj.svg"],
-    care: "Avoid temperature swings, keep lashings taut, and dust the shell regularly.",
-    sound: "Deep bass thud with crisp treble slaps tuned for dhrupad.",
-    story: "Hand-laced in Gwalior tradition for authentic tonal balance.",
-    video_url: "assets/videos/tabla-making.mp4"
   }
 ];
 
 const defaultVideos = [
-  { id: 1, titleKey: "videoSitar", url: "assets/videos/sitar-making.mp4" },
-  { id: 2, titleKey: "videoTabla", url: "assets/videos/tabla-making.mp4" },
-  { id: 3, titleKey: "videoHarmonium", url: "assets/videos/harmonium-making.mp4" }
+  { id: 1, titleKey: "videoHarmonium", url: "assets/videos/harmonium-making.mp4" }
 ];
 
 const translations = {
   en: {
-    navProducts: "Products",
-    navAbout: "About",
+    navProducts: "Instruments",
+    navAbout: "Our approach",
     navContact: "Contact",
     navAdmin: "Admin",
     cart: "Cart",
-    heroEyebrow: "Handcrafted in India",
-    heroTitle: "Indian Classical Instruments for Every Riyaaz",
-    heroDesc: "Discover concert-grade sitars, tablas, tanpuras, harmoniums, and flutes crafted by trusted artisans.",
-    shopInstruments: "Shop Instruments",
-    heroCardTitle: "Free Tuning + Setup",
-    heroCardDesc: "Every order includes pre-delivery quality check and tuning guidance from our experts.",
+    heroEyebrow: "A tradition carried in every note",
+    heroTitle: "Find your voice in the harmonium",
+    heroDesc: "Explore harmoniums for daily riyaaz, bhajan, and accompaniment. Browse the available model, its photos, and features.",
+    shopInstruments: "Explore Harmoniums",
+    heroCardTitle: "Choose for your music",
+    heroCardDesc: "Compare the listed features, browse instrument photos, or ask us about the setup that suits your music.",
     profileTitle: "Your Profile",
     profileGreeting: "Welcome back,",
     profileSince: "Member since",
@@ -106,24 +49,30 @@ const translations = {
     profileUpdateSuccess: "Profile updated.",
     profileUpdateError: "Unable to update profile.",
     profileMissingValue: "Not added yet",
-    featuredInstruments: "Featured Instruments",
-    filter_all: "All",
+    featuredInstruments: "The Harmonium Collection",
+    allProductTitle: "Our Instruments",
+    allProductIntro: "Browse the instruments currently available, with product details and photos.",
+    catalogEmpty: "No instruments are listed right now.",
+    categoryEmpty: "There are no instruments in this category.",
+    collectionEyebrow: "Made for your music",
+    collectionIntro: "Explore the current model, its details, and instrument photos.",
+    filter_all: "All instruments",
     filter_string: "String",
     filter_percussion: "Percussion",
     filter_wind: "Wind",
     filter_keyboard: "Keyboard",
-    aboutTitle: "Why Musicians Choose स्वयंवाणी",
-    aboutPoint1: "Verified artisan network across Kolkata, Miraj, and Varanasi",
-    aboutPoint2: "Careful climate-safe packaging for domestic and international shipping",
-    aboutPoint3: "Video quality checks before dispatch",
-    aboutPoint4: "Dedicated support for beginners and professional performers",
+    aboutTitle: "A harmonium for your music",
+    aboutPoint1: "See the available model and its listed features in one place",
+    aboutPoint2: "Browse detailed product photos before you decide",
+    aboutPoint3: "Watch the harmonium making video",
+    aboutPoint4: "Ask us if you need help understanding the setup",
     aboutHelpTitle: "Need help choosing?",
-    aboutHelpDesc: "Share your level, budget, and style. We'll recommend the right instrument and setup within 24 hours.",
-    videosTitle: "Instrument Making Videos",
-    videosDesc: "Watch how our artisans shape, tune, and finish each instrument.",
-    videoSitar: "Sitar Making Process",
-    videoTabla: "Tabla Skin & Tuning Craft",
-    videoHarmonium: "Harmonium Reed Setup",
+    aboutHelpDesc: "Tell us what you play and which features matter. Send an inquiry and we’ll help you understand the listed setup.",
+    videosTitle: "Harmonium Making",
+    videosDesc: "Take a closer look at the craft behind the harmonium.",
+    allVideosTitle: "Instrument Making Videos",
+    allVideosDesc: "Take a closer look at how our instruments are made.",
+    videoHarmonium: "Harmonium Making Process",
     videoLabelTitle: "Video Title",
     videoLabelUrl: "Video URL",
     videoAdd: "Add Video",
@@ -134,7 +83,7 @@ const translations = {
     videoLoadFailed: "Could not load videos.",
     videoSaveFailed: "Could not save video changes.",
     watchMakingVideo: "Watch Making Video",
-    contactTitle: "Contact Us",
+    contactTitle: "Questions about a harmonium?",
     labelName: "Name",
     labelEmail: "Email",
     labelMessage: "Message",
@@ -193,38 +142,44 @@ const translations = {
     couponUnavailable: "No coupon available right now."
   },
   mr: {
-    navProducts: "उत्पादने",
-    navAbout: "आमच्या बद्दल",
+    navProducts: "वाद्ये",
+    navAbout: "आमचा दृष्टिकोन",
     navContact: "संपर्क",
     navAdmin: "ॲडमिन",
     cart: "कार्ट",
-    heroEyebrow: "भारतामध्ये हस्तनिर्मित",
-    heroTitle: "प्रत्येक रियाजसाठी भारतीय शास्त्रीय वाद्ये",
-    heroDesc: "विश्वसनीय कारागिरांनी तयार केलेली कॉन्सर्ट-ग्रेड सितार, तबला, तानपूरा, हार्मोनियम आणि बासरी शोधा.",
-    shopInstruments: "वाद्ये खरेदी करा",
-    heroCardTitle: "मोफत ट्यूनिंग + सेटअप",
-    heroCardDesc: "प्रत्येक ऑर्डरमध्ये डिलिव्हरीपूर्व गुणवत्ता तपासणी आणि तज्ज्ञांचे ट्यूनिंग मार्गदर्शन समाविष्ट आहे.",
+    heroEyebrow: "प्रत्येक सुरात जपलेली परंपरा",
+    heroTitle: "हार्मोनियममधून शोधा तुमचा स्वर",
+    heroDesc: "रोजच्या रियाज, भजन आणि साथीसाठी हार्मोनियम पाहा. उपलब्ध मॉडेल, फोटो आणि वैशिष्ट्ये जाणून घ्या.",
+    shopInstruments: "हार्मोनियम पाहा",
+    heroCardTitle: "तुमच्या संगीतासाठी निवडा",
+    heroCardDesc: "वैशिष्ट्यांची तुलना करा, फोटो पाहा किंवा तुमच्या संगीताला योग्य सेटअपबद्दल विचारा.",
     profileTitle: "तुमचे प्रोफाइल",
     profileGreeting: "पुन्हा स्वागत आहे,",
     profileSince: "सदस्यत्वाची सुरुवात",
-    featuredInstruments: "प्रमुख वाद्ये",
-    filter_all: "सर्व",
+    featuredInstruments: "हार्मोनियम संग्रह",
+    allProductTitle: "आमची वाद्ये",
+    allProductIntro: "उपलब्ध वाद्ये, त्यांची माहिती आणि फोटो पाहा.",
+    catalogEmpty: "सध्या कोणतीही वाद्ये उपलब्ध नाहीत.",
+    categoryEmpty: "या प्रकारात वाद्य उपलब्ध नाही.",
+    collectionEyebrow: "तुमच्या संगीतासाठी",
+    collectionIntro: "उपलब्ध मॉडेल, त्याची माहिती आणि वाद्याचे फोटो पाहा.",
+    filter_all: "सर्व वाद्ये",
     filter_string: "तंतुवाद्य",
     filter_percussion: "तालवाद्य",
     filter_wind: "वायुवाद्य",
     filter_keyboard: "कीबोर्ड",
-    aboutTitle: "संगीतकार स्वयंवाणी का निवडतात",
-    aboutPoint1: "कोलकाता, मिरज आणि वाराणसी येथील प्रमाणित कारागीर नेटवर्क",
-    aboutPoint2: "देशांतर्गत आणि आंतरराष्ट्रीय शिपिंगसाठी सुरक्षित पॅकेजिंग",
-    aboutPoint3: "पाठवण्यापूर्वी व्हिडिओ गुणवत्ता तपासणी",
-    aboutPoint4: "नवशिक्या आणि व्यावसायिक कलाकारांसाठी समर्पित मदत",
+    aboutTitle: "तुमच्या संगीतासाठी हार्मोनियम",
+    aboutPoint1: "उपलब्ध मॉडेल आणि त्याची वैशिष्ट्ये एका ठिकाणी पाहा",
+    aboutPoint2: "निर्णय घेण्यापूर्वी उत्पादनाचे फोटो पाहा",
+    aboutPoint3: "हार्मोनियम बनवण्याचा व्हिडिओ पाहा",
+    aboutPoint4: "सेटअप समजून घेण्यासाठी आम्हाला विचारा",
     aboutHelpTitle: "योग्य वाद्य निवडण्यात मदत हवी?",
-    aboutHelpDesc: "तुमची पातळी, बजेट आणि शैली सांगा. आम्ही 24 तासांत योग्य वाद्य आणि सेटअप सुचवू.",
-    videosTitle: "वाद्यनिर्मिती व्हिडिओ",
-    videosDesc: "आमचे कारागीर वाद्य कसे तयार, ट्यून आणि फिनिश करतात ते पाहा.",
-    videoSitar: "सितार बनवण्याची प्रक्रिया",
-    videoTabla: "तबला स्किन आणि ट्यूनिंग कला",
-    videoHarmonium: "हार्मोनियम रीड सेटअप",
+    aboutHelpDesc: "तुम्ही काय वाजवता आणि कोणती वैशिष्ट्ये महत्त्वाची आहेत ते सांगा. सेटअप समजून घेण्यासाठी आम्हाला संदेश पाठवा.",
+    videosTitle: "हार्मोनियम निर्मिती",
+    videosDesc: "हार्मोनियम घडवण्याच्या कारागिरीची झलक पाहा.",
+    allVideosTitle: "वाद्यनिर्मिती व्हिडिओ",
+    allVideosDesc: "आमची वाद्ये कशी तयार होतात याची झलक पाहा.",
+    videoHarmonium: "हार्मोनियम बनवण्याची प्रक्रिया",
     videoLabelTitle: "व्हिडिओ शीर्षक",
     videoLabelUrl: "व्हिडिओ URL",
     videoAdd: "व्हिडिओ जोडा",
@@ -235,7 +190,7 @@ const translations = {
     videoLoadFailed: "व्हिडिओ लोड करता आले नाहीत.",
     videoSaveFailed: "व्हिडिओ बदल सेव्ह करता आले नाहीत.",
     watchMakingVideo: "बनवण्याचा व्हिडिओ पहा",
-    contactTitle: "आमच्याशी संपर्क साधा",
+    contactTitle: "हार्मोनियमबद्दल प्रश्न आहेत?",
     labelName: "नाव",
     labelEmail: "ईमेल",
     labelMessage: "संदेश",
@@ -294,17 +249,17 @@ const translations = {
     couponUnavailable: "सध्या कोणतेही कूपन नाही.",
   },
   hi: {
-    navProducts: "उत्पाद",
-    navAbout: "हमारे बारे में",
+    navProducts: "वाद्य",
+    navAbout: "हमारा तरीका",
     navContact: "संपर्क",
     navAdmin: "एडमिन",
     cart: "कार्ट",
-    heroEyebrow: "भारत में हस्तनिर्मित",
-    heroTitle: "हर रियाज़ के लिए भारतीय शास्त्रीय वाद्य",
-    heroDesc: "विश्वसनीय कारीगरों द्वारा बनाए गए कॉन्सर्ट-ग्रेड सितार, तबला, तानपुरा, हारमोनियम और बांसुरी खोजें।",
-    shopInstruments: "वाद्य खरीदें",
-    heroCardTitle: "मुफ्त ट्यूनिंग + सेटअप",
-    heroCardDesc: "हर ऑर्डर में डिलीवरी से पहले गुणवत्ता जांच और विशेषज्ञ ट्यूनिंग मार्गदर्शन शामिल है।",
+    heroEyebrow: "हर सुर में संजोई परंपरा",
+    heroTitle: "हारमोनियम में अपनी आवाज़ खोजें",
+    heroDesc: "रोज़ के रियाज़, भजन और संगत के लिए हारमोनियम देखें। उपलब्ध मॉडल, तस्वीरें और खूबियाँ जानें।",
+    shopInstruments: "हारमोनियम देखें",
+    heroCardTitle: "अपने संगीत के लिए चुनें",
+    heroCardDesc: "दिए गए फीचर्स की तुलना करें, तस्वीरें देखें या अपने संगीत के अनुसार सेटअप के बारे में पूछें।",
     profileTitle: "आपकी प्रोफ़ाइल",
     profileGreeting: "फिर से स्वागत है,",
     profileSince: "सदस्यता प्रारंभ",
@@ -317,24 +272,30 @@ const translations = {
     profileUpdateSuccess: "प्रोफ़ाइल अपडेट हो गई।",
     profileUpdateError: "प्रोफ़ाइल अपडेट करने में विफल।",
     profileMissingValue: "अभी नहीं जोड़ा गया",
-    featuredInstruments: "विशेष वाद्य",
-    filter_all: "सभी",
+    featuredInstruments: "हारमोनियम संग्रह",
+    allProductTitle: "हमारे वाद्य",
+    allProductIntro: "उपलब्ध वाद्य, उनकी जानकारी और तस्वीरें देखें।",
+    catalogEmpty: "अभी कोई वाद्य सूचीबद्ध नहीं है।",
+    categoryEmpty: "इस श्रेणी में कोई वाद्य नहीं है।",
+    collectionEyebrow: "आपके संगीत के लिए",
+    collectionIntro: "उपलब्ध मॉडल, उसकी जानकारी और वाद्य की तस्वीरें देखें।",
+    filter_all: "सभी वाद्य",
     filter_string: "तार वाद्य",
     filter_percussion: "ताल वाद्य",
     filter_wind: "वायु वाद्य",
     filter_keyboard: "कीबोर्ड",
-    aboutTitle: "संगीतकार स्वयंवाणी क्यों चुनते हैं",
-    aboutPoint1: "कोलकाता, मिराज और वाराणसी में प्रमाणित कारीगर नेटवर्क",
-    aboutPoint2: "देश और विदेश शिपिंग के लिए सुरक्षित पैकेजिंग",
-    aboutPoint3: "डिस्पैच से पहले वीडियो गुणवत्ता जांच",
-    aboutPoint4: "शुरुआती और पेशेवर कलाकारों के लिए समर्पित सहायता",
+    aboutTitle: "आपके संगीत के लिए हारमोनियम",
+    aboutPoint1: "उपलब्ध मॉडल और उसके फीचर्स एक जगह देखें",
+    aboutPoint2: "फैसला करने से पहले उत्पाद की तस्वीरें देखें",
+    aboutPoint3: "हारमोनियम बनाने का वीडियो देखें",
+    aboutPoint4: "सेटअप समझने में मदद के लिए हमसे पूछें",
     aboutHelpTitle: "सही वाद्य चुनने में मदद चाहिए?",
-    aboutHelpDesc: "अपना स्तर, बजट और शैली बताएं। हम 24 घंटे में सही वाद्य और सेटअप सुझाएंगे।",
-    videosTitle: "वाद्य बनाने के वीडियो",
-    videosDesc: "देखें हमारे कारीगर हर वाद्य को कैसे बनाते, ट्यून करते और फिनिश करते हैं।",
-    videoSitar: "सितार बनाने की प्रक्रिया",
-    videoTabla: "तबला स्किन और ट्यूनिंग कला",
-    videoHarmonium: "हारमोनियम रीड सेटअप",
+    aboutHelpDesc: "आप क्या बजाते हैं और कौन-से फीचर जरूरी हैं, हमें बताएं। सेटअप समझने के लिए संदेश भेजें।",
+    videosTitle: "हारमोनियम निर्माण",
+    videosDesc: "हारमोनियम बनाने की कारीगरी को करीब से देखें।",
+    allVideosTitle: "वाद्य बनाने के वीडियो",
+    allVideosDesc: "देखें हमारे वाद्य कैसे बनाए जाते हैं।",
+    videoHarmonium: "हारमोनियम बनाने की प्रक्रिया",
     videoLabelTitle: "वीडियो शीर्षक",
     videoLabelUrl: "वीडियो URL",
     videoAdd: "वीडियो जोड़ें",
@@ -345,7 +306,7 @@ const translations = {
     videoLoadFailed: "वीडियो लोड नहीं हो सके।",
     videoSaveFailed: "वीडियो बदलाव सेव नहीं हुए।",
     watchMakingVideo: "बनाने का वीडियो देखें",
-    contactTitle: "संपर्क करें",
+    contactTitle: "हारमोनियम के बारे में सवाल हैं?",
     labelName: "नाम",
     labelEmail: "ईमेल",
     labelMessage: "संदेश",
@@ -432,6 +393,29 @@ function notifyCustomerState() {
 }
 
 const productGrid = document.getElementById("productGrid");
+const catalogFilters = document.getElementById("catalogFilters");
+const catalogTitle = document.getElementById("catalogTitle");
+const catalogIntro = document.getElementById("catalogIntro");
+const videosSectionTitle = document.getElementById("videosSectionTitle");
+const videosSectionDesc = document.getElementById("videosSectionDesc");
+productGrid?.addEventListener("click", (event) => {
+  const thumbnail = event.target.closest("[data-gallery-image]");
+  if (thumbnail) {
+    event.preventDefault();
+    event.stopPropagation();
+    const card = thumbnail.closest(".product-card");
+    const mainImage = card?.querySelector("[data-gallery-main]");
+    if (mainImage) mainImage.src = thumbnail.dataset.galleryImage;
+    card?.querySelectorAll(".product-thumbnail").forEach((button) => {
+      const active = button === thumbnail;
+      button.classList.toggle("is-active", active);
+      button.setAttribute("aria-pressed", String(active));
+    });
+    return;
+  }
+
+  if (event.target.closest(".harmonium-inquiry-link")) event.stopPropagation();
+});
 const cartBtn = document.getElementById("cartBtn");
 const cartPanel = document.getElementById("cartPanel");
 const closeCart = document.getElementById("closeCart");
@@ -908,14 +892,14 @@ function getCartItemSavings(item) {
 }
 
 function resolveImage(product) {
-  const key = product.name.toLowerCase();
-  if (key.includes("sitar")) return "assets/images/sitar.svg";
-  if (key.includes("tabla")) return "assets/Tabla/tabla_1.jpg";
-  if (key.includes("tanpura")) return "assets/images/tanpura.svg";
-  if (key.includes("bansuri") || key.includes("flute")) return "assets/images/bansuri.svg";
-  if (key.includes("harmonium")) return "assets/images/harmonium.svg";
-  if (key.includes("pakhawaj")) return "assets/images/pakhawaj.svg";
-  return "assets/images/sitar.svg";
+  const name = String(product?.name || "").toLowerCase();
+  const category = String(product?.category || "").toLowerCase();
+  if (name.includes("sitar") || category === "string") return "assets/images/sitar.svg";
+  if (name.includes("tabla") || name.includes("pakhawaj") || category === "percussion") return "assets/images/tabla.svg";
+  if (name.includes("tanpura")) return "assets/images/tanpura.svg";
+  if (name.includes("bansuri") || name.includes("flute") || category === "wind") return "assets/images/bansuri.svg";
+  if (name.includes("harmonium") || category === "harmonium" || category === "keyboard") return "assets/images/harmonium.svg";
+  return "assets/images/instruments-bg.svg";
 }
 
 function visibleProducts() {
@@ -923,23 +907,85 @@ function visibleProducts() {
   return products.filter((p) => p.category === state.filter);
 }
 
+function categoryDisplayName(value) {
+  return String(value || "Instrument")
+    .replace(/[_-]+/g, " ")
+    .replace(/\b\w/g, (letter) => letter.toUpperCase());
+}
+
+function renderCatalogFilters() {
+  if (!catalogFilters) return;
+  const categories = [...new Set(products.map((product) => String(product.category || "").trim()).filter(Boolean))];
+  if (state.filter !== "all" && !categories.includes(state.filter)) state.filter = "all";
+
+  catalogFilters.replaceChildren();
+  const options = [{ value: "all", label: t("filter_all") }, ...categories.map((value) => ({ value, label: categoryDisplayName(value) }))];
+  options.forEach(({ value, label }) => {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = `filter-btn${state.filter === value ? " active" : ""}`;
+    button.dataset.filter = value;
+    button.textContent = label;
+    button.setAttribute("aria-pressed", String(state.filter === value));
+    catalogFilters.appendChild(button);
+  });
+
+  const harmoniumOnly = products.length > 0 && products.every(isHarmoniumProduct);
+  productGrid?.classList.toggle("single-harmonium", harmoniumOnly && products.length === 1);
+  productGrid?.classList.toggle("single-product", products.length === 1);
+  if (catalogTitle) catalogTitle.textContent = t(harmoniumOnly ? "featuredInstruments" : "allProductTitle");
+  if (catalogIntro) catalogIntro.textContent = t(harmoniumOnly ? "collectionIntro" : "allProductIntro");
+  if (videosSectionTitle) videosSectionTitle.textContent = t(harmoniumOnly ? "videosTitle" : "allVideosTitle");
+  if (videosSectionDesc) videosSectionDesc.textContent = t(harmoniumOnly ? "videosDesc" : "allVideosDesc");
+}
+
+function isHarmoniumProduct(product) {
+  return /harmonium/i.test(product?.name || "") || String(product?.category || "").toLowerCase() === "harmonium";
+}
+
+function productGalleryMarkup(product, image) {
+  const images = (product.images && product.images.length ? product.images : [image]).slice(0, 5);
+  return `
+    <div class="product-card-gallery">
+      <img src="${image}" alt="${product.name}" class="product-image" data-gallery-main onerror="this.src='${resolveImage(product)}'" />
+      <div class="product-thumbnails" role="group" aria-label="${product.name} photos">
+        ${images.map((src, index) => `
+          <button type="button" class="product-thumbnail ${index === 0 ? "is-active" : ""}" data-gallery-image="${src}" aria-pressed="${index === 0}" aria-label="View photo ${index + 1}">
+            <img src="${src}" alt="" loading="lazy" />
+          </button>
+        `).join("")}
+      </div>
+    </div>
+  `;
+}
+
 function renderProducts() {
-  if (!products || products.length === 0) {
-    products = [...fallbackProducts];
-  }
+  if (!productGrid || !productsLoaded) return;
   productGrid.innerHTML = "";
+  if (products.length === 0) {
+    const empty = document.createElement("p");
+    empty.className = "catalog-empty";
+    empty.textContent = t("catalogEmpty");
+    productGrid.appendChild(empty);
+    return;
+  }
   const items = visibleProducts();
   items.forEach((product) => {
     const card = document.createElement("article");
-    card.className = "product-card";
+    card.className = `product-card${isHarmoniumProduct(product) ? " harmonium-product-card" : ""}`;
     card.setAttribute("data-product-id", String(product.id));
+    card.dataset.availability = product.availability || "available";
+    card.dataset.category = product.category || "Instrument";
+    card.dataset.details = product.details || "";
     const image = product.images && product.images.length ? product.images[0] : resolveImage(product);
     const discountPct = getActiveDiscountPercent();
     const dealPrice = discountPct > 0 ? getCartItemFinalPrice(product) : product.price;
     const savings = discountPct > 0 ? product.price - dealPrice : 0;
     card.innerHTML = `
-      <img src="${image}" alt="${product.name}" class="product-image" onerror="this.src='assets/images/sitar.svg'" />
+      ${productGalleryMarkup(product, image)}
       <h3>${product.name}</h3>
+      <p class="product-details">${product.details || ""}</p>
+      <span class="availability-badge" data-store-availability="${product.availability || "available"}"></span>
       <div class="product-bottom">
         <div class="price-stack">
           <div class="price-row">
@@ -953,53 +999,23 @@ function renderProducts() {
           </div>
           ${discountPct > 0 ? `<span class="price-savings">You save ${formatINR(savings)}</span>` : ""}
         </div>
-        <button class="product-cta" data-id="${product.id}"><span>${t("addToCart")}</span></button>
+        <button class="product-cta" data-id="${product.id}" ${product.availability === "out_of_stock" ? "disabled" : ""}><span>${product.availability === "out_of_stock" ? "Out of stock" : t("addToCart")}</span></button>
+        <button type="button" class="harmonium-view-details">Photos &amp; details</button>
+        <a class="harmonium-inquiry-link" href="#contact">Ask about this model</a>
       </div>
     `;
     productGrid.appendChild(card);
   });
 
-  // If nothing rendered (e.g., products unexpectedly empty or filter mismatch), fall back once.
-  if (productGrid.children.length === 0 && fallbackProducts.length > 0) {
-    products = [...fallbackProducts];
-    state.filter = "all";
-    productGrid.innerHTML = "";
-    visibleProducts().forEach((product) => {
-      const card = document.createElement("article");
-      card.className = "product-card";
-      card.setAttribute("data-product-id", String(product.id));
-      const image = product.images && product.images.length ? product.images[0] : resolveImage(product);
-      const discountPct = getActiveDiscountPercent();
-      const dealPrice = discountPct > 0 ? getCartItemFinalPrice(product) : product.price;
-      const savings = discountPct > 0 ? product.price - dealPrice : 0;
-      card.innerHTML = `
-        <img src="${image}" alt="${product.name}" class="product-image" onerror="this.src='assets/images/sitar.svg'" />
-        <h3>${product.name}</h3>
-        <div class="product-bottom">
-          <div class="price-stack">
-            <div class="price-row">
-              <span class="price-label">${discountPct > 0 ? t("discountedPriceLabel") : "Price"}</span>
-              <span class="price deal">${formatINR(dealPrice)}</span>
-            </div>
-            <div class="price-subrow">
-              <span class="price-label muted">M.R.P:</span>
-              <span class="price-original">${formatINR(product.price)}</span>
-              ${discountPct > 0 ? `<span class="price-pct">(${discountPct}% off)</span>` : ""}
-            </div>
-            ${discountPct > 0 ? `<span class="price-savings">You save ${formatINR(savings)}</span>` : ""}
-          </div>
-          <button class="product-cta" data-id="${product.id}"><span>${t("addToCart")}</span></button>
-        </div>
-      `;
-      productGrid.appendChild(card);
-    });
+  if (productGrid.children.length === 0) {
+    const empty = document.createElement("p");
+    empty.className = "catalog-empty";
+    empty.textContent = t("categoryEmpty");
+    productGrid.appendChild(empty);
   }
 }
 
 function ensureProductsVisible() {
-  if (!products || products.length === 0) {
-    products = [...fallbackProducts];
-  }
   renderProducts();
 }
 
@@ -1016,12 +1032,13 @@ function openProductModal(product) {
   const discountPct = getActiveDiscountPercent();
   const dealPrice = discountPct > 0 ? getCartItemFinalPrice(product) : product.price;
   const savings = discountPct > 0 ? product.price - dealPrice : 0;
+  const categoryLabel = isHarmoniumProduct(product) ? "Harmonium" : product.category;
   productModalMeta.innerHTML =
     discountPct > 0
-      ? `${product.category} | ${formatINR(dealPrice)} <span class="price-original">${formatINR(
+      ? `${categoryLabel} | ${formatINR(dealPrice)} <span class="price-original">${formatINR(
           product.price
         )}</span> <span class="price-pct">(${discountPct}% off)</span>`
-      : `${product.category} | ${formatINR(product.price)}`;
+      : `${categoryLabel} | ${formatINR(product.price)}`;
   productMediaList.innerHTML = "";
 
   const images = (product.images && product.images.length ? product.images : [resolveImage(product)]).slice(0, 8);
@@ -1263,6 +1280,8 @@ function openProductModal(product) {
 
   productModalAddToCart.dataset.productId = String(product.id);
   productModalAddToCart.innerHTML = `<span>${t("addToCart")}</span>`;
+  productModalAddToCart.disabled = product.availability === "out_of_stock";
+  if (productModalAddToCart.disabled) productModalAddToCart.innerHTML = "<span>Out of stock</span>";
   productModal.classList.add("open");
   productModal.setAttribute("aria-hidden", "false");
 }
@@ -1304,7 +1323,7 @@ function renderCart() {
       image.src = imageSrc;
       image.alt = item.name;
       image.onerror = () => {
-        image.src = "assets/images/sitar.svg";
+        image.src = "assets/images/harmonium.svg";
       };
 
       const details = document.createElement("div");
@@ -1842,6 +1861,7 @@ document.addEventListener("click", async (event) => {
   if (id) {
     const selected = products.find((p) => p.id === Number(id));
     if (selected) {
+      if (selected.availability === "out_of_stock") return;
       const existing = state.cart.find((item) => item.id === selected.id);
       if (existing) {
         existing.qty = Number(existing.qty || 1) + 1;
@@ -1959,6 +1979,7 @@ productModalAddToCart?.addEventListener("click", () => {
   const id = Number(productModalAddToCart.dataset.productId || "0");
   const selected = products.find((p) => p.id === id);
   if (selected) {
+    if (selected.availability === "out_of_stock") return;
     const existing = state.cart.find((item) => item.id === selected.id);
     if (existing) {
       existing.qty = Number(existing.qty || 1) + 1;
@@ -1976,6 +1997,7 @@ document.addEventListener("keydown", (event) => {
 if (langSwitcher) {
   langSwitcher.addEventListener("change", () => {
     applyLanguage(langSwitcher.value);
+    renderCatalogFilters();
   });
 }
 
@@ -2357,13 +2379,12 @@ inquiryForm.addEventListener("submit", async (event) => {
   }
 });
 
-document.querySelectorAll(".filter-btn").forEach((btn) => {
-  btn.addEventListener("click", () => {
-    document.querySelectorAll(".filter-btn").forEach((b) => b.classList.remove("active"));
-    btn.classList.add("active");
-    state.filter = btn.dataset.filter;
-    renderProducts();
-  });
+catalogFilters?.addEventListener("click", (event) => {
+  const button = event.target.closest("[data-filter]");
+  if (!button) return;
+  state.filter = button.dataset.filter || "all";
+  renderCatalogFilters();
+  renderProducts();
 });
 
 async function loadProducts() {
@@ -2376,11 +2397,15 @@ async function loadProducts() {
       throw new Error(data.error || t("loadFailed"));
     }
     const fetched = data.products || [];
-    products = fetched.length > 0 ? fetched : [...fallbackProducts];
+    products = fetched;
+    productsLoaded = true;
+    renderCatalogFilters();
     hydrateCartWithProducts();
     renderProducts();
   } catch (error) {
     products = [...fallbackProducts];
+    productsLoaded = true;
+    renderCatalogFilters();
     hydrateCartWithProducts();
     renderProducts();
     productGrid.insertAdjacentHTML("beforeend", `<p>${error.message || t("loadFailed")}</p>`);
