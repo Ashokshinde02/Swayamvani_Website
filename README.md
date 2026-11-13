@@ -39,6 +39,7 @@ Default Docker admin credentials:
 ## Configuration
 
 - `PORT` (default: `8080`)
+- `PUBLIC_BASE_URL` (canonical public URL used in password reset links; set to `https://www.swayamvani.com` on Render)
 - `ADMIN_USER` (default: `admin`)
 - `ADMIN_PASSWORD` (default fallback for local: `admin123`)
 - `DB_VENDOR` (`postgres` or `mysql`)
@@ -49,7 +50,7 @@ Default Docker admin credentials:
 - `RATE_LIMIT_CLIENT_IP_HEADER` (optional single-IP header from a trusted proxy; for Render, set `CF-Connecting-IP`)
 - `RATE_LIMIT_<ROUTE>` sets a per-client request count and time window, for example `RATE_LIMIT_ADMIN_LOGIN=5/15m`
 
-Rate limits are configured per route in `.env` or the deployment environment. Supported route variables are `ADMIN_LOGIN`, `CUSTOMER_LOGIN`, `CUSTOMER_REGISTER`, `PASSWORD_RESET`, `PASSWORD_UPDATE`, `CHECKOUT`, `RAZORPAY_ORDER`, `COUPON_USE`, and `INQUIRY`. Values use `requests/duration` syntax (`10/1m`, `3/1h`); setting a route value to `0` disables that route's limit. Defaults are listed in `.env.example`. Docker Compose reads `.env` automatically; with `go run .`, export the variables in your shell. Settings load at startup, so restart the app after changing them. Limits are stored in app memory, so each running app instance enforces its own counters. If the app runs behind a proxy, configure `RATE_LIMIT_CLIENT_IP_HEADER` only for a header that the proxy overwrites with the client's actual IP; do not use a client-controlled forwarded header.
+Rate limits are configured per route in `.env` or the deployment environment. Supported route variables are `ADMIN_LOGIN`, `CUSTOMER_LOGIN`, `CUSTOMER_REGISTER`, `PASSWORD_RESET`, `PASSWORD_RESET_COMPLETE`, `PASSWORD_UPDATE`, `CHECKOUT`, `RAZORPAY_ORDER`, `COUPON_USE`, and `INQUIRY`. Values use `requests/duration` syntax (`10/1m`, `3/1h`); setting a route value to `0` disables that route's limit. Defaults are listed in `.env.example`. Docker Compose reads `.env` automatically; with `go run .`, export the variables in your shell. Settings load at startup, so restart the app after changing them. Limits are stored in app memory, so each running app instance enforces its own counters. If the app runs behind a proxy, configure `RATE_LIMIT_CLIENT_IP_HEADER` only for a header that the proxy overwrites with the client's actual IP; do not use a client-controlled forwarded header.
 
 If `DB_VENDOR` or `DB_DSN` is missing, app runs with in-memory storage.
 

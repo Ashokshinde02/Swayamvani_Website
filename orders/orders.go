@@ -1,8 +1,10 @@
 package orders
 
 import (
+	"crypto/rand"
 	"encoding/json"
 	"errors"
+	"math/big"
 	"os"
 	"path/filepath"
 	"sync"
@@ -20,6 +22,7 @@ type Item struct {
 // Order represents a placed order that can be shown in "My Orders".
 type Order struct {
 	ID            int            `json:"id"`
+	OrderNumber   int            `json:"order_number"`
 	CustomerEmail string         `json:"customer_email"`
 	CustomerName  string         `json:"customer_name,omitempty"`
 	Items         []Item         `json:"items"`
@@ -30,6 +33,15 @@ type Order struct {
 	Address       string         `json:"address,omitempty"`
 	CreatedAt     time.Time      `json:"created_at"`
 	Metadata      map[string]any `json:"metadata,omitempty"`
+}
+
+// GenerateOrderNumber returns a cryptographically random six-digit order number.
+func GenerateOrderNumber() (int, error) {
+	n, err := rand.Int(rand.Reader, big.NewInt(900000))
+	if err != nil {
+		return 0, err
+	}
+	return int(n.Int64()) + 100000, nil
 }
 
 // Store keeps orders in-memory with a file snapshot for persistence when SQL is absent.
@@ -64,12 +76,43 @@ func (o *Store) Load() error {
 		return err
 	}
 	o.orders = orders
+	numbers := make(map[int]struct{}, len(o.orders))
+	needsSave := false
 	for _, ord := range orders {
 		if ord.ID > o.nextID {
 			o.nextID = ord.ID
 		}
 	}
+	for i := range o.orders {
+		if o.orders[i].OrderNumber > 0 {
+			numbers[o.orders[i].OrderNumber] = struct{}{}
+			continue
+		}
+		orderNumber, err := uniqueOrderNumber(numbers)
+		if err != nil {
+			return err
+		}
+		o.orders[i].OrderNumber = orderNumber
+		numbers[orderNumber] = struct{}{}
+		needsSave = true
+	}
+	if needsSave {
+		return o.saveLocked()
+	}
 	return nil
+}
+
+func uniqueOrderNumber(used map[int]struct{}) (int, error) {
+	for range 100 {
+		number, err := GenerateOrderNumber()
+		if err != nil {
+			return 0, err
+		}
+		if _, exists := used[number]; !exists {
+			return number, nil
+		}
+	}
+	return 0, errors.New("could not generate a unique order number")
 }
 
 func (o *Store) saveLocked() error {
@@ -89,9 +132,20 @@ func (o *Store) saveLocked() error {
 func (o *Store) Add(email, name string, items []Item, total int, status, paymentRef, mobile, address string, metadata map[string]any) (Order, error) {
 	o.mu.Lock()
 	defer o.mu.Unlock()
+	used := make(map[int]struct{}, len(o.orders))
+	for _, existing := range o.orders {
+		if existing.OrderNumber > 0 {
+			used[existing.OrderNumber] = struct{}{}
+		}
+	}
+	orderNumber, err := uniqueOrderNumber(used)
+	if err != nil {
+		return Order{}, err
+	}
 	o.nextID++
 	order := Order{
 		ID:            o.nextID,
+		OrderNumber:   orderNumber,
 		CustomerEmail: email,
 		CustomerName:  name,
 		Items:         items,

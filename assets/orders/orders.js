@@ -3,6 +3,7 @@ const ordersList = document.getElementById("ordersList");
 const ordersEmpty = document.getElementById("ordersEmpty");
 const closeOrdersModal = document.getElementById("closeOrdersModal");
 const customerOrdersBtn = document.getElementById("customerOrdersBtn");
+const cartOrderReference = document.getElementById("cartOrderReference");
 
 let ordersCache = [];
 
@@ -47,10 +48,11 @@ function renderOrders(orders) {
     const itemsText = (order.items || [])
       .map((it) => `${it.name} (${formatINR(it.price)})`)
       .join(" · ");
+    const orderNumber = Number(order.order_number) || order.id;
     card.innerHTML = `
       <div class="order-card-head">
         <div>
-          <p class="order-id">Order #${order.id || "new"}</p>
+          <p class="order-id">Order #${orderNumber || "new"}</p>
           <p class="order-date">${dateText}</p>
         </div>
         <span class="order-status">${order.status || "pending"}</span>
@@ -94,7 +96,12 @@ if (ordersModal) {
   });
 }
 
-window.onOrderCreated = function () {
+window.onOrderCreated = function (order) {
+  const orderNumber = Number(order?.order_number) || order?.id;
+  if (cartOrderReference && orderNumber) {
+    cartOrderReference.textContent = `Order reference: #${orderNumber}`;
+    cartOrderReference.hidden = false;
+  }
   if (ordersModal?.classList.contains("open")) {
     loadOrders();
   }

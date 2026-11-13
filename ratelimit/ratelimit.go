@@ -31,15 +31,16 @@ func DefaultConfig() Config {
 	return Config{
 		Enabled: true,
 		RouteLimits: map[string]Rule{
-			"admin_login":       {Limit: 5, Window: 15 * time.Minute},
-			"customer_login":    {Limit: 10, Window: 15 * time.Minute},
-			"customer_register": {Limit: 5, Window: time.Hour},
-			"password_reset":    {Limit: 3, Window: time.Hour},
-			"password_update":   {Limit: 5, Window: 15 * time.Minute},
-			"checkout":          {Limit: 20, Window: time.Minute},
-			"razorpay_order":    {Limit: 10, Window: time.Minute},
-			"coupon_use":        {Limit: 10, Window: time.Minute},
-			"inquiry":           {Limit: 5, Window: time.Hour},
+			"admin_login":             {Limit: 5, Window: 15 * time.Minute},
+			"customer_login":          {Limit: 10, Window: 15 * time.Minute},
+			"customer_register":       {Limit: 5, Window: time.Hour},
+			"password_reset":          {Limit: 3, Window: time.Hour},
+			"password_reset_complete": {Limit: 10, Window: 15 * time.Minute},
+			"password_update":         {Limit: 5, Window: 15 * time.Minute},
+			"checkout":                {Limit: 20, Window: time.Minute},
+			"razorpay_order":          {Limit: 10, Window: time.Minute},
+			"coupon_use":              {Limit: 10, Window: time.Minute},
+			"inquiry":                 {Limit: 5, Window: time.Hour},
 		},
 	}
 }

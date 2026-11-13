@@ -1,6 +1,7 @@
 const loginSection = document.getElementById("loginSection");
 const adminSection = document.getElementById("adminSection");
 const loginForm = document.getElementById("loginForm");
+const loginStatus = document.getElementById("loginStatus");
 const logoutBtn = document.getElementById("logoutBtn");
 const productForm = document.getElementById("productForm");
 const videoForm = document.getElementById("videoForm");
@@ -374,7 +375,12 @@ async function api(path, options = {}) {
   });
   const data = await response.json();
   if (!response.ok) {
-    throw new Error(data.error || "Request failed");
+    let message = data.error || "Request failed";
+    if (response.status === 429) {
+      const retryAfter = Number(response.headers.get("Retry-After"));
+      if (retryAfter > 0) message += ` Please try again in ${retryAfter} seconds.`;
+    }
+    throw new Error(message);
   }
   return data;
 }
@@ -439,6 +445,7 @@ function buildOrdersHtml(orders = []) {
   return orders
     .map((o) => {
       const canInvoice = ["confirmed", "shipped", "delivered"].includes(o.status);
+      const orderReference = Number(o.order_number) || o.id;
       const created = o.created_at ? new Date(o.created_at).toLocaleString("en-IN") : "—";
       const items = (o.items || [])
         .map((it) => `${escapeHtml(it.name)} × ${Number(it.quantity || 1)} (${fmtINR(it.price)})`)
@@ -447,7 +454,8 @@ function buildOrdersHtml(orders = []) {
         <div class="cart-item order-admin-card">
           <div class="order-admin-head">
             <div>
-              <strong>Order #${o.id}</strong>
+              <strong>Order #${orderReference}</strong>
+              <p class="form-hint">Record ID: ${o.id}</p>
               <p>${escapeHtml(o.customer_name || "")}</p>
               <p class="form-hint">${escapeHtml(o.customer_email || "")}</p>
               <p class="form-hint">${created}</p>
@@ -504,6 +512,7 @@ function buildOrdersModalContent(selectedStatus, orders) {
 
 function renderInvoice(order) {
   const fmtINR = (val) => new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 }).format(val || 0);
+  const orderReference = Number(order.order_number) || order.id;
   const win = window.open("", "_blank", "width=800,height=900");
   if (!win) {
     if (adminStatus) adminStatus.textContent = "Popup blocked. Allow popups to view invoice.";
@@ -525,7 +534,7 @@ function renderInvoice(order) {
   const html = `
   <html>
     <head>
-      <title>Invoice #${order.id}</title>
+      <title>Invoice #${orderReference}</title>
       <style>
         :root {
           --accent: #c96a1b;
@@ -560,7 +569,7 @@ function renderInvoice(order) {
       </div>
       <h1>Order Invoice</h1>
       <div class="box meta">
-        <div><strong>Order #</strong> ${order.id}</div>
+        <div><strong>Order #</strong> ${orderReference}</div>
         <div><strong>Status:</strong> <span class="status">${order.status || "pending"}</span></div>
         <div><strong>Date:</strong> ${order.created_at ? new Date(order.created_at).toLocaleString("en-IN") : "—"}</div>
       </div>
@@ -751,7 +760,8 @@ function initPasswordToggles() {
 
 loginForm.addEventListener("submit", async (event) => {
   event.preventDefault();
-  adminStatus.textContent = "";
+  if (loginStatus) loginStatus.textContent = "";
+  if (adminStatus) adminStatus.textContent = "";
 
   try {
     await api("/api/admin/login", {
@@ -765,7 +775,9 @@ loginForm.addEventListener("submit", async (event) => {
     await checkSession();
   } catch (error) {
     toggleLogoutButton(false);
-    adminStatus.textContent = error.message || "Login failed.";
+    const message = error.message || "Login failed.";
+    if (loginStatus) loginStatus.textContent = message;
+    if (adminStatus) adminStatus.textContent = message;
   }
 });
 
@@ -886,12 +898,20 @@ adminModalBody?.addEventListener("change", async (event) => {
   const next = target.value;
   target.disabled = true;
   try {
-    await api(`/api/admin/orders/${orderId}`, {
+    const result = await api(`/api/admin/orders/${orderId}`, {
       method: "PATCH",
       body: JSON.stringify({ status: next })
     });
     if (order) order.status = next;
-    if (adminStatus) adminStatus.textContent = `Order #${orderId} updated to ${next}.`;
+    if (adminStatus) {
+      if (next === "confirmed" && result.invoice_email_sent) {
+        adminStatus.textContent = `Order #${order?.order_number || orderId} confirmed. Invoice emailed to the registered address.`;
+      } else if (result.invoice_email_error) {
+        adminStatus.textContent = result.invoice_email_error;
+      } else {
+        adminStatus.textContent = `Order #${order?.order_number || orderId} updated to ${next}.`;
+      }
+    }
   } catch (error) {
     target.value = prev;
     if (adminStatus) adminStatus.textContent = error.message || "Failed to update order.";

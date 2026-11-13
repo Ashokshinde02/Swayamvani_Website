@@ -28,10 +28,11 @@ const defaultVideos = [
 const translations = {
   en: {
     navProducts: "Instruments",
-    navAbout: "Our approach",
+    navAbout: "About",
     navContact: "Contact",
     navAdmin: "Admin",
     cart: "Cart",
+    brandTagline: "Destination for every musical journey",
     heroEyebrow: "A tradition carried in every note",
     heroTitle: "Find your voice in the harmonium",
     heroDesc: "Explore harmoniums for daily riyaaz, bhajan, and accompaniment. Browse the available model, its photos, and features.",
@@ -137,7 +138,7 @@ const translations = {
     customerRegister: "Create Account",
     customerPassword: "Password",
     customerForgotPassword: "Forgot password?",
-    customerForgotDesc: "Enter the email tied to your account and we will email you a temporary password.",
+    customerForgotDesc: "Enter your email and, if an account exists, we’ll send a secure password reset link.",
     customerSendReset: "Send reset instructions",
     customerBackToLogin: "Back to login",
     customerUpdatePasswordLink: "Update password",
@@ -146,8 +147,13 @@ const translations = {
     customerConfirmPassword: "Confirm password",
     customerUpdatePasswordSuccess: "Password updated. Please log in again.",
     customerUpdatePasswordError: "Could not update password.",
-    customerForgotPasswordSent: "If an account exists, we’ve emailed you a temporary password.",
+    customerForgotPasswordSent: "If an account exists, we’ve emailed a password reset link.",
     customerForgotPasswordError: "Failed to send reset email.",
+    customerResetTitle: "Set a new password",
+    customerResetDesc: "Choose a new password for your account.",
+    customerResetSubmit: "Reset password",
+    customerResetSuccess: "Your password has been reset. Sign in with your new password.",
+    customerResetInvalid: "This reset link is invalid or expired. Request a new one.",
     customerLogout: "Logout",
     customerAuthSuccess: "You are logged in.",
     customerRegisterSuccess: "Account successfully created and your login details have been emailed to you.",
@@ -171,10 +177,11 @@ const translations = {
   },
   mr: {
     navProducts: "वाद्ये",
-    navAbout: "आमचा दृष्टिकोन",
+    navAbout: "आमच्याबद्दल",
     navContact: "संपर्क",
     navAdmin: "ॲडमिन",
     cart: "कार्ट",
+    brandTagline: "प्रत्येक संगीत प्रवासाचे ठिकाण",
     heroEyebrow: "प्रत्येक सुरात जपलेली परंपरा",
     heroTitle: "हार्मोनियम मधून शोधा तुमचा स्वर",
     heroDesc: "रोजच्या रियाज, भजन आणि साथीसाठी हार्मोनियम पाहा. उपलब्ध मॉडेल, फोटो आणि वैशिष्ट्ये जाणून घ्या.",
@@ -271,11 +278,16 @@ const translations = {
     customerRegister: "खाते तयार करा",
     customerPassword: "पासवर्ड",
     customerForgotPassword: "पासवर्ड भूल गए?",
-    customerForgotDesc: "आपल्या खात्याशी जोडलेला ईमेल द्या आणि आम्ही आपल्याला तात्पुरता पासवर्ड ईमेल करू.",
+    customerForgotDesc: "तुमचा ईमेल द्या. खाते असल्यास, आम्ही सुरक्षित पासवर्ड रीसेट लिंक पाठवू.",
     customerSendReset: "रीसेट सूचना पाठवा",
     customerBackToLogin: "लॉगिनवर परत जा",
-    customerForgotPasswordSent: "खाते अस्तित्वात असल्यास, आम्ही आपल्याला तात्पुरता पासवर्ड ईमेल केला आहे.",
+    customerForgotPasswordSent: "खाते अस्तित्वात असल्यास, आम्ही पासवर्ड रीसेट लिंक ईमेल केली आहे.",
     customerForgotPasswordError: "रीसेट ईमेल पाठवताना त्रुटी.",
+    customerResetTitle: "नवीन पासवर्ड तयार करा",
+    customerResetDesc: "तुमच्या खात्यासाठी नवीन पासवर्ड निवडा.",
+    customerResetSubmit: "पासवर्ड रीसेट करा",
+    customerResetSuccess: "पासवर्ड रीसेट झाला. नवीन पासवर्डने लॉगिन करा.",
+    customerResetInvalid: "ही रीसेट लिंक अवैध किंवा कालबाह्य आहे. नवीन लिंक मागवा.",
     customerLogout: "लॉगआउट",
     customerAuthSuccess: "तुम्ही लॉगिन आहात.",
     customerRegisterSuccess: "खाते यशस्वीरित्या तयार झाले आहे आणि आपला युजर आयडी व पासवर्ड ईमेलवर पाठवला गेला आहे.",
@@ -305,10 +317,11 @@ const translations = {
   },
   hi: {
     navProducts: "वाद्य",
-    navAbout: "हमारा तरीका",
+    navAbout: "हमारे बारे में",
     navContact: "संपर्क",
     navAdmin: "एडमिन",
     cart: "कार्ट",
+    brandTagline: "हर संगीत यात्रा का ठिकाना",
     heroEyebrow: "हर सुर में संजोई परंपरा",
     heroTitle: "हारमोनियम में अपनी आवाज़ खोजें",
     heroDesc: "रोज़ के रियाज़, भजन और संगत के लिए हारमोनियम देखें। उपलब्ध मॉडल, तस्वीरें और खूबियाँ जानें।",
@@ -414,11 +427,16 @@ const translations = {
     customerRegister: "खाता बनाएं",
     customerPassword: "पासवर्ड",
     customerForgotPassword: "पासवर्ड भूल गए?",
-    customerForgotDesc: "अपने खाते से जुड़ा ईमेल डालें; हम एक अस्थायी पासवर्ड ईमेल करेंगे।",
+    customerForgotDesc: "अपना ईमेल डालें। खाता मौजूद होने पर हम सुरक्षित पासवर्ड रीसेट लिंक भेजेंगे।",
     customerSendReset: "रीसेट निर्देश भेजें",
     customerBackToLogin: "लॉगिन पर वापस जाएं",
-    customerForgotPasswordSent: "यदि खाता मौजूद है, तो हमने आपको एक अस्थायी पासवर्ड ईमेल कर दिया है।",
+    customerForgotPasswordSent: "यदि खाता मौजूद है, तो हमने पासवर्ड रीसेट लिंक ईमेल किया है।",
     customerForgotPasswordError: "रीसेट ईमेल भेजने में त्रुटि।",
+    customerResetTitle: "नया पासवर्ड बनाएँ",
+    customerResetDesc: "अपने खाते के लिए नया पासवर्ड चुनें।",
+    customerResetSubmit: "पासवर्ड रीसेट करें",
+    customerResetSuccess: "पासवर्ड रीसेट हो गया। नए पासवर्ड से लॉगिन करें।",
+    customerResetInvalid: "यह रीसेट लिंक अमान्य या समाप्त हो गई है। नई लिंक माँगें।",
     customerLogout: "लॉगआउट",
     customerAuthSuccess: "आप लॉगिन हैं।",
     customerAuthFailed: "ग्राहक प्रमाणीकरण विफल।",
@@ -524,6 +542,12 @@ const customerModal = document.getElementById("customerModal");
 const closeCustomerModal = document.getElementById("closeCustomerModal");
 const customerLoginForm = document.getElementById("customerLoginForm");
 const customerRegisterForm = document.getElementById("customerRegisterForm");
+const customerResetForm = document.getElementById("customerResetForm");
+const customerResetPasswordInput = document.getElementById("customerResetPassword");
+const customerResetConfirmPasswordInput = document.getElementById("customerResetConfirmPassword");
+const customerResetStatus = document.getElementById("customerResetStatus");
+const backToLoginFromReset = document.getElementById("backToLoginFromReset");
+let passwordResetToken = new URLSearchParams(window.location.search).get("reset_token") || "";
 const showRegisterLink = document.getElementById("showRegisterLink");
 const backToLoginLink = document.getElementById("backToLoginLink");
 const customerUpdateForm = document.getElementById("customerUpdateForm");
@@ -578,10 +602,11 @@ const customerProfileStatusEl = document.getElementById("customerProfileStatus")
 let isCustomerProfileVisible = false;
 
 function showLoginForm() {
-  if (!customerLoginForm || !customerRegisterForm || !customerForgotForm || !customerUpdateForm) return;
+  if (!customerLoginForm || !customerRegisterForm || !customerForgotForm || !customerResetForm || !customerUpdateForm) return;
   customerLoginForm.classList.remove("hidden");
   customerRegisterForm.classList.add("hidden");
   customerForgotForm.classList.add("hidden");
+  customerResetForm.classList.add("hidden");
   customerUpdateForm.classList.add("hidden");
   customerLoginForm.querySelector("input")?.focus();
   if (customerForgotStatus) {
@@ -593,10 +618,11 @@ function showLoginForm() {
 }
 
 function showForgotForm() {
-  if (!customerLoginForm || !customerRegisterForm || !customerForgotForm || !customerUpdateForm) return;
+  if (!customerLoginForm || !customerRegisterForm || !customerForgotForm || !customerResetForm || !customerUpdateForm) return;
   customerLoginForm.classList.add("hidden");
   customerRegisterForm.classList.add("hidden");
   customerForgotForm.classList.remove("hidden");
+  customerResetForm.classList.add("hidden");
   customerUpdateForm.classList.add("hidden");
   customerForgotEmailInput?.focus();
   if (customerForgotStatus) {
@@ -605,15 +631,26 @@ function showForgotForm() {
 }
 
 function showUpdatePasswordForm() {
-  if (!customerLoginForm || !customerRegisterForm || !customerForgotForm || !customerUpdateForm) return;
+  if (!customerLoginForm || !customerRegisterForm || !customerForgotForm || !customerResetForm || !customerUpdateForm) return;
   customerLoginForm.classList.add("hidden");
   customerRegisterForm.classList.add("hidden");
   customerForgotForm.classList.add("hidden");
+  customerResetForm.classList.add("hidden");
   customerUpdateForm.classList.remove("hidden");
   customerNewPasswordInput?.focus();
   if (customerUpdateStatus) {
     customerUpdateStatus.textContent = "";
   }
+}
+
+function showResetPasswordForm() {
+  if (!customerLoginForm || !customerRegisterForm || !customerForgotForm || !customerResetForm || !customerUpdateForm) return;
+  customerLoginForm.classList.add("hidden");
+  customerRegisterForm.classList.add("hidden");
+  customerForgotForm.classList.add("hidden");
+  customerUpdateForm.classList.add("hidden");
+  customerResetForm.classList.remove("hidden");
+  customerResetPasswordInput?.focus();
 }
 
 function toggleRegisterForm(show) {
@@ -623,6 +660,8 @@ function toggleRegisterForm(show) {
     customerRegisterForm.classList.remove("hidden");
     customerLoginForm.classList.add("hidden");
     customerForgotForm.classList.add("hidden");
+    customerResetForm?.classList.add("hidden");
+    customerUpdateForm?.classList.add("hidden");
     const firstField = document.getElementById("customerRegisterName");
     if (firstField) firstField.focus();
   } else {
@@ -650,8 +689,22 @@ backToLoginFromForgot?.addEventListener("click", (event) => {
   showLoginForm();
 });
 
+backToLoginFromReset?.addEventListener("click", (event) => {
+  event.preventDefault();
+  passwordResetToken = "";
+  customerResetForm?.reset();
+  showLoginForm();
+});
+
 // initial state
 toggleRegisterForm(false);
+if (passwordResetToken) {
+  const resetURL = new URL(window.location.href);
+  resetURL.searchParams.delete("reset_token");
+  window.history.replaceState({}, "", `${resetURL.pathname}${resetURL.search}${resetURL.hash}`);
+  openCustomerModal();
+  showResetPasswordForm();
+}
 
 function firstNameFrom(name = "") {
   const trimmed = String(name).trim();
@@ -2307,20 +2360,12 @@ customerLoginForm?.addEventListener("submit", async (event) => {
     });
 
     state.customer = data.customer || null;
-    const requiresUpdate = Boolean(data.updateRequired);
     if (guestCartSnapshot.length) {
       pendingCartMerge = guestCartSnapshot;
     }
     applyStoredShipping(state.customer);
     renderCustomerState();
     customerLoginForm.reset();
-    if (requiresUpdate) {
-      if (customerUpdateStatus) {
-        customerUpdateStatus.textContent = t("customerUpdatePasswordDesc");
-      }
-      showUpdatePasswordForm();
-      return;
-    }
     closeCustomerAuthModal();
   } catch (error) {
     if (customerLoginStatus) customerLoginStatus.textContent = error.message || t("customerAuthFailed");
@@ -2376,6 +2421,35 @@ customerForgotForm?.addEventListener("submit", async (event) => {
     customerForgotForm.reset();
   } catch (error) {
     customerForgotStatus.textContent = error.message || t("customerForgotPasswordError");
+  }
+});
+
+customerResetForm?.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  if (!customerResetStatus) return;
+  const newPassword = (customerResetPasswordInput?.value || "").trim();
+  const confirmPassword = (customerResetConfirmPasswordInput?.value || "").trim();
+  if (newPassword.length < 6 || newPassword !== confirmPassword) {
+    customerResetStatus.textContent = t("customerUpdatePasswordError");
+    return;
+  }
+  if (!passwordResetToken) {
+    customerResetStatus.textContent = t("customerResetInvalid");
+    return;
+  }
+  customerResetStatus.textContent = t("sending");
+  try {
+    await apiJSON("/api/customer/reset-password", {
+      method: "POST",
+      body: JSON.stringify({ token: passwordResetToken, password: newPassword })
+    });
+    passwordResetToken = "";
+    customerResetForm.reset();
+    customerResetStatus.textContent = t("customerResetSuccess");
+    showLoginForm();
+    if (customerLoginStatus) customerLoginStatus.textContent = t("customerResetSuccess");
+  } catch (error) {
+    customerResetStatus.textContent = error.message || t("customerResetInvalid");
   }
 });
 

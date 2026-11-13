@@ -24,7 +24,7 @@ import (
 
 	mailer "swayamvani/mailer"
 
-	_ "github.com/go-sql-driver/mysql"
+	mysqlDriver "github.com/go-sql-driver/mysql"
 	_ "github.com/lib/pq"
 )
 
@@ -134,6 +134,22 @@ type CustomerForgotPasswordRequest struct {
 	Email string `json:"email"`
 }
 
+type CustomerResetPasswordRequest struct {
+	Token    string `json:"token"`
+	Password string `json:"password"`
+}
+
+type passwordResetToken struct {
+	Email     string
+	ExpiresAt time.Time
+}
+
+type passwordResetEmailJob struct {
+	Account        CustomerAccount
+	ResetURL       string
+	PasswordChange bool
+}
+
 type CustomerAccount struct {
 	Name         string    `json:"name"`
 	Email        string    `json:"email"`
@@ -179,29 +195,32 @@ type SQLStorage struct {
 }
 
 type Server struct {
-	store                Storage
-	sqlStore             *SQLStorage
-	emailRegex           *regexp.Regexp
-	adminUser            string
-	adminPass            string
-	sessions             *SessionManager
-	customerSessions     *SessionManager
-	customerMu           sync.RWMutex
-	customers            map[string]CustomerAccount
-	customerDataPath     string
-	ordersStore          *orders.Store
-	offerConfig          OfferConfig
-	offerList            OffersFile
-	offerMu              sync.RWMutex
-	offerConfigPath      string
-	deliveryInfo         DeliveryInfo
-	deliveryInfoPath     string
-	deliveryMu           sync.RWMutex
-	razorpayKeyID        string
-	razorpayKeySecret    string
-	sessionSecret        []byte
-	passwordResetMu      sync.RWMutex
-	pendingPasswordReset map[string]bool
+	store                  Storage
+	sqlStore               *SQLStorage
+	emailRegex             *regexp.Regexp
+	adminUser              string
+	adminPass              string
+	sessions               *SessionManager
+	customerSessions       *SessionManager
+	customerMu             sync.RWMutex
+	customers              map[string]CustomerAccount
+	customerDataPath       string
+	ordersStore            *orders.Store
+	offerConfig            OfferConfig
+	offerList              OffersFile
+	offerMu                sync.RWMutex
+	offerConfigPath        string
+	deliveryInfo           DeliveryInfo
+	deliveryInfoPath       string
+	deliveryMu             sync.RWMutex
+	razorpayKeyID          string
+	razorpayKeySecret      string
+	sessionSecret          []byte
+	passwordResetMu        sync.RWMutex
+	passwordResetTokens    map[string]passwordResetToken
+	resetTokenByEmail      map[string]string
+	passwordResetEmailJobs chan passwordResetEmailJob
+	publicBaseURL          string
 }
 
 func main() {
@@ -220,24 +239,33 @@ func main() {
 		log.Println("warning: ADMIN_PASSWORD not set, using default 'admin123' for local use")
 	}
 
-	s := &Server{
-		store:                store,
-		sqlStore:             sqlStore,
-		emailRegex:           regexp.MustCompile(`^[^\s@]+@[^\s@]+\.[^\s@]+$`),
-		adminUser:            adminUser,
-		adminPass:            adminPass,
-		sessions:             newSessionManager(12 * time.Hour),
-		customerSessions:     newSessionManager(12 * time.Hour),
-		customers:            make(map[string]CustomerAccount),
-		customerDataPath:     filepath.Join("data", "customers.json"),
-		ordersStore:          orders.NewStore(filepath.Join("data")),
-		offerConfigPath:      filepath.Join("data", "offers.json"),
-		deliveryInfoPath:     filepath.Join("data", "delivery.json"),
-		razorpayKeyID:        strings.TrimSpace(os.Getenv("RAZORPAY_KEY_ID")),
-		razorpayKeySecret:    strings.TrimSpace(os.Getenv("RAZORPAY_KEY_SECRET")),
-		sessionSecret:        loadSessionSecret(),
-		pendingPasswordReset: make(map[string]bool),
+	publicBaseURL := strings.TrimRight(strings.TrimSpace(os.Getenv("PUBLIC_BASE_URL")), "/")
+	if publicBaseURL == "" {
+		publicBaseURL = "https://www.swayamvani.com"
 	}
+
+	s := &Server{
+		store:                  store,
+		sqlStore:               sqlStore,
+		emailRegex:             regexp.MustCompile(`^[^\s@]+@[^\s@]+\.[^\s@]+$`),
+		adminUser:              adminUser,
+		adminPass:              adminPass,
+		sessions:               newSessionManager(12 * time.Hour),
+		customerSessions:       newSessionManager(12 * time.Hour),
+		customers:              make(map[string]CustomerAccount),
+		customerDataPath:       filepath.Join("data", "customers.json"),
+		ordersStore:            orders.NewStore(filepath.Join("data")),
+		offerConfigPath:        filepath.Join("data", "offers.json"),
+		deliveryInfoPath:       filepath.Join("data", "delivery.json"),
+		razorpayKeyID:          strings.TrimSpace(os.Getenv("RAZORPAY_KEY_ID")),
+		razorpayKeySecret:      strings.TrimSpace(os.Getenv("RAZORPAY_KEY_SECRET")),
+		sessionSecret:          loadSessionSecret(),
+		passwordResetTokens:    make(map[string]passwordResetToken),
+		resetTokenByEmail:      make(map[string]string),
+		passwordResetEmailJobs: make(chan passwordResetEmailJob, 64),
+		publicBaseURL:          publicBaseURL,
+	}
+	go s.runPasswordResetEmailWorker()
 	if err := s.loadCustomers(); err != nil {
 		log.Printf("warning: failed to load customers file: %v", err)
 	}
@@ -268,6 +296,7 @@ func main() {
 	mux.Handle("/api/customer/register", rateLimiter.Wrap("customer_register", http.HandlerFunc(s.handleCustomerRegister)))
 	mux.Handle("/api/customer/login", rateLimiter.Wrap("customer_login", http.HandlerFunc(s.handleCustomerLogin)))
 	mux.Handle("/api/customer/forgot-password", rateLimiter.Wrap("password_reset", http.HandlerFunc(s.handleCustomerForgotPassword)))
+	mux.Handle("/api/customer/reset-password", rateLimiter.Wrap("password_reset_complete", http.HandlerFunc(s.handleCustomerResetPassword)))
 	mux.HandleFunc("/api/customer/logout", s.handleCustomerLogout)
 	mux.Handle("/api/customer/update-password", rateLimiter.Wrap("password_update", http.HandlerFunc(s.handleCustomerUpdatePassword)))
 	mux.HandleFunc("/api/customer/me", s.handleCustomerMe)
@@ -539,6 +568,86 @@ func (s *SQLStorage) ensureSchema() error {
 			return err
 		}
 	}
+	if err := s.backfillOrderNumbers(); err != nil {
+		return err
+	}
+	if s.vendor == "postgres" {
+		_, err := s.db.Exec("ALTER TABLE orders ALTER COLUMN order_number SET NOT NULL")
+		return err
+	}
+	_, err := s.db.Exec("ALTER TABLE orders MODIFY order_number INT NOT NULL")
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func isUniqueConstraintViolation(err error) bool {
+	var mysqlErr *mysqlDriver.MySQLError
+	if errors.As(err, &mysqlErr) {
+		return mysqlErr.Number == 1062
+	}
+	type sqlStateError interface {
+		SQLState() string
+	}
+	var stateErr sqlStateError
+	return errors.As(err, &stateErr) && stateErr.SQLState() == "23505"
+}
+
+func (s *SQLStorage) backfillOrderNumbers() error {
+	rows, err := s.db.Query("SELECT id FROM orders WHERE order_number IS NULL ORDER BY id")
+	if err != nil {
+		return err
+	}
+	var ids []int
+	for rows.Next() {
+		var id int
+		if err := rows.Scan(&id); err != nil {
+			rows.Close()
+			return err
+		}
+		ids = append(ids, id)
+	}
+	if err := rows.Err(); err != nil {
+		rows.Close()
+		return err
+	}
+	if err := rows.Close(); err != nil {
+		return err
+	}
+
+	for _, id := range ids {
+		assigned := false
+		for attempt := 0; attempt < 100; attempt++ {
+			orderNumber, err := orders.GenerateOrderNumber()
+			if err != nil {
+				return err
+			}
+			query := "UPDATE orders SET order_number = ? WHERE id = ? AND order_number IS NULL"
+			if s.vendor == "postgres" {
+				query = "UPDATE orders SET order_number = $1 WHERE id = $2 AND order_number IS NULL"
+			}
+			result, err := s.db.Exec(query, orderNumber, id)
+			if err != nil {
+				if isUniqueConstraintViolation(err) {
+					continue
+				}
+				return err
+			}
+			updated, err := result.RowsAffected()
+			if err != nil {
+				return err
+			}
+			assigned = true
+			if updated == 0 {
+				break
+			}
+			break
+		}
+		if !assigned {
+			return fmt.Errorf("could not assign a unique order number to order %d", id)
+		}
+	}
 	return nil
 }
 
@@ -592,8 +701,15 @@ func schemaQueries(vendor string) []string {
 				)`,
 			`ALTER TABLE customers ADD COLUMN IF NOT EXISTS mobile TEXT NOT NULL DEFAULT ''`,
 			`ALTER TABLE customers ADD COLUMN IF NOT EXISTS address TEXT NOT NULL DEFAULT ''`,
+			`CREATE TABLE IF NOT EXISTS password_reset_tokens (
+				email TEXT PRIMARY KEY REFERENCES customers(email) ON DELETE CASCADE ON UPDATE CASCADE,
+				token_hash CHAR(64) NOT NULL UNIQUE,
+				expires_at TIMESTAMPTZ NOT NULL,
+				created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+			)`,
 			`CREATE TABLE IF NOT EXISTS orders (
 					id SERIAL PRIMARY KEY,
+					order_number INTEGER,
 					customer_email TEXT NOT NULL,
 					customer_name TEXT NOT NULL DEFAULT '',
 					items_json JSONB NOT NULL,
@@ -608,6 +724,8 @@ func schemaQueries(vendor string) []string {
 			`ALTER TABLE orders ADD COLUMN IF NOT EXISTS mobile TEXT NOT NULL DEFAULT ''`,
 			`ALTER TABLE orders ADD COLUMN IF NOT EXISTS address TEXT NOT NULL DEFAULT ''`,
 			`ALTER TABLE orders ADD COLUMN IF NOT EXISTS customer_name TEXT NOT NULL DEFAULT ''`,
+			`ALTER TABLE orders ADD COLUMN IF NOT EXISTS order_number INTEGER`,
+			`CREATE UNIQUE INDEX IF NOT EXISTS idx_orders_order_number ON orders(order_number)`,
 			`CREATE TABLE IF NOT EXISTS offers (
 						id SERIAL PRIMARY KEY,
 						active BOOLEAN NOT NULL DEFAULT FALSE,
@@ -673,8 +791,16 @@ func schemaQueries(vendor string) []string {
 				)`,
 		`ALTER TABLE customers ADD COLUMN mobile VARCHAR(32) NOT NULL DEFAULT ''`,
 		`ALTER TABLE customers ADD COLUMN address VARCHAR(512) NOT NULL DEFAULT ''`,
+		`CREATE TABLE IF NOT EXISTS password_reset_tokens (
+			email VARCHAR(255) PRIMARY KEY,
+			token_hash CHAR(64) NOT NULL UNIQUE,
+			expires_at TIMESTAMP NOT NULL,
+			created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+			CONSTRAINT fk_password_reset_customer FOREIGN KEY (email) REFERENCES customers(email) ON DELETE CASCADE ON UPDATE CASCADE
+		)`,
 		`CREATE TABLE IF NOT EXISTS orders (
 				id INT AUTO_INCREMENT PRIMARY KEY,
+				order_number INT NULL,
 				customer_email VARCHAR(255) NOT NULL,
 				customer_name VARCHAR(255) NOT NULL DEFAULT '',
 				items_json JSON NOT NULL,
@@ -693,6 +819,8 @@ func schemaQueries(vendor string) []string {
 		`ALTER TABLE orders ADD COLUMN mobile VARCHAR(32) NOT NULL DEFAULT ''`,
 		`ALTER TABLE orders ADD COLUMN address VARCHAR(2048) NOT NULL DEFAULT ''`,
 		`ALTER TABLE orders ADD COLUMN customer_name VARCHAR(255) NOT NULL DEFAULT ''`,
+		`ALTER TABLE orders ADD COLUMN order_number INT NULL`,
+		`CREATE UNIQUE INDEX idx_orders_order_number ON orders(order_number)`,
 		`CREATE TABLE IF NOT EXISTS offers (
 				id INT AUTO_INCREMENT PRIMARY KEY,
 				active BOOLEAN NOT NULL DEFAULT FALSE,
@@ -999,6 +1127,61 @@ func (s *SQLStorage) UpdateCustomerPassword(email, hash string) error {
 	return err
 }
 
+func (s *SQLStorage) SavePasswordResetToken(email, tokenHash string, expiresAt time.Time) error {
+	if s.vendor == "postgres" {
+		_, err := s.db.Exec(`INSERT INTO password_reset_tokens (email, token_hash, expires_at) VALUES ($1, $2, $3)
+			ON CONFLICT (email) DO UPDATE SET token_hash = EXCLUDED.token_hash, expires_at = EXCLUDED.expires_at`, email, tokenHash, expiresAt)
+		return err
+	}
+	_, err := s.db.Exec(`INSERT INTO password_reset_tokens (email, token_hash, expires_at) VALUES (?, ?, ?)
+		ON DUPLICATE KEY UPDATE token_hash = VALUES(token_hash), expires_at = VALUES(expires_at)`, email, tokenHash, expiresAt)
+	return err
+}
+
+func (s *SQLStorage) DeletePasswordResetToken(email, tokenHash string) error {
+	if s.vendor == "postgres" {
+		_, err := s.db.Exec("DELETE FROM password_reset_tokens WHERE email = $1 AND token_hash = $2", email, tokenHash)
+		return err
+	}
+	_, err := s.db.Exec("DELETE FROM password_reset_tokens WHERE email = ? AND token_hash = ?", email, tokenHash)
+	return err
+}
+
+func (s *SQLStorage) ConsumePasswordResetToken(tokenHash string, now time.Time) (string, bool, error) {
+	tx, err := s.db.Begin()
+	if err != nil {
+		return "", false, err
+	}
+	defer tx.Rollback()
+
+	query := "SELECT email, expires_at FROM password_reset_tokens WHERE token_hash = ? FOR UPDATE"
+	if s.vendor == "postgres" {
+		query = "SELECT email, expires_at FROM password_reset_tokens WHERE token_hash = $1 FOR UPDATE"
+	}
+	var email string
+	var expiresAt time.Time
+	if err := tx.QueryRow(query, tokenHash).Scan(&email, &expiresAt); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return "", false, nil
+		}
+		return "", false, err
+	}
+	deleteQuery := "DELETE FROM password_reset_tokens WHERE token_hash = ?"
+	if s.vendor == "postgres" {
+		deleteQuery = "DELETE FROM password_reset_tokens WHERE token_hash = $1"
+	}
+	if _, err := tx.Exec(deleteQuery, tokenHash); err != nil {
+		return "", false, err
+	}
+	if err := tx.Commit(); err != nil {
+		return "", false, err
+	}
+	if !expiresAt.After(now) {
+		return "", false, nil
+	}
+	return email, true, nil
+}
+
 func (s *SQLStorage) UpdateCustomerProfile(oldEmail string, account CustomerAccount) error {
 	if s.vendor == "postgres" {
 		_, err := s.db.Exec("UPDATE customers SET name=$1, email=$2, mobile=$3, address=$4 WHERE email=$5",
@@ -1202,20 +1385,41 @@ func (s *SQLStorage) ListInquiries() ([]Inquiry, error) {
 func (s *SQLStorage) CreateOrder(email, name string, items []orders.Item, total int, status, paymentRef, mobile, address string, metadata map[string]any) (orders.Order, error) {
 	itemsJSON, _ := json.Marshal(items)
 	metaJSON, _ := json.Marshal(metadata)
-
-	if s.vendor == "postgres" {
-		row := s.db.QueryRow(`
-			INSERT INTO orders (customer_email, customer_name, items_json, total, status, payment_ref, mobile, address, metadata)
-			VALUES ($1, $2, $3::jsonb, $4, $5, $6, $7, $8, $9::jsonb)
-			RETURNING id, created_at
-		`, email, name, string(itemsJSON), total, status, paymentRef, mobile, address, string(metaJSON))
+	for attempt := 0; attempt < 10; attempt++ {
+		orderNumber, err := orders.GenerateOrderNumber()
+		if err != nil {
+			return orders.Order{}, err
+		}
 		var id int
 		var created time.Time
-		if err := row.Scan(&id, &created); err != nil {
+		if s.vendor == "postgres" {
+			err = s.db.QueryRow(`
+				INSERT INTO orders (order_number, customer_email, customer_name, items_json, total, status, payment_ref, mobile, address, metadata)
+				VALUES ($1, $2, $3, $4::jsonb, $5, $6, $7, $8, $9, $10::jsonb)
+				RETURNING id, created_at
+			`, orderNumber, email, name, string(itemsJSON), total, status, paymentRef, mobile, address, string(metaJSON)).Scan(&id, &created)
+		} else {
+			var result sql.Result
+			result, err = s.db.Exec(`
+				INSERT INTO orders (order_number, customer_email, customer_name, items_json, total, status, payment_ref, mobile, address, metadata, created_at)
+				VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())
+			`, orderNumber, email, name, string(itemsJSON), total, status, paymentRef, mobile, address, string(metaJSON))
+			if err == nil {
+				var id64 int64
+				id64, err = result.LastInsertId()
+				id = int(id64)
+				created = time.Now()
+			}
+		}
+		if err != nil {
+			if isUniqueConstraintViolation(err) {
+				continue
+			}
 			return orders.Order{}, err
 		}
 		return orders.Order{
 			ID:            id,
+			OrderNumber:   orderNumber,
 			CustomerEmail: email,
 			CustomerName:  name,
 			Items:         items,
@@ -1228,40 +1432,19 @@ func (s *SQLStorage) CreateOrder(email, name string, items []orders.Item, total 
 			CreatedAt:     created,
 		}, nil
 	}
-
-	res, err := s.db.Exec(`
-		INSERT INTO orders (customer_email, customer_name, items_json, total, status, payment_ref, mobile, address, metadata, created_at)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())
-	`, email, name, string(itemsJSON), total, status, paymentRef, mobile, address, string(metaJSON))
-	if err != nil {
-		return orders.Order{}, err
-	}
-	id64, _ := res.LastInsertId()
-	return orders.Order{
-		ID:            int(id64),
-		CustomerEmail: email,
-		CustomerName:  name,
-		Items:         items,
-		Total:         total,
-		Status:        status,
-		PaymentRef:    paymentRef,
-		Mobile:        mobile,
-		Address:       address,
-		Metadata:      metadata,
-		CreatedAt:     time.Now(),
-	}, nil
+	return orders.Order{}, errors.New("could not generate a unique order number")
 }
 
 func (s *SQLStorage) ListOrdersByEmail(email string) ([]orders.Order, error) {
 	query := `
-		SELECT id, items_json, total, status, payment_ref, mobile, address, customer_name, metadata, created_at
+		SELECT id, order_number, items_json, total, status, payment_ref, mobile, address, customer_name, metadata, created_at
 		FROM orders WHERE customer_email = ?
 		ORDER BY created_at DESC
 	`
 	args := []any{email}
 	if s.vendor == "postgres" {
 		query = `
-			SELECT id, items_json, total, status, payment_ref, mobile, address, customer_name, metadata, created_at
+			SELECT id, order_number, items_json, total, status, payment_ref, mobile, address, customer_name, metadata, created_at
 			FROM orders WHERE customer_email = $1
 			ORDER BY created_at DESC
 		`
@@ -1276,6 +1459,7 @@ func (s *SQLStorage) ListOrdersByEmail(email string) ([]orders.Order, error) {
 	for rows.Next() {
 		var (
 			id           int
+			orderNumber  int
 			itemsJSON    string
 			total        int
 			status       string
@@ -1286,7 +1470,7 @@ func (s *SQLStorage) ListOrdersByEmail(email string) ([]orders.Order, error) {
 			metaJSON     sql.NullString
 			created      time.Time
 		)
-		if err := rows.Scan(&id, &itemsJSON, &total, &status, &paymentRef, &mobile, &address, &customerName, &metaJSON, &created); err != nil {
+		if err := rows.Scan(&id, &orderNumber, &itemsJSON, &total, &status, &paymentRef, &mobile, &address, &customerName, &metaJSON, &created); err != nil {
 			return nil, err
 		}
 		var items []orders.Item
@@ -1297,6 +1481,7 @@ func (s *SQLStorage) ListOrdersByEmail(email string) ([]orders.Order, error) {
 		}
 		out = append(out, orders.Order{
 			ID:            id,
+			OrderNumber:   orderNumber,
 			CustomerEmail: email,
 			CustomerName:  customerName,
 			Items:         items,
@@ -1314,7 +1499,7 @@ func (s *SQLStorage) ListOrdersByEmail(email string) ([]orders.Order, error) {
 
 func (s *SQLStorage) LastOrderByEmail(email string) (orders.Order, bool, error) {
 	query := `
-		SELECT id, items_json, total, status, payment_ref, mobile, address, customer_name, metadata, created_at
+		SELECT id, order_number, items_json, total, status, payment_ref, mobile, address, customer_name, metadata, created_at
 		FROM orders WHERE customer_email = ?
 		ORDER BY created_at DESC
 		LIMIT 1
@@ -1322,7 +1507,7 @@ func (s *SQLStorage) LastOrderByEmail(email string) (orders.Order, bool, error) 
 	args := []any{email}
 	if s.vendor == "postgres" {
 		query = `
-			SELECT id, items_json, total, status, payment_ref, mobile, address, customer_name, metadata, created_at
+			SELECT id, order_number, items_json, total, status, payment_ref, mobile, address, customer_name, metadata, created_at
 			FROM orders WHERE customer_email = $1
 			ORDER BY created_at DESC
 			LIMIT 1
@@ -1331,6 +1516,7 @@ func (s *SQLStorage) LastOrderByEmail(email string) (orders.Order, bool, error) 
 	row := s.db.QueryRow(query, args...)
 	var (
 		id           int
+		orderNumber  int
 		itemsJSON    string
 		total        int
 		status       string
@@ -1341,7 +1527,7 @@ func (s *SQLStorage) LastOrderByEmail(email string) (orders.Order, bool, error) 
 		metaJSON     sql.NullString
 		created      time.Time
 	)
-	if err := row.Scan(&id, &itemsJSON, &total, &status, &paymentRef, &mobile, &address, &customerName, &metaJSON, &created); err != nil {
+	if err := row.Scan(&id, &orderNumber, &itemsJSON, &total, &status, &paymentRef, &mobile, &address, &customerName, &metaJSON, &created); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return orders.Order{}, false, nil
 		}
@@ -1355,6 +1541,7 @@ func (s *SQLStorage) LastOrderByEmail(email string) (orders.Order, bool, error) 
 	}
 	return orders.Order{
 		ID:            id,
+		OrderNumber:   orderNumber,
 		CustomerEmail: email,
 		CustomerName:  customerName,
 		Items:         items,
@@ -1377,9 +1564,24 @@ func (s *SQLStorage) UpdateOrderStatus(id int, status string) error {
 	return err
 }
 
+func (s *Server) sendOrderInvoiceEmail(order orders.Order) error {
+	if strings.TrimSpace(order.CustomerEmail) == "" {
+		return errors.New("order has no customer email")
+	}
+	orderReference := order.OrderNumber
+	if orderReference == 0 {
+		orderReference = order.ID
+	}
+	logoURL := "https://www.swayamvani.com/logo.jpeg"
+	body := mailer.CreateOrderInvoiceBody(logoURL, order)
+	_, err := mailer.SendMail(order.CustomerName, order.CustomerEmail,
+		fmt.Sprintf("Payment confirmed — order reference #%d", orderReference), body)
+	return err
+}
+
 func (s *SQLStorage) ListOrders(statuses []string) ([]orders.Order, error) {
 	base := `
-		SELECT id, customer_email, customer_name, items_json, total, status, payment_ref, mobile, address, metadata, created_at
+		SELECT id, order_number, customer_email, customer_name, items_json, total, status, payment_ref, mobile, address, metadata, created_at
 		FROM orders
 	`
 	var rows *sql.Rows
@@ -1411,6 +1613,7 @@ func (s *SQLStorage) ListOrders(statuses []string) ([]orders.Order, error) {
 	for rows.Next() {
 		var (
 			id           int
+			orderNumber  int
 			email        string
 			customerName string
 			itemsJSON    string
@@ -1422,7 +1625,7 @@ func (s *SQLStorage) ListOrders(statuses []string) ([]orders.Order, error) {
 			metaJSON     sql.NullString
 			created      time.Time
 		)
-		if err := rows.Scan(&id, &email, &customerName, &itemsJSON, &total, &statusVal, &paymentRef, &mobile, &address, &metaJSON, &created); err != nil {
+		if err := rows.Scan(&id, &orderNumber, &email, &customerName, &itemsJSON, &total, &statusVal, &paymentRef, &mobile, &address, &metaJSON, &created); err != nil {
 			return nil, err
 		}
 		var items []orders.Item
@@ -1433,6 +1636,7 @@ func (s *SQLStorage) ListOrders(statuses []string) ([]orders.Order, error) {
 		}
 		out = append(out, orders.Order{
 			ID:            id,
+			OrderNumber:   orderNumber,
 			CustomerEmail: email,
 			CustomerName:  customerName,
 			Items:         items,
@@ -1791,7 +1995,7 @@ func (s *Server) handleCustomerLogin(w http.ResponseWriter, r *http.Request) {
 		writeJSONError(w, http.StatusBadRequest, "invalid JSON payload")
 		return
 	}
-	fmt.Println("payload", payload)
+
 	payload.Email = strings.ToLower(strings.TrimSpace(payload.Email))
 	payload.Password = strings.TrimSpace(payload.Password)
 	if payload.Email == "" || payload.Password == "" {
@@ -1830,7 +2034,6 @@ func (s *Server) handleCustomerLogin(w http.ResponseWriter, r *http.Request) {
 	}
 	setCustomerSessionCookie(w, token)
 	shippingMobile, shippingAddress := s.latestShippingForCustomer(account.Email)
-	requiresUpdate := s.isPasswordResetRequired(account.Email)
 	writeJSON(w, http.StatusOK, map[string]any{
 		"status": "ok",
 		"customer": CustomerProfile{
@@ -1840,18 +2043,16 @@ func (s *Server) handleCustomerLogin(w http.ResponseWriter, r *http.Request) {
 			Mobile:    firstNonEmpty(account.Mobile, shippingMobile),
 			Address:   firstNonEmpty(account.Address, shippingAddress),
 		},
-		"updateRequired": requiresUpdate,
 	})
 }
 
 func (s *Server) handleCustomerForgotPassword(w http.ResponseWriter, r *http.Request) {
-	log.Printf("IN handleCustomerForgotPassword")
 	if r.Method != http.MethodPost {
 		writeJSONError(w, http.StatusMethodNotAllowed, "method not allowed")
 		return
 	}
 	var payload CustomerForgotPasswordRequest
-	if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
+	if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, 16*1024)).Decode(&payload); err != nil {
 		writeJSONError(w, http.StatusBadRequest, "invalid JSON payload")
 		return
 	}
@@ -1862,30 +2063,65 @@ func (s *Server) handleCustomerForgotPassword(w http.ResponseWriter, r *http.Req
 	}
 
 	account, ok := s.customerAccountByEmail(email)
-	if !ok {
-		writeJSONError(w, http.StatusBadRequest, "Email Id Not Found,Enter Valid Email Id")
-		return
+	if ok {
+		token, tokenHash, err := s.createPasswordResetToken(email)
+		if err != nil {
+			log.Printf("password reset token creation failed")
+		} else {
+			resetURL := s.publicBaseURL + "/?reset_token=" + token + "#reset-password"
+			select {
+			case s.passwordResetEmailJobs <- passwordResetEmailJob{Account: account, ResetURL: resetURL}:
+			default:
+				log.Printf("password reset email queue is full")
+				s.deletePasswordResetToken(email, tokenHash)
+			}
+		}
 	}
-
-	newPassword := generateTemporaryPassword()
-	if err := s.updateCustomerPassword(email, hashPassword(newPassword)); err != nil {
-		log.Printf("forgot password update: %v", err)
-		writeJSONError(w, http.StatusInternalServerError, "failed to reset password")
-		return
-	}
-	log.Printf("before send reset pass mail")
-	if err := s.sendPasswordResetEmail(account, newPassword); err != nil {
-		log.Printf("forgot password email: %v", err)
-		writeJSONError(w, http.StatusInternalServerError, "failed to send reset email")
-		return
-	}
-
-	s.markPasswordResetRequired(email)
 
 	writeJSON(w, http.StatusOK, map[string]any{
 		"status":  "ok",
-		"message": "password reset email sent",
+		"message": "If an account exists for that email, a password reset link will be sent.",
 	})
+}
+
+func (s *Server) handleCustomerResetPassword(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		writeJSONError(w, http.StatusMethodNotAllowed, "method not allowed")
+		return
+	}
+	var payload CustomerResetPasswordRequest
+	if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, 16*1024)).Decode(&payload); err != nil {
+		writeJSONError(w, http.StatusBadRequest, "invalid JSON payload")
+		return
+	}
+	password := strings.TrimSpace(payload.Password)
+	if len(password) < 6 {
+		writeJSONError(w, http.StatusBadRequest, "password must be at least 6 characters")
+		return
+	}
+	email, ok, err := s.consumePasswordResetToken(strings.TrimSpace(payload.Token))
+	if err != nil {
+		log.Printf("password reset token verification failed")
+		writeJSONError(w, http.StatusInternalServerError, "failed to reset password")
+		return
+	}
+	if !ok {
+		writeJSONError(w, http.StatusBadRequest, "reset link is invalid or expired; request a new one")
+		return
+	}
+	if err := s.updateCustomerPassword(email, hashPassword(password)); err != nil {
+		log.Printf("password reset update failed")
+		writeJSONError(w, http.StatusInternalServerError, "failed to reset password")
+		return
+	}
+	if account, exists := s.customerAccountByEmail(email); exists {
+		select {
+		case s.passwordResetEmailJobs <- passwordResetEmailJob{Account: account, PasswordChange: true}:
+		default:
+			log.Printf("password change notification queue is full")
+		}
+	}
+	writeJSON(w, http.StatusOK, map[string]string{"status": "ok", "message": "password updated"})
 }
 
 type CustomerUpdatePasswordRequest struct {
@@ -1923,7 +2159,6 @@ func (s *Server) handleCustomerUpdatePassword(w http.ResponseWriter, r *http.Req
 		writeJSONError(w, http.StatusInternalServerError, "failed to update password")
 		return
 	}
-	s.clearPasswordResetRequired(email)
 	writeJSON(w, http.StatusOK, map[string]any{
 		"status":  "ok",
 		"message": "password updated",
@@ -2034,7 +2269,6 @@ func (s *Server) handleCustomerProfile(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		setCustomerSessionCookie(w, token)
-		s.movePasswordResetRequirement(email, updatedEmail)
 	}
 
 	shippingMobile, shippingAddress := s.latestShippingForCustomer(updatedEmail)
@@ -2082,7 +2316,7 @@ func (s *Server) customerAccountByEmail(email string) (CustomerAccount, bool) {
 		if err == nil {
 			return acc, true
 		}
-		//return CustomerAccount{}, false
+		return CustomerAccount{}, false
 	} else {
 		s.customerMu.RLock()
 		acc, ok = s.customers[email]
@@ -2091,35 +2325,94 @@ func (s *Server) customerAccountByEmail(email string) (CustomerAccount, bool) {
 	return acc, ok
 }
 
-func (s *Server) markPasswordResetRequired(email string) {
+func (s *Server) createPasswordResetToken(email string) (string, string, error) {
+	raw := make([]byte, 32)
+	if _, err := rand.Read(raw); err != nil {
+		return "", "", err
+	}
+	token := hex.EncodeToString(raw)
+	digest := sha256.Sum256(raw)
+	tokenHash := hex.EncodeToString(digest[:])
+	expiresAt := time.Now().Add(30 * time.Minute)
+	if s.sqlStore != nil {
+		if err := s.sqlStore.SavePasswordResetToken(email, tokenHash, expiresAt); err != nil {
+			return "", "", err
+		}
+		return token, tokenHash, nil
+	}
+
 	s.passwordResetMu.Lock()
-	s.pendingPasswordReset[email] = true
-	s.passwordResetMu.Unlock()
+	defer s.passwordResetMu.Unlock()
+	for hash, record := range s.passwordResetTokens {
+		if !record.ExpiresAt.After(time.Now()) {
+			delete(s.passwordResetTokens, hash)
+			if s.resetTokenByEmail[record.Email] == hash {
+				delete(s.resetTokenByEmail, record.Email)
+			}
+		}
+	}
+	if previous := s.resetTokenByEmail[email]; previous != "" {
+		delete(s.passwordResetTokens, previous)
+	}
+	s.passwordResetTokens[tokenHash] = passwordResetToken{Email: email, ExpiresAt: expiresAt}
+	s.resetTokenByEmail[email] = tokenHash
+	return token, tokenHash, nil
 }
 
-func (s *Server) clearPasswordResetRequired(email string) {
-	s.passwordResetMu.Lock()
-	delete(s.pendingPasswordReset, email)
-	s.passwordResetMu.Unlock()
-}
-
-func (s *Server) movePasswordResetRequirement(oldEmail, newEmail string) {
-	if oldEmail == newEmail {
+func (s *Server) deletePasswordResetToken(email, tokenHash string) {
+	if s.sqlStore != nil {
+		if err := s.sqlStore.DeletePasswordResetToken(email, tokenHash); err != nil {
+			log.Printf("password reset token cleanup failed")
+		}
 		return
 	}
 	s.passwordResetMu.Lock()
-	if _, ok := s.pendingPasswordReset[oldEmail]; ok {
-		delete(s.pendingPasswordReset, oldEmail)
-		s.pendingPasswordReset[newEmail] = true
+	delete(s.passwordResetTokens, tokenHash)
+	if s.resetTokenByEmail[email] == tokenHash {
+		delete(s.resetTokenByEmail, email)
 	}
 	s.passwordResetMu.Unlock()
 }
 
-func (s *Server) isPasswordResetRequired(email string) bool {
-	s.passwordResetMu.RLock()
-	_, ok := s.pendingPasswordReset[email]
-	s.passwordResetMu.RUnlock()
-	return ok
+func (s *Server) consumePasswordResetToken(token string) (string, bool, error) {
+	raw, err := hex.DecodeString(token)
+	if err != nil || len(raw) != 32 {
+		return "", false, nil
+	}
+	digest := sha256.Sum256(raw)
+	tokenHash := hex.EncodeToString(digest[:])
+	if s.sqlStore != nil {
+		return s.sqlStore.ConsumePasswordResetToken(tokenHash, time.Now())
+	}
+
+	s.passwordResetMu.Lock()
+	defer s.passwordResetMu.Unlock()
+	record, exists := s.passwordResetTokens[tokenHash]
+	if !exists {
+		return "", false, nil
+	}
+	delete(s.passwordResetTokens, tokenHash)
+	if s.resetTokenByEmail[record.Email] == tokenHash {
+		delete(s.resetTokenByEmail, record.Email)
+	}
+	if !record.ExpiresAt.After(time.Now()) {
+		return "", false, nil
+	}
+	return record.Email, true, nil
+}
+
+func (s *Server) runPasswordResetEmailWorker() {
+	for job := range s.passwordResetEmailJobs {
+		var err error
+		if job.PasswordChange {
+			err = s.sendPasswordChangedEmail(job.Account)
+		} else {
+			err = s.sendPasswordResetEmail(job.Account, job.ResetURL)
+		}
+		if err != nil {
+			log.Printf("password account email delivery failed")
+		}
+	}
 }
 
 func (s *Server) updateCustomerPassword(email, hash string) error {
@@ -2160,11 +2453,18 @@ func (s *Server) updateCustomerProfile(oldEmail string, updated CustomerAccount)
 	return saveCustomerSnapshot(s.customerDataPath, snapshot)
 }
 
-func (s *Server) sendPasswordResetEmail(account CustomerAccount, password string) error {
-	log.Printf("in send password reset mail")
-	swayamVaniLogo := "https://swayamvani.onrender.com/logo.jpeg"
+func (s *Server) sendPasswordResetEmail(account CustomerAccount, resetURL string) error {
+	swayamVaniLogo := "https://www.swayamvani.com/logo.jpeg"
 	subject := "Swayamvani password reset"
-	body := mailer.CreatePasswordResetBody(swayamVaniLogo, account.Name, account.Email, password)
+	body := mailer.CreatePasswordResetLinkBody(swayamVaniLogo, account.Name, account.Email, resetURL)
+	_, err := mailer.SendMail(account.Name, account.Email, subject, body)
+	return err
+}
+
+func (s *Server) sendPasswordChangedEmail(account CustomerAccount) error {
+	swayamVaniLogo := "https://www.swayamvani.com/logo.jpeg"
+	subject := "Your Swayamvani password was changed"
+	body := mailer.CreatePasswordChangedBody(swayamVaniLogo, account.Name, account.Email, "support@swayamvani.com")
 	_, err := mailer.SendMail(account.Name, account.Email, subject, body)
 	return err
 }
@@ -2255,6 +2555,34 @@ func (s *Server) handleAdminOrderStatus(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
+	var targetOrder orders.Order
+	foundOrder := false
+	if s.sqlStore != nil {
+		list, err := s.sqlStore.ListOrders(nil)
+		if err != nil {
+			writeJSONError(w, http.StatusInternalServerError, "failed to load order")
+			return
+		}
+		for _, order := range list {
+			if order.ID == id {
+				targetOrder, foundOrder = order, true
+				break
+			}
+		}
+	} else {
+		for _, order := range s.ordersStore.ListAll() {
+			if order.ID == id {
+				targetOrder, foundOrder = order, true
+				break
+			}
+		}
+	}
+	if !foundOrder {
+		writeJSONError(w, http.StatusNotFound, "order not found")
+		return
+	}
+	shouldSendInvoice := strings.EqualFold(payload.Status, "confirmed") && !strings.EqualFold(targetOrder.Status, "confirmed")
+
 	if s.sqlStore != nil {
 		if err := s.sqlStore.UpdateOrderStatus(id, payload.Status); err != nil {
 			writeJSONError(w, http.StatusInternalServerError, "failed to update order")
@@ -2271,7 +2599,17 @@ func (s *Server) handleAdminOrderStatus(w http.ResponseWriter, r *http.Request) 
 		}
 	}
 
-	writeJSON(w, http.StatusOK, map[string]string{"status": "ok"})
+	response := map[string]any{"status": "ok", "invoice_email_sent": false}
+	if shouldSendInvoice {
+		targetOrder.Status = "confirmed"
+		if err := s.sendOrderInvoiceEmail(targetOrder); err != nil {
+			log.Printf("order invoice email failed for order %d: %v", targetOrder.ID, err)
+			response["invoice_email_error"] = "Order confirmed, but the invoice email could not be sent. Check the mail service and retry the confirmation."
+		} else {
+			response["invoice_email_sent"] = true
+		}
+	}
+	writeJSON(w, http.StatusOK, response)
 }
 
 func (s *Server) handleAdminProducts(w http.ResponseWriter, r *http.Request) {
@@ -3024,19 +3362,6 @@ func (s *Server) deleteOfferLocked(id int) error {
 func hashPassword(password string) string {
 	sum := sha256.Sum256([]byte(password))
 	return hex.EncodeToString(sum[:])
-}
-
-func generateTemporaryPassword() string {
-	const charset = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789"
-	const length = 10
-	buf := make([]byte, length)
-	if _, err := rand.Read(buf); err != nil {
-		return "Swayamvani123"
-	}
-	for i := range buf {
-		buf[i] = charset[int(buf[i])%len(charset)]
-	}
-	return string(buf)
 }
 
 func (s *Server) customerEmailFromRequest(r *http.Request) (string, bool) {

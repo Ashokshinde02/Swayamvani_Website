@@ -102,44 +102,32 @@ func (s *Server) handleCheckout(w http.ResponseWriter, r *http.Request) {
 		}
 		return
 	}
-	lines := make([]string, 0, len(payload.Items))
-	for _, item := range orderItems {
-		name := item.Name
-		img := strings.TrimSpace(item.Image)
-		label := fmt.Sprintf("%s x %d (Rs %d)", name, item.Quantity, item.Price)
-		if img != "" {
-			lines = append(lines, fmt.Sprintf("%s\nImage: %s", label, publicAssetURL(img)))
-		} else {
-			lines = append(lines, label)
-		}
-	}
 	order, err := s.createOrder(email, accountName, orderItems, total, "pending", "", payload.Mobile, payload.Address, map[string]any{"channel": "whatsapp"})
 	if err != nil {
 		writeJSONError(w, http.StatusInternalServerError, "failed to save order")
 		return
 	}
-	brandLine := "Swayamvani Harmoniums\nhttps://www.swayamvani.com\nLogo: https://www.swayamvani.com/logo.jpeg"
 	message := fmt.Sprintf(
-		"%s\n\nNew order\nOrder #: %d\nName: %s\nEmail: %s\nMobile: %s\nAddress: %s\n\nItems:\n%s\n\nTotal: Rs %d",
-		brandLine,
-		order.ID,
-		accountName,
-		email,
-		payload.Mobile,
-		payload.Address,
-		strings.Join(lines, "\n\n"),
-		total,
+		"Swayamvani Harmoniums\nhttps://www.swayamvani.com\nLogo: https://www.swayamvani.com/logo.jpeg\n\nNew order\nOrder reference: #%d\nName: %s\nEmail: %s\nMobile: %s\nAddress: %s\n\nItems:",
+		order.OrderNumber,
+		order.CustomerName,
+		order.CustomerEmail,
+		order.Mobile,
+		order.Address,
 	)
+	for _, item := range order.Items {
+		message += fmt.Sprintf("\n%s x %d (Rs %d)", item.Name, item.Quantity, item.Price)
+		if item.Image != "" {
+			imageURL := item.Image
+			if strings.HasPrefix(imageURL, "/") {
+				imageURL = "https://www.swayamvani.com" + imageURL
+			}
+			message += "\nImage: " + imageURL
+		}
+	}
+	message += fmt.Sprintf("\n\nTotal: Rs %d", order.Total)
 	waURL := "https://wa.me/917020705968?text=" + url.QueryEscape(message)
 	writeJSON(w, http.StatusOK, map[string]any{"whatsapp_url": waURL, "order": order})
-}
-
-func publicAssetURL(asset string) string {
-	asset = strings.TrimSpace(asset)
-	if asset == "" || strings.HasPrefix(asset, "https://") || strings.HasPrefix(asset, "http://") {
-		return asset
-	}
-	return "https://www.swayamvani.com/" + strings.TrimLeft(asset, "/")
 }
 
 func (s *Server) handleCreateRazorpayOrder(w http.ResponseWriter, r *http.Request) {

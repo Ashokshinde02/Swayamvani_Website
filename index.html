@@ -3,6 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="referrer" content="no-referrer" />
     <title>स्वयंवाणी Harmoniums | Harmoniums for Riyaaz</title>
     <meta
       name="description"
@@ -15,18 +16,21 @@
       href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;700&family=Manrope:wght@400;600;700&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="styles.css?v=20261113profilemenu2" />
+    <link rel="stylesheet" href="styles.css?v=20261114brandtagline1" />
   </head>
   <body>
     <header class="site-header">
       <div class="container nav-wrap">
         <a href="#" class="brand" aria-label="स्वयंवाणी Harmoniums home">
           <img src="logo.jpeg" alt="स्वयंवाणी Harmoniums" class="brand-logo" onerror="this.style.display='none'" />
-          <span id="brandText" class="brand-text">स्वयंवाणी</span>
+          <span class="brand-copy">
+            <span id="brandText" class="brand-text">स्वयंवाणी</span>
+            <span class="brand-tagline" data-i18n="brandTagline">Destination for every musical journey</span>
+          </span>
         </a>
         <nav class="main-nav" aria-label="Main navigation">
           <a href="#products" data-i18n="navProducts">Harmoniums</a>
-          <a href="#about" data-i18n="navAbout">Our approach</a>
+          <a href="#about" data-i18n="navAbout">About</a>
           <a href="#contact" data-i18n="navContact">Contact</a>
           <!-- Admin link hidden on customer-facing site -->
         </nav>
@@ -226,6 +230,7 @@
         <button id="closeCart" class="close-cart-icon" aria-label="Close cart">×</button>
       </div>
       <p id="cartDiscountHint" class="cart-alert" aria-live="polite"></p>
+      <p id="cartOrderReference" class="cart-alert" aria-live="polite" hidden></p>
   <div class="cart-body-grid">
         <div id="cartItems" class="cart-items"></div>
         <div class="cart-summary">
@@ -349,7 +354,7 @@
             <form id="customerForgotForm" class="inquiry-form customer-form hidden">
               <h4 data-i18n="customerForgotPassword">Forgot password?</h4>
               <p class="form-footnote" data-i18n="customerForgotDesc">
-                Enter the email tied to your account and we will email you a temporary password.
+                Enter your email and, if an account exists, we’ll send a secure password reset link.
               </p>
               <label>
                 <span data-i18n="labelEmail">Email</span>
@@ -358,6 +363,39 @@
               <button type="submit" data-i18n="customerSendReset">Send reset instructions</button>
               <p id="customerForgotStatus" class="form-status customer-auth-status" aria-live="polite"></p>
               <a href="#" id="backToLoginFromForgot" class="text-link" data-i18n="customerBackToLogin">Back to login</a>
+            </form>
+            <form id="customerResetForm" class="inquiry-form customer-form hidden">
+              <h4 data-i18n="customerResetTitle">Set a new password</h4>
+              <p class="form-footnote" data-i18n="customerResetDesc">Choose a new password for your account.</p>
+              <label>
+                <span data-i18n="customerPassword">New password</span>
+                <span class="password-field">
+                  <input type="password" id="customerResetPassword" minlength="6" required />
+                  <button type="button" class="password-toggle" data-target="customerResetPassword" onclick="togglePasswordById('customerResetPassword', this)" aria-label="Show password" aria-pressed="false">
+                    <svg class="password-eye" viewBox="0 0 24 24" aria-hidden="true">
+                      <path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6-10-6-10-6z" fill="none" stroke="currentColor" stroke-width="2"/>
+                      <circle cx="12" cy="12" r="3" fill="none" stroke="currentColor" stroke-width="2"/>
+                      <path class="password-eye-slash" d="M4 20L20 4" fill="none" stroke="currentColor" stroke-width="2"/>
+                    </svg>
+                  </button>
+                </span>
+              </label>
+              <label>
+                <span data-i18n="customerConfirmPassword">Confirm password</span>
+                <span class="password-field">
+                  <input type="password" id="customerResetConfirmPassword" minlength="6" required />
+                  <button type="button" class="password-toggle" data-target="customerResetConfirmPassword" onclick="togglePasswordById('customerResetConfirmPassword', this)" aria-label="Show password" aria-pressed="false">
+                    <svg class="password-eye" viewBox="0 0 24 24" aria-hidden="true">
+                      <path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6-10-6-10-6z" fill="none" stroke="currentColor" stroke-width="2"/>
+                      <circle cx="12" cy="12" r="3" fill="none" stroke="currentColor" stroke-width="2"/>
+                      <path class="password-eye-slash" d="M4 20L20 4" fill="none" stroke="currentColor" stroke-width="2"/>
+                    </svg>
+                  </button>
+                </span>
+              </label>
+              <button type="submit" data-i18n="customerResetSubmit">Reset password</button>
+              <p id="customerResetStatus" class="form-status customer-auth-status" aria-live="polite"></p>
+              <a href="#" id="backToLoginFromReset" class="text-link" data-i18n="customerBackToLogin">Back to login</a>
             </form>
             <form id="customerUpdateForm" class="inquiry-form customer-form hidden">
               <h4 data-i18n="customerUpdatePassword">Update password</h4>
@@ -497,8 +535,8 @@
     </footer>
 
     <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
-    <script src="script.js?v=20261113profilemenu2"></script>
+    <script src="script.js?v=20261114passwordreset1"></script>
     <script src="inventory.js?v=20261112harmonium1"></script>
-    <script src="assets/orders/orders.js?v=20260322v1"></script>
+    <script src="assets/orders/orders.js?v=20261114orderref1"></script>
   </body>
 </html>
