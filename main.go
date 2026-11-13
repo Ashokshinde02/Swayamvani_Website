@@ -17,6 +17,7 @@ import (
 	"strconv"
 	"strings"
 	"swayamvani/orders"
+	"swayamvani/ratelimit"
 	"sync"
 	"time"
 	"unicode/utf8"
@@ -254,26 +255,27 @@ func main() {
 	}
 
 	mux := http.NewServeMux()
+	rateLimiter := ratelimit.New(ratelimit.ConfigFromEnv())
 	mux.HandleFunc("/healthz", s.handleHealthz)
 	mux.HandleFunc("/api/products", s.handleProducts)
 	mux.HandleFunc("/api/videos", s.handleVideos)
-	mux.HandleFunc("/api/inquiry", s.handleInquiry)
-	mux.HandleFunc("/api/checkout", s.handleCheckout)
-	mux.HandleFunc("/api/payment/razorpay/order", s.handleCreateRazorpayOrder)
-	mux.HandleFunc("/api/admin/login", s.handleAdminLogin)
+	mux.Handle("/api/inquiry", rateLimiter.Wrap("inquiry", http.HandlerFunc(s.handleInquiry)))
+	mux.Handle("/api/checkout", rateLimiter.Wrap("checkout", http.HandlerFunc(s.handleCheckout)))
+	mux.Handle("/api/payment/razorpay/order", rateLimiter.Wrap("razorpay_order", http.HandlerFunc(s.handleCreateRazorpayOrder)))
+	mux.Handle("/api/admin/login", rateLimiter.Wrap("admin_login", http.HandlerFunc(s.handleAdminLogin)))
 	mux.HandleFunc("/api/admin/logout", s.handleAdminLogout)
 	mux.HandleFunc("/api/admin/me", s.handleAdminMe)
-	mux.HandleFunc("/api/customer/register", s.handleCustomerRegister)
-	mux.HandleFunc("/api/customer/login", s.handleCustomerLogin)
-	mux.HandleFunc("/api/customer/forgot-password", s.handleCustomerForgotPassword)
+	mux.Handle("/api/customer/register", rateLimiter.Wrap("customer_register", http.HandlerFunc(s.handleCustomerRegister)))
+	mux.Handle("/api/customer/login", rateLimiter.Wrap("customer_login", http.HandlerFunc(s.handleCustomerLogin)))
+	mux.Handle("/api/customer/forgot-password", rateLimiter.Wrap("password_reset", http.HandlerFunc(s.handleCustomerForgotPassword)))
 	mux.HandleFunc("/api/customer/logout", s.handleCustomerLogout)
-	mux.HandleFunc("/api/customer/update-password", s.handleCustomerUpdatePassword)
+	mux.Handle("/api/customer/update-password", rateLimiter.Wrap("password_update", http.HandlerFunc(s.handleCustomerUpdatePassword)))
 	mux.HandleFunc("/api/customer/me", s.handleCustomerMe)
 	mux.HandleFunc("/api/customer/profile", s.handleCustomerProfile)
 	mux.HandleFunc("/api/customer/orders", s.handleCustomerOrders)
 	mux.HandleFunc("/api/offers", s.handleGetOffers)
 	mux.HandleFunc("/api/delivery", s.handleGetDeliveryInfo)
-	mux.HandleFunc("/api/coupon/use", s.handleCouponUse)
+	mux.Handle("/api/coupon/use", rateLimiter.Wrap("coupon_use", http.HandlerFunc(s.handleCouponUse)))
 	mux.HandleFunc("/api/admin/offers", s.handleAdminOffers)
 	mux.HandleFunc("/api/admin/delivery", s.handleAdminDeliveryInfo)
 	mux.HandleFunc("/api/admin/orders", s.handleAdminOrders)
