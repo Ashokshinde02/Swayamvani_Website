@@ -562,6 +562,10 @@ const profileMenu = document.getElementById("profileMenu");
 const profileDropdown = document.getElementById("profileDropdown");
 const dropdownOrders = document.getElementById("dropdownOrders");
 const dropdownLogout = document.getElementById("dropdownLogout");
+// Keep the menu outside the horizontally scrollable mobile header so it cannot be clipped.
+if (profileDropdown && profileDropdown.parentElement !== document.body) {
+  document.body.appendChild(profileDropdown);
+}
 const navLinks = document.querySelectorAll(".main-nav a, .brand, .cta");
 const profileEditBtn = document.getElementById("profileEditBtn");
 const profileModal = document.getElementById("profileModal");
@@ -1896,6 +1900,7 @@ function renderCustomerState() {
 }
 
 function renderCustomerProfile() {
+  if (!state.customer) closeProfileDropdown();
   if (customerProfileToggle) {
     customerProfileToggle.hidden = !state.customer;
     customerProfileToggle.setAttribute("aria-expanded", String(!!state.customer && isCustomerProfileVisible));
@@ -2205,6 +2210,18 @@ document.addEventListener("keydown", (event) => {
 let profileDropdownTimeout = null;
 function openProfileDropdown() {
   if (!profileMenu || !profileDropdown) return;
+  const triggerRect = customerProfileToggle?.getBoundingClientRect();
+  profileDropdown.classList.add("open");
+  if (triggerRect) {
+    const menuWidth = profileDropdown.offsetWidth;
+    const left = Math.min(Math.max(8, triggerRect.left), window.innerWidth - menuWidth - 8);
+    let top = triggerRect.bottom + 8;
+    if (top + profileDropdown.offsetHeight > window.innerHeight - 8) {
+      top = Math.max(8, triggerRect.top - profileDropdown.offsetHeight - 8);
+    }
+    profileDropdown.style.setProperty("--profile-dropdown-top", `${top}px`);
+    profileDropdown.style.setProperty("--profile-dropdown-left", `${left}px`);
+  }
   profileMenu.classList.add("open");
   profileDropdown.setAttribute("aria-hidden", "false");
   customerProfileToggle?.setAttribute("aria-expanded", "true");
@@ -2212,6 +2229,7 @@ function openProfileDropdown() {
 function closeProfileDropdown() {
   if (!profileMenu || !profileDropdown) return;
   profileMenu.classList.remove("open");
+  profileDropdown.classList.remove("open");
   profileDropdown.setAttribute("aria-hidden", "true");
   if (profileDropdown.contains(document.activeElement)) {
     customerProfileToggle?.focus();
@@ -2225,6 +2243,12 @@ profileMenu?.addEventListener("mouseenter", () => {
 profileMenu?.addEventListener("mouseleave", () => {
   profileDropdownTimeout = setTimeout(closeProfileDropdown, 120);
 });
+profileDropdown?.addEventListener("mouseenter", () => {
+  if (profileDropdownTimeout) clearTimeout(profileDropdownTimeout);
+});
+profileDropdown?.addEventListener("mouseleave", () => {
+  profileDropdownTimeout = setTimeout(closeProfileDropdown, 120);
+});
 customerProfileToggle?.addEventListener("click", (e) => {
   e.stopPropagation();
   if (profileMenu.classList.contains("open")) {
@@ -2235,10 +2259,16 @@ customerProfileToggle?.addEventListener("click", (e) => {
 });
 document.addEventListener("click", (e) => {
   if (!profileMenu) return;
-  if (!profileMenu.contains(e.target)) {
+  if (!profileMenu.contains(e.target) && !profileDropdown?.contains(e.target)) {
     closeProfileDropdown();
   }
 });
+window.addEventListener("resize", () => {
+  if (profileMenu?.classList.contains("open")) openProfileDropdown();
+});
+window.addEventListener("scroll", () => {
+  if (profileMenu?.classList.contains("open")) closeProfileDropdown();
+}, { passive: true });
 
 dropdownOrders?.addEventListener("click", () => {
   closeProfileDropdown();

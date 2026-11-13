@@ -239,9 +239,9 @@ h3 {
 }
 
 .profile-dropdown {
-  position: absolute;
-  top: calc(100% + 6px);
-  right: 0;
+  position: fixed;
+  top: var(--profile-dropdown-top, 8px);
+  left: var(--profile-dropdown-left, 8px);
   min-width: 160px;
   background: #fffaf3;
   border: 1px solid #e6d3bf;
@@ -251,13 +251,14 @@ h3 {
   display: none;
   flex-direction: column;
   gap: 0.25rem;
-  z-index: 50;
+  z-index: 1000;
 }
 
 .profile-dropdown button {
   border: none;
   background: #fff;
   border-radius: 10px;
+  min-height: 44px;
   padding: 0.55rem 0.75rem;
   text-align: left;
   font-weight: 700;
@@ -271,7 +272,7 @@ h3 {
   color: var(--accent-dark);
 }
 
-.profile-menu.open .profile-dropdown {
+.profile-dropdown.open {
   display: flex;
 }
 
