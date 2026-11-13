@@ -1,7 +1,6 @@
 package main
 
 import (
-	"bytes"
 	"crypto/rand"
 	"crypto/sha256"
 	"crypto/subtle"
@@ -10,10 +9,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
 	"log"
 	"net/http"
-	"net/url"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -22,6 +19,7 @@ import (
 	"swayamvani/orders"
 	"sync"
 	"time"
+	"unicode/utf8"
 
 	mailer "swayamvani/mailer"
 
@@ -30,14 +28,15 @@ import (
 )
 
 type Product struct {
-	ID           int      `json:"id"`
-	Name         string   `json:"name"`
-	Category     string   `json:"category"`
-	Price        int      `json:"price"`
-	Details      string   `json:"details"`
-	Images       []string `json:"images"`
-	VideoURL     string   `json:"video_url"`
-	Availability string   `json:"availability"`
+	ID            int      `json:"id"`
+	Name          string   `json:"name"`
+	Category      string   `json:"category"`
+	Price         int      `json:"price"`
+	Details       string   `json:"details"`
+	PlayingStyles []string `json:"playing_styles"`
+	Images        []string `json:"images"`
+	VideoURL      string   `json:"video_url"`
+	Availability  string   `json:"availability"`
 }
 
 type Video struct {
@@ -60,16 +59,11 @@ type InquiryRequest struct {
 	Message string `json:"message"`
 }
 
-type CheckoutItem struct {
-	Name  string `json:"name"`
-	Price int    `json:"price"`
-	Image string `json:"image"`
-}
-
-type CheckoutRequest struct {
-	Items   []CheckoutItem `json:"items"`
-	Mobile  string         `json:"mobile"`
-	Address string         `json:"address"`
+type DeliveryInfo struct {
+	ShippingCharges      string `json:"shippingCharges"`
+	ServiceableLocations string `json:"serviceableLocations"`
+	DispatchTime         string `json:"dispatchTime"`
+	PackagingDetails     string `json:"packagingDetails"`
 }
 
 type OfferConfig struct {
@@ -104,13 +98,14 @@ type OffersFile struct {
 }
 
 type ProductInput struct {
-	Name         string   `json:"name"`
-	Category     string   `json:"category"`
-	Price        int      `json:"price"`
-	Details      string   `json:"details"`
-	Images       []string `json:"images"`
-	VideoURL     string   `json:"video_url"`
-	Availability string   `json:"availability"`
+	Name          string   `json:"name"`
+	Category      string   `json:"category"`
+	Price         int      `json:"price"`
+	Details       string   `json:"details"`
+	PlayingStyles []string `json:"playing_styles"`
+	Images        []string `json:"images"`
+	VideoURL      string   `json:"video_url"`
+	Availability  string   `json:"availability"`
 }
 
 type VideoInput struct {
@@ -153,16 +148,6 @@ type CustomerProfile struct {
 	CreatedAt string `json:"created_at"`
 	Mobile    string `json:"mobile,omitempty"`
 	Address   string `json:"address,omitempty"`
-}
-
-type RazorpayOrderRequest struct {
-	Items []CheckoutItem `json:"items"`
-}
-
-type RazorpayOrderResponse struct {
-	ID       string `json:"id"`
-	Amount   int    `json:"amount"`
-	Currency string `json:"currency"`
 }
 
 type Storage interface {
@@ -208,6 +193,9 @@ type Server struct {
 	offerList            OffersFile
 	offerMu              sync.RWMutex
 	offerConfigPath      string
+	deliveryInfo         DeliveryInfo
+	deliveryInfoPath     string
+	deliveryMu           sync.RWMutex
 	razorpayKeyID        string
 	razorpayKeySecret    string
 	sessionSecret        []byte
@@ -243,6 +231,7 @@ func main() {
 		customerDataPath:     filepath.Join("data", "customers.json"),
 		ordersStore:          orders.NewStore(filepath.Join("data")),
 		offerConfigPath:      filepath.Join("data", "offers.json"),
+		deliveryInfoPath:     filepath.Join("data", "delivery.json"),
 		razorpayKeyID:        strings.TrimSpace(os.Getenv("RAZORPAY_KEY_ID")),
 		razorpayKeySecret:    strings.TrimSpace(os.Getenv("RAZORPAY_KEY_SECRET")),
 		sessionSecret:        loadSessionSecret(),
@@ -253,6 +242,9 @@ func main() {
 	}
 	if err := s.loadOffers(); err != nil {
 		log.Printf("warning: failed to load offers file: %v", err)
+	}
+	if err := s.loadDeliveryInfo(); err != nil {
+		log.Printf("warning: failed to load delivery info: %v", err)
 	}
 	if err := s.loadCustomers(); err != nil {
 		log.Printf("warning: failed to load customers: %v", err)
@@ -280,8 +272,10 @@ func main() {
 	mux.HandleFunc("/api/customer/profile", s.handleCustomerProfile)
 	mux.HandleFunc("/api/customer/orders", s.handleCustomerOrders)
 	mux.HandleFunc("/api/offers", s.handleGetOffers)
+	mux.HandleFunc("/api/delivery", s.handleGetDeliveryInfo)
 	mux.HandleFunc("/api/coupon/use", s.handleCouponUse)
 	mux.HandleFunc("/api/admin/offers", s.handleAdminOffers)
+	mux.HandleFunc("/api/admin/delivery", s.handleAdminDeliveryInfo)
 	mux.HandleFunc("/api/admin/orders", s.handleAdminOrders)
 	mux.HandleFunc("/api/admin/products", s.handleAdminProducts)
 	mux.HandleFunc("/api/admin/products/", s.handleAdminProductByID)
@@ -469,14 +463,15 @@ func (m *MemoryStorage) CreateProduct(in ProductInput) (Product, error) {
 	images := make([]string, len(in.Images))
 	copy(images, in.Images)
 	p := Product{
-		ID:           m.nextProduct,
-		Name:         in.Name,
-		Category:     in.Category,
-		Price:        in.Price,
-		Details:      in.Details,
-		Images:       images,
-		VideoURL:     in.VideoURL,
-		Availability: in.Availability,
+		ID:            m.nextProduct,
+		Name:          in.Name,
+		Category:      in.Category,
+		Price:         in.Price,
+		Details:       in.Details,
+		PlayingStyles: append([]string(nil), in.PlayingStyles...),
+		Images:        images,
+		VideoURL:      in.VideoURL,
+		Availability:  in.Availability,
 	}
 	m.nextProduct++
 	m.products = append(m.products, p)
@@ -492,6 +487,7 @@ func (m *MemoryStorage) UpdateProduct(id int, in ProductInput) (Product, error) 
 			m.products[i].Category = in.Category
 			m.products[i].Price = in.Price
 			m.products[i].Details = in.Details
+			m.products[i].PlayingStyles = append([]string(nil), in.PlayingStyles...)
 			m.products[i].Images = make([]string, len(in.Images))
 			copy(m.products[i].Images, in.Images)
 			m.products[i].VideoURL = in.VideoURL
@@ -556,11 +552,20 @@ func schemaQueries(vendor string) []string {
 				images_json TEXT NOT NULL DEFAULT '[]',
 				video_url TEXT NOT NULL DEFAULT '',
 				availability TEXT NOT NULL DEFAULT 'available',
+				playing_styles_json TEXT NOT NULL DEFAULT '[]',
 				created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+			)`,
+			`CREATE TABLE IF NOT EXISTS delivery_settings (
+				id INTEGER PRIMARY KEY CHECK (id = 1),
+				shipping_charges TEXT NOT NULL DEFAULT '',
+				serviceable_locations TEXT NOT NULL DEFAULT '',
+				dispatch_time TEXT NOT NULL DEFAULT '',
+				packaging_details TEXT NOT NULL DEFAULT ''
 			)`,
 			`ALTER TABLE products ADD COLUMN IF NOT EXISTS images_json TEXT NOT NULL DEFAULT '[]'`,
 			`ALTER TABLE products ADD COLUMN IF NOT EXISTS video_url TEXT NOT NULL DEFAULT ''`,
 			`ALTER TABLE products ADD COLUMN IF NOT EXISTS availability TEXT NOT NULL DEFAULT 'available'`,
+			`ALTER TABLE products ADD COLUMN IF NOT EXISTS playing_styles_json TEXT NOT NULL DEFAULT '[]'`,
 			`CREATE TABLE IF NOT EXISTS videos (
 				id SERIAL PRIMARY KEY,
 				title TEXT NOT NULL,
@@ -632,7 +637,15 @@ func schemaQueries(vendor string) []string {
 			images_json TEXT NOT NULL,
 			video_url VARCHAR(255) NOT NULL DEFAULT '',
 			availability VARCHAR(32) NOT NULL DEFAULT 'available',
+			playing_styles_json TEXT NULL,
 			created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+		)`,
+		`CREATE TABLE IF NOT EXISTS delivery_settings (
+			id INT PRIMARY KEY,
+			shipping_charges VARCHAR(1200) NOT NULL DEFAULT '',
+			serviceable_locations VARCHAR(1200) NOT NULL DEFAULT '',
+			dispatch_time VARCHAR(1200) NOT NULL DEFAULT '',
+			packaging_details VARCHAR(1200) NOT NULL DEFAULT ''
 		)`,
 		`CREATE TABLE IF NOT EXISTS videos (
 			id INT AUTO_INCREMENT PRIMARY KEY,
@@ -656,8 +669,8 @@ func schemaQueries(vendor string) []string {
 					address VARCHAR(512) NOT NULL DEFAULT '',
 					created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 				)`,
-		`ALTER TABLE customers ADD COLUMN IF NOT EXISTS mobile VARCHAR(32) NOT NULL DEFAULT ''`,
-		`ALTER TABLE customers ADD COLUMN IF NOT EXISTS address VARCHAR(512) NOT NULL DEFAULT ''`,
+		`ALTER TABLE customers ADD COLUMN mobile VARCHAR(32) NOT NULL DEFAULT ''`,
+		`ALTER TABLE customers ADD COLUMN address VARCHAR(512) NOT NULL DEFAULT ''`,
 		`CREATE TABLE IF NOT EXISTS orders (
 				id INT AUTO_INCREMENT PRIMARY KEY,
 				customer_email VARCHAR(255) NOT NULL,
@@ -667,16 +680,17 @@ func schemaQueries(vendor string) []string {
 				status VARCHAR(32) NOT NULL,
 				payment_ref VARCHAR(255) NOT NULL DEFAULT '',
 				mobile VARCHAR(32) NOT NULL DEFAULT '',
-				address TEXT NOT NULL DEFAULT '',
+				address VARCHAR(2048) NOT NULL DEFAULT '',
 				metadata JSON NULL,
 				created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
 				INDEX idx_orders_customer_email (customer_email)
 			)`,
 		`CREATE INDEX idx_orders_customer_email ON orders(customer_email)`,
-		`ALTER TABLE products ADD COLUMN IF NOT EXISTS availability VARCHAR(32) NOT NULL DEFAULT 'available'`,
-		`ALTER TABLE orders ADD COLUMN IF NOT EXISTS mobile VARCHAR(32) NOT NULL DEFAULT ''`,
-		`ALTER TABLE orders ADD COLUMN IF NOT EXISTS address TEXT NOT NULL DEFAULT ''`,
-		`ALTER TABLE orders ADD COLUMN IF NOT EXISTS customer_name VARCHAR(255) NOT NULL DEFAULT ''`,
+		`ALTER TABLE products ADD COLUMN availability VARCHAR(32) NOT NULL DEFAULT 'available'`,
+		`ALTER TABLE products ADD COLUMN playing_styles_json TEXT NULL`,
+		`ALTER TABLE orders ADD COLUMN mobile VARCHAR(32) NOT NULL DEFAULT ''`,
+		`ALTER TABLE orders ADD COLUMN address VARCHAR(2048) NOT NULL DEFAULT ''`,
+		`ALTER TABLE orders ADD COLUMN customer_name VARCHAR(255) NOT NULL DEFAULT ''`,
 		`CREATE TABLE IF NOT EXISTS offers (
 				id INT AUTO_INCREMENT PRIMARY KEY,
 				active BOOLEAN NOT NULL DEFAULT FALSE,
@@ -693,8 +707,8 @@ func schemaQueries(vendor string) []string {
 			coupon_enabled BOOLEAN NOT NULL DEFAULT TRUE,
 			created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 		)`,
-		`ALTER TABLE offers ADD COLUMN IF NOT EXISTS coupon_enabled BOOLEAN NOT NULL DEFAULT TRUE`,
-		`ALTER TABLE offers ADD COLUMN IF NOT EXISTS discount_percent INT NOT NULL DEFAULT 10`,
+		`ALTER TABLE offers ADD COLUMN coupon_enabled BOOLEAN NOT NULL DEFAULT TRUE`,
+		`ALTER TABLE offers ADD COLUMN discount_percent INT NOT NULL DEFAULT 10`,
 	}
 }
 
@@ -801,7 +815,7 @@ func (s *SQLStorage) seedVideos() error {
 }
 
 func (s *SQLStorage) ListProducts() ([]Product, error) {
-	rows, err := s.db.Query("SELECT id, name, category, price, details, images_json, video_url, availability FROM products ORDER BY id")
+	rows, err := s.db.Query("SELECT id, name, category, price, details, images_json, video_url, availability, COALESCE(playing_styles_json, '[]') FROM products ORDER BY id")
 	if err != nil {
 		return nil, err
 	}
@@ -810,14 +824,44 @@ func (s *SQLStorage) ListProducts() ([]Product, error) {
 	out := make([]Product, 0)
 	for rows.Next() {
 		var p Product
-		var imagesJSON string
-		if err := rows.Scan(&p.ID, &p.Name, &p.Category, &p.Price, &p.Details, &imagesJSON, &p.VideoURL, &p.Availability); err != nil {
+		var imagesJSON, stylesJSON string
+		if err := rows.Scan(&p.ID, &p.Name, &p.Category, &p.Price, &p.Details, &imagesJSON, &p.VideoURL, &p.Availability, &stylesJSON); err != nil {
 			return nil, err
 		}
 		p.Images = decodeImagesJSON(imagesJSON)
+		p.PlayingStyles = decodeImagesJSON(stylesJSON)
 		out = append(out, p)
 	}
 	return out, rows.Err()
+}
+
+func (s *SQLStorage) GetDeliveryInfo() (DeliveryInfo, error) {
+	var info DeliveryInfo
+	err := s.db.QueryRow("SELECT shipping_charges, serviceable_locations, dispatch_time, packaging_details FROM delivery_settings WHERE id = 1").Scan(
+		&info.ShippingCharges, &info.ServiceableLocations, &info.DispatchTime, &info.PackagingDetails,
+	)
+	if errors.Is(err, sql.ErrNoRows) {
+		return DeliveryInfo{}, nil
+	}
+	return info, err
+}
+
+func (s *SQLStorage) SaveDeliveryInfo(info DeliveryInfo) error {
+	if s.vendor == "postgres" {
+		_, err := s.db.Exec(`INSERT INTO delivery_settings (id, shipping_charges, serviceable_locations, dispatch_time, packaging_details)
+			VALUES (1, $1, $2, $3, $4)
+			ON CONFLICT (id) DO UPDATE SET shipping_charges = EXCLUDED.shipping_charges,
+			serviceable_locations = EXCLUDED.serviceable_locations, dispatch_time = EXCLUDED.dispatch_time,
+			packaging_details = EXCLUDED.packaging_details`,
+			info.ShippingCharges, info.ServiceableLocations, info.DispatchTime, info.PackagingDetails)
+		return err
+	}
+	_, err := s.db.Exec(`INSERT INTO delivery_settings (id, shipping_charges, serviceable_locations, dispatch_time, packaging_details)
+		VALUES (1, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE shipping_charges = VALUES(shipping_charges),
+		serviceable_locations = VALUES(serviceable_locations), dispatch_time = VALUES(dispatch_time),
+		packaging_details = VALUES(packaging_details)`,
+		info.ShippingCharges, info.ServiceableLocations, info.DispatchTime, info.PackagingDetails)
+	return err
 }
 
 func (s *SQLStorage) ListOffers() ([]OfferEntry, error) {
@@ -1034,16 +1078,16 @@ func (s *SQLStorage) CreateProduct(in ProductInput) (Product, error) {
 	var id int
 	if s.vendor == "postgres" {
 		err := s.db.QueryRow(
-			"INSERT INTO products (name, category, price, details, images_json, video_url, availability) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id",
-			in.Name, in.Category, in.Price, in.Details, encodeImagesJSON(in.Images), in.VideoURL, in.Availability,
+			"INSERT INTO products (name, category, price, details, images_json, video_url, availability, playing_styles_json) VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id",
+			in.Name, in.Category, in.Price, in.Details, encodeImagesJSON(in.Images), in.VideoURL, in.Availability, encodeImagesJSON(in.PlayingStyles),
 		).Scan(&id)
 		if err != nil {
 			return Product{}, err
 		}
 	} else {
 		res, err := s.db.Exec(
-			"INSERT INTO products (name, category, price, details, images_json, video_url, availability) VALUES (?, ?, ?, ?, ?, ?, ?)",
-			in.Name, in.Category, in.Price, in.Details, encodeImagesJSON(in.Images), in.VideoURL, in.Availability,
+			"INSERT INTO products (name, category, price, details, images_json, video_url, availability, playing_styles_json) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+			in.Name, in.Category, in.Price, in.Details, encodeImagesJSON(in.Images), in.VideoURL, in.Availability, encodeImagesJSON(in.PlayingStyles),
 		)
 		if err != nil {
 			return Product{}, err
@@ -1055,14 +1099,15 @@ func (s *SQLStorage) CreateProduct(in ProductInput) (Product, error) {
 		id = int(lastID)
 	}
 	return Product{
-		ID:           id,
-		Name:         in.Name,
-		Category:     in.Category,
-		Price:        in.Price,
-		Details:      in.Details,
-		Images:       in.Images,
-		VideoURL:     in.VideoURL,
-		Availability: in.Availability,
+		ID:            id,
+		Name:          in.Name,
+		Category:      in.Category,
+		Price:         in.Price,
+		Details:       in.Details,
+		PlayingStyles: in.PlayingStyles,
+		Images:        in.Images,
+		VideoURL:      in.VideoURL,
+		Availability:  in.Availability,
 	}, nil
 }
 
@@ -1071,13 +1116,13 @@ func (s *SQLStorage) UpdateProduct(id int, in ProductInput) (Product, error) {
 	var err error
 	if s.vendor == "postgres" {
 		res, err = s.db.Exec(
-			"UPDATE products SET name = $1, category = $2, price = $3, details = $4, images_json = $5, video_url = $6, availability = $7 WHERE id = $8",
-			in.Name, in.Category, in.Price, in.Details, encodeImagesJSON(in.Images), in.VideoURL, in.Availability, id,
+			"UPDATE products SET name = $1, category = $2, price = $3, details = $4, images_json = $5, video_url = $6, availability = $7, playing_styles_json = $8 WHERE id = $9",
+			in.Name, in.Category, in.Price, in.Details, encodeImagesJSON(in.Images), in.VideoURL, in.Availability, encodeImagesJSON(in.PlayingStyles), id,
 		)
 	} else {
 		res, err = s.db.Exec(
-			"UPDATE products SET name = ?, category = ?, price = ?, details = ?, images_json = ?, video_url = ?, availability = ? WHERE id = ?",
-			in.Name, in.Category, in.Price, in.Details, encodeImagesJSON(in.Images), in.VideoURL, in.Availability, id,
+			"UPDATE products SET name = ?, category = ?, price = ?, details = ?, images_json = ?, video_url = ?, availability = ?, playing_styles_json = ? WHERE id = ?",
+			in.Name, in.Category, in.Price, in.Details, encodeImagesJSON(in.Images), in.VideoURL, in.Availability, encodeImagesJSON(in.PlayingStyles), id,
 		)
 	}
 	if err != nil {
@@ -1091,14 +1136,15 @@ func (s *SQLStorage) UpdateProduct(id int, in ProductInput) (Product, error) {
 		return Product{}, sql.ErrNoRows
 	}
 	return Product{
-		ID:           id,
-		Name:         in.Name,
-		Category:     in.Category,
-		Price:        in.Price,
-		Details:      in.Details,
-		Images:       in.Images,
-		VideoURL:     in.VideoURL,
-		Availability: in.Availability,
+		ID:            id,
+		Name:          in.Name,
+		Category:      in.Category,
+		Price:         in.Price,
+		Details:       in.Details,
+		PlayingStyles: in.PlayingStyles,
+		Images:        in.Images,
+		VideoURL:      in.VideoURL,
+		Availability:  in.Availability,
 	}, nil
 }
 
@@ -1590,196 +1636,6 @@ func (s *Server) handleInquiry(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusCreated, map[string]string{
 		"status":  "ok",
 		"message": "Thanks. We will contact you within 24 hours.",
-	})
-}
-
-func (s *Server) handleCheckout(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPost {
-		writeJSONError(w, http.StatusMethodNotAllowed, "method not allowed")
-		return
-	}
-	email, ok := s.customerEmailFromRequest(r)
-	if !ok {
-		writeJSONError(w, http.StatusUnauthorized, "please login before checkout")
-		return
-	}
-	var payload CheckoutRequest
-	if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
-		writeJSONError(w, http.StatusBadRequest, "invalid JSON payload")
-		return
-	}
-	payload.Mobile = strings.TrimSpace(payload.Mobile)
-	payload.Address = strings.TrimSpace(payload.Address)
-	if payload.Mobile == "" || payload.Address == "" {
-		writeJSONError(w, http.StatusBadRequest, "mobile and address are required")
-		return
-	}
-	if len(payload.Items) == 0 {
-		writeJSONError(w, http.StatusBadRequest, "cart is empty")
-		return
-	}
-	accountName := ""
-	if acc, ok := s.customerAccountByEmail(email); ok {
-		accountName = acc.Name
-	}
-	if accountName == "" {
-		accountName = strings.Split(email, "@")[0]
-	}
-
-	total := 0
-	lines := make([]string, 0, len(payload.Items))
-	for _, item := range payload.Items {
-		name := strings.TrimSpace(item.Name)
-		if name == "" || item.Price <= 0 {
-			writeJSONError(w, http.StatusBadRequest, "invalid cart item")
-			return
-		}
-		total += item.Price
-		img := strings.TrimSpace(item.Image)
-		if img != "" {
-			lines = append(lines, fmt.Sprintf("%s (Rs %d)\nImage: %s", name, item.Price, publicAssetURL(img)))
-		} else {
-			lines = append(lines, fmt.Sprintf("%s (Rs %d)", name, item.Price))
-		}
-	}
-
-	orderItems := make([]orders.Item, 0, len(payload.Items))
-	for _, it := range payload.Items {
-		orderItems = append(orderItems, orders.Item{Name: it.Name, Price: it.Price, Image: it.Image})
-	}
-	order, err := s.createOrder(email, accountName, orderItems, total, "pending", "", payload.Mobile, payload.Address, map[string]any{"channel": "whatsapp"})
-	if err != nil {
-		writeJSONError(w, http.StatusInternalServerError, "failed to save order")
-		return
-	}
-	brandLine := "Swayamvani Harmoniums\nhttps://www.swayamvani.com\nLogo: https://www.swayamvani.com/logo.jpeg"
-	message := fmt.Sprintf(
-		"%s\n\nNew order\nOrder #: %d\nName: %s\nEmail: %s\nMobile: %s\nAddress: %s\n\nItems:\n%s\n\nTotal: Rs %d",
-		brandLine,
-		order.ID,
-		accountName,
-		email,
-		payload.Mobile,
-		payload.Address,
-		strings.Join(lines, "\n\n"),
-		total,
-	)
-	waURL := "https://wa.me/917020705968?text=" + url.QueryEscape(message)
-	writeJSON(w, http.StatusOK, map[string]any{"whatsapp_url": waURL, "order": order})
-}
-
-func publicAssetURL(asset string) string {
-	asset = strings.TrimSpace(asset)
-	if asset == "" || strings.HasPrefix(asset, "https://") || strings.HasPrefix(asset, "http://") {
-		return asset
-	}
-	return "https://www.swayamvani.com/" + strings.TrimLeft(asset, "/")
-}
-
-func (s *Server) handleCreateRazorpayOrder(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPost {
-		writeJSONError(w, http.StatusMethodNotAllowed, "method not allowed")
-		return
-	}
-	email, ok := s.customerEmailFromRequest(r)
-	if !ok {
-		writeJSONError(w, http.StatusUnauthorized, "please login before checkout")
-		return
-	}
-	if s.razorpayKeyID == "" || s.razorpayKeySecret == "" {
-		writeJSONError(w, http.StatusBadRequest, "razorpay is not configured")
-		return
-	}
-
-	var payload RazorpayOrderRequest
-	if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
-		writeJSONError(w, http.StatusBadRequest, "invalid JSON payload")
-		return
-	}
-	// Razorpay path reuses checkout payload for items only; mobile/address expected via /api/checkout.
-	if len(payload.Items) == 0 {
-		writeJSONError(w, http.StatusBadRequest, "cart is empty")
-		return
-	}
-	accountName := ""
-	if acc, ok := s.customerAccountByEmail(email); ok {
-		accountName = acc.Name
-	}
-	if accountName == "" {
-		accountName = strings.Split(email, "@")[0]
-	}
-
-	totalINR := 0
-	names := make([]string, 0, len(payload.Items))
-	for _, item := range payload.Items {
-		name := strings.TrimSpace(item.Name)
-		if name == "" || item.Price <= 0 {
-			writeJSONError(w, http.StatusBadRequest, "invalid cart item")
-			return
-		}
-		totalINR += item.Price
-		names = append(names, name)
-	}
-	amountPaise := totalINR * 100
-
-	receipt := fmt.Sprintf("svayavani_%d", time.Now().UnixNano())
-	rpPayload := map[string]any{
-		"amount":   amountPaise,
-		"currency": "INR",
-		"receipt":  receipt,
-		"notes": map[string]string{
-			"source": "svayavani",
-			"items":  strings.Join(names, ", "),
-		},
-	}
-	body, _ := json.Marshal(rpPayload)
-
-	req, err := http.NewRequest(http.MethodPost, "https://api.razorpay.com/v1/orders", bytes.NewReader(body))
-	if err != nil {
-		writeJSONError(w, http.StatusInternalServerError, "failed to create payment request")
-		return
-	}
-	req.Header.Set("Content-Type", "application/json")
-	req.SetBasicAuth(s.razorpayKeyID, s.razorpayKeySecret)
-
-	client := &http.Client{Timeout: 10 * time.Second}
-	resp, err := client.Do(req)
-	if err != nil {
-		writeJSONError(w, http.StatusBadGateway, "payment gateway request failed")
-		return
-	}
-	defer resp.Body.Close()
-
-	respBody, _ := io.ReadAll(resp.Body)
-	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		writeJSONError(w, http.StatusBadGateway, fmt.Sprintf("razorpay error: %s", strings.TrimSpace(string(respBody))))
-		return
-	}
-
-	var rpResp RazorpayOrderResponse
-	if err := json.Unmarshal(respBody, &rpResp); err != nil {
-		writeJSONError(w, http.StatusBadGateway, "invalid payment gateway response")
-		return
-	}
-	if rpResp.ID == "" {
-		writeJSONError(w, http.StatusBadGateway, "payment order was not created")
-		return
-	}
-
-	orderItems := make([]orders.Item, 0, len(payload.Items))
-	for _, it := range payload.Items {
-		orderItems = append(orderItems, orders.Item{Name: it.Name, Price: it.Price})
-	}
-	if _, err := s.createOrder(email, accountName, orderItems, totalINR, "pending_payment", rpResp.ID, "", "", map[string]any{"channel": "razorpay"}); err != nil {
-		writeJSONError(w, http.StatusInternalServerError, "failed to save order")
-		return
-	}
-
-	writeJSON(w, http.StatusOK, map[string]any{
-		"key_id":   s.razorpayKeyID,
-		"order_id": rpResp.ID,
-		"amount":   rpResp.Amount,
-		"currency": rpResp.Currency,
 	})
 }
 
@@ -2565,6 +2421,107 @@ func (s *Server) handleGetOffers(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]any{"offers": active, "list": list.Offers})
 }
 
+func (s *Server) handleGetDeliveryInfo(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		writeJSONError(w, http.StatusMethodNotAllowed, "method not allowed")
+		return
+	}
+	s.deliveryMu.RLock()
+	info := s.deliveryInfo
+	s.deliveryMu.RUnlock()
+	writeJSON(w, http.StatusOK, map[string]any{"delivery": info})
+}
+
+func (s *Server) handleAdminDeliveryInfo(w http.ResponseWriter, r *http.Request) {
+	if !s.isAdmin(r) {
+		writeJSONError(w, http.StatusUnauthorized, "unauthorized")
+		return
+	}
+	switch r.Method {
+	case http.MethodGet:
+		s.deliveryMu.RLock()
+		info := s.deliveryInfo
+		s.deliveryMu.RUnlock()
+		writeJSON(w, http.StatusOK, map[string]any{"delivery": info})
+	case http.MethodPut:
+		var info DeliveryInfo
+		if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, 32*1024)).Decode(&info); err != nil {
+			writeJSONError(w, http.StatusBadRequest, "invalid JSON payload")
+			return
+		}
+		info = normalizeDeliveryInfo(info)
+		if utf8.RuneCountInString(info.ShippingCharges) > 1200 || utf8.RuneCountInString(info.ServiceableLocations) > 1200 || utf8.RuneCountInString(info.DispatchTime) > 1200 || utf8.RuneCountInString(info.PackagingDetails) > 1200 {
+			writeJSONError(w, http.StatusBadRequest, "delivery information must be 1200 characters or fewer per field")
+			return
+		}
+		s.deliveryMu.Lock()
+		var saveErr error
+		if s.sqlStore != nil {
+			saveErr = s.sqlStore.SaveDeliveryInfo(info)
+		} else {
+			saveErr = saveDeliveryInfo(s.deliveryInfoPath, info)
+		}
+		if saveErr != nil {
+			s.deliveryMu.Unlock()
+			writeJSONError(w, http.StatusInternalServerError, "failed to save delivery information")
+			return
+		}
+		s.deliveryInfo = info
+		s.deliveryMu.Unlock()
+		writeJSON(w, http.StatusOK, map[string]any{"status": "ok", "delivery": info})
+	default:
+		writeJSONError(w, http.StatusMethodNotAllowed, "method not allowed")
+	}
+}
+
+func normalizeDeliveryInfo(info DeliveryInfo) DeliveryInfo {
+	info.ShippingCharges = strings.TrimSpace(info.ShippingCharges)
+	info.ServiceableLocations = strings.TrimSpace(info.ServiceableLocations)
+	info.DispatchTime = strings.TrimSpace(info.DispatchTime)
+	info.PackagingDetails = strings.TrimSpace(info.PackagingDetails)
+	return info
+}
+
+func (s *Server) loadDeliveryInfo() error {
+	if s.sqlStore != nil {
+		info, err := s.sqlStore.GetDeliveryInfo()
+		if err != nil {
+			return err
+		}
+		s.deliveryInfo = normalizeDeliveryInfo(info)
+		return nil
+	}
+	data, err := os.ReadFile(s.deliveryInfoPath)
+	if errors.Is(err, os.ErrNotExist) {
+		s.deliveryInfo = DeliveryInfo{}
+		return nil
+	}
+	if err != nil {
+		return err
+	}
+	var info DeliveryInfo
+	if err := json.Unmarshal(data, &info); err != nil {
+		return err
+	}
+	s.deliveryInfo = normalizeDeliveryInfo(info)
+	return nil
+}
+
+func saveDeliveryInfo(path string, info DeliveryInfo) error {
+	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+		return err
+	}
+	body, err := json.MarshalIndent(info, "", "  ")
+	if err != nil {
+		return err
+	}
+	tmp := path + ".tmp"
+	if err := os.WriteFile(tmp, body, 0o600); err != nil {
+		return err
+	}
+	return os.Rename(tmp, path)
+}
+
 func (s *Server) handleAdminOffers(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case http.MethodGet:
@@ -2722,6 +2679,7 @@ func normalizeProductInput(in ProductInput) ProductInput {
 	in.Name = strings.TrimSpace(in.Name)
 	in.Category = strings.ToLower(strings.TrimSpace(in.Category))
 	in.Details = strings.TrimSpace(in.Details)
+	in.PlayingStyles = normalizePlayingStyles(in.PlayingStyles)
 	in.VideoURL = strings.TrimSpace(in.VideoURL)
 	in.Availability = normalizeAvailability(in.Availability)
 	images := make([]string, 0, len(in.Images))
@@ -2733,6 +2691,20 @@ func normalizeProductInput(in ProductInput) ProductInput {
 	}
 	in.Images = images
 	return in
+}
+
+func normalizePlayingStyles(values []string) []string {
+	allowed := map[string]bool{"riyaaz": true, "bhajan": true, "accompaniment": true, "classical": true}
+	seen := make(map[string]bool)
+	styles := make([]string, 0, len(values))
+	for _, value := range values {
+		style := strings.ToLower(strings.TrimSpace(value))
+		if allowed[style] && !seen[style] {
+			seen[style] = true
+			styles = append(styles, style)
+		}
+	}
+	return styles
 }
 
 func normalizeAvailability(value string) string {

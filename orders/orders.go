@@ -11,9 +11,10 @@ import (
 
 // Item mirrors a checkout line item.
 type Item struct {
-	Name  string `json:"name"`
-	Price int    `json:"price"`
-	Image string `json:"image,omitempty"`
+	Name     string `json:"name"`
+	Price    int    `json:"price"`
+	Image    string `json:"image,omitempty"`
+	Quantity int    `json:"quantity,omitempty"`
 }
 
 // Order represents a placed order that can be shown in "My Orders".

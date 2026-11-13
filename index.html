@@ -15,7 +15,7 @@
       href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;700&family=Manrope:wght@400;600;700&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="styles.css?v=20261112catalog4" />
+    <link rel="stylesheet" href="styles.css?v=20261113desktopsort2" />
   </head>
   <body>
     <header class="site-header">
@@ -133,7 +133,18 @@
               <h2 id="catalogTitle" data-i18n="featuredInstruments">The Harmonium Collection</h2>
               <p id="catalogIntro" class="section-intro" data-i18n="collectionIntro">Explore the current model, its details, and instrument photos.</p>
             </div>
-            <div class="filters" id="catalogFilters" role="group" aria-label="Instrument categories"></div>
+            <div class="catalog-controls">
+              <label>
+                <span data-i18n="catalogSortLabel">Sort by</span>
+                <select id="catalogSort">
+                  <option value="default" data-i18n="sortFeatured">Featured</option>
+                  <option value="price-asc" data-i18n="sortPriceAsc">Price: low to high</option>
+                  <option value="price-desc" data-i18n="sortPriceDesc">Price: high to low</option>
+                  <option value="availability" data-i18n="sortAvailability">Availability</option>
+                </select>
+              </label>
+              <div class="filters" id="catalogFilters" role="group" aria-label="Instrument categories"></div>
+            </div>
           </div>
           <div id="productGrid" class="product-grid"></div>
         </div>
@@ -233,6 +244,7 @@
                 </div>
                 <p id="couponStatus" class="form-status" aria-live="polite"></p>
               </div>
+              <div id="checkoutDeliveryInfo" class="delivery-info-checkout" data-delivery-info="compact"></div>
               <div class="ship-box">
                   <label for="checkoutMobile">Mobile</label>
                   <input id="checkoutMobile" type="tel" inputmode="numeric" pattern="\\d{10}" maxlength="10" placeholder="10-digit mobile" />
@@ -485,7 +497,7 @@
     </footer>
 
     <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
-    <script src="script.js?v=20261113catalog2"></script>
+    <script src="script.js?v=20261113delivery1"></script>
     <script src="inventory.js?v=20261112harmonium1"></script>
     <script src="assets/orders/orders.js?v=20260322v1"></script>
   </body>

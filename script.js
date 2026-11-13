@@ -1,5 +1,6 @@
 let products = [];
 let productsLoaded = false;
+let deliveryInfo = {};
 let productGalleryKeyHandler = null;
 const fallbackProducts = [
   {
@@ -54,8 +55,35 @@ const translations = {
     allProductIntro: "Browse the instruments currently available, with product details and photos.",
     catalogEmpty: "No instruments are listed right now.",
     categoryEmpty: "There are no instruments in this category.",
+    noProductMatches: "No instruments match these filters.",
+    catalogSearchLabel: "Search instruments",
+    catalogSearchPlaceholder: "Name, type, or feature",
+    catalogAvailabilityLabel: "Availability",
+    availabilityAll: "Any availability",
+    availabilityInStock: "In stock",
+    availabilityMadeToOrder: "Made to order",
+    availabilityOutOfStock: "Out of stock",
+    catalogStyleLabel: "Playing style",
+    styleAll: "Any style",
+    styleRiyaaz: "Riyaaz / practice",
+    styleBhajan: "Bhajan / devotional",
+    styleAccompaniment: "Vocal accompaniment",
+    styleClassical: "Classical music",
+    catalogSortLabel: "Sort by",
+    sortFeatured: "Featured",
+    sortPriceAsc: "Price: low to high",
+    sortPriceDesc: "Price: high to low",
+    sortAvailability: "Availability",
     collectionEyebrow: "Made for your music",
     collectionIntro: "Explore the current model, its details, and instrument photos.",
+    productSpecsLabel: "Key specifications",
+    shippingAsk: "Ask about delivery",
+    deliveryTitle: "Delivery details",
+    deliveryAsk: "Ask about delivery",
+    deliveryShippingLabel: "Shipping charges",
+    deliveryLocationsLabel: "Serviceable locations",
+    deliveryDispatchLabel: "Estimated dispatch time",
+    deliveryPackagingLabel: "Packaging details",
     filter_all: "All instruments",
     filter_string: "String",
     filter_percussion: "Percussion",
@@ -148,11 +176,11 @@ const translations = {
     navAdmin: "ॲडमिन",
     cart: "कार्ट",
     heroEyebrow: "प्रत्येक सुरात जपलेली परंपरा",
-    heroTitle: "हार्मोनियममधून शोधा तुमचा स्वर",
+    heroTitle: "हार्मोनियम मधून शोधा तुमचा स्वर",
     heroDesc: "रोजच्या रियाज, भजन आणि साथीसाठी हार्मोनियम पाहा. उपलब्ध मॉडेल, फोटो आणि वैशिष्ट्ये जाणून घ्या.",
     shopInstruments: "हार्मोनियम पाहा",
     heroCardTitle: "तुमच्या संगीतासाठी निवडा",
-    heroCardDesc: "वैशिष्ट्यांची तुलना करा, फोटो पाहा किंवा तुमच्या संगीताला योग्य सेटअपबद्दल विचारा.",
+    heroCardDesc: "वैशिष्ट्यांची तुलना करा, फोटो पाहा किंवा तुमच्या संगीताला योग्य सेटअप बद्दल विचारा.",
     profileTitle: "तुमचे प्रोफाइल",
     profileGreeting: "पुन्हा स्वागत आहे,",
     profileSince: "सदस्यत्वाची सुरुवात",
@@ -161,8 +189,35 @@ const translations = {
     allProductIntro: "उपलब्ध वाद्ये, त्यांची माहिती आणि फोटो पाहा.",
     catalogEmpty: "सध्या कोणतीही वाद्ये उपलब्ध नाहीत.",
     categoryEmpty: "या प्रकारात वाद्य उपलब्ध नाही.",
+    noProductMatches: "या फिल्टरशी जुळणारी वाद्ये नाहीत.",
+    catalogSearchLabel: "वाद्य शोधा",
+    catalogSearchPlaceholder: "नाव, प्रकार किंवा वैशिष्ट्य",
+    catalogAvailabilityLabel: "उपलब्धता",
+    availabilityAll: "कोणतीही उपलब्धता",
+    availabilityInStock: "साठ्यात उपलब्ध",
+    availabilityMadeToOrder: "ऑर्डरनुसार तयार",
+    availabilityOutOfStock: "साठ्यात नाही",
+    catalogStyleLabel: "वादनाची शैली",
+    styleAll: "कोणतीही शैली",
+    styleRiyaaz: "रियाज / सराव",
+    styleBhajan: "भजन / भक्तिसंगीत",
+    styleAccompaniment: "गायनासाठी साथ",
+    styleClassical: "शास्त्रीय संगीत",
+    catalogSortLabel: "क्रमवारी",
+    sortFeatured: "वैशिष्ट्यपूर्ण",
+    sortPriceAsc: "कमी ते जास्त किंमत",
+    sortPriceDesc: "जास्त ते कमी किंमत",
+    sortAvailability: "उपलब्धतेनुसार",
     collectionEyebrow: "तुमच्या संगीतासाठी",
     collectionIntro: "उपलब्ध मॉडेल, त्याची माहिती आणि वाद्याचे फोटो पाहा.",
+    productSpecsLabel: "मुख्य वैशिष्ट्ये",
+    shippingAsk: "डिलिव्हरीबद्दल विचारा",
+    deliveryTitle: "डिलिव्हरीची माहिती",
+    deliveryAsk: "डिलिव्हरीबद्दल विचारा",
+    deliveryShippingLabel: "शिपिंग शुल्क",
+    deliveryLocationsLabel: "डिलिव्हरी उपलब्ध ठिकाणे",
+    deliveryDispatchLabel: "अंदाजे पाठवण्याची वेळ",
+    deliveryPackagingLabel: "पॅकेजिंगची माहिती",
     filter_all: "सर्व वाद्ये",
     filter_string: "तंतुवाद्य",
     filter_percussion: "तालवाद्य",
@@ -277,8 +332,35 @@ const translations = {
     allProductIntro: "उपलब्ध वाद्य, उनकी जानकारी और तस्वीरें देखें।",
     catalogEmpty: "अभी कोई वाद्य सूचीबद्ध नहीं है।",
     categoryEmpty: "इस श्रेणी में कोई वाद्य नहीं है।",
+    noProductMatches: "इन फ़िल्टर से मेल खाने वाला कोई वाद्य नहीं है।",
+    catalogSearchLabel: "वाद्य खोजें",
+    catalogSearchPlaceholder: "नाम, प्रकार या विशेषता",
+    catalogAvailabilityLabel: "उपलब्धता",
+    availabilityAll: "कोई भी उपलब्धता",
+    availabilityInStock: "स्टॉक में",
+    availabilityMadeToOrder: "ऑर्डर पर बनेगा",
+    availabilityOutOfStock: "स्टॉक में नहीं",
+    catalogStyleLabel: "वादन शैली",
+    styleAll: "कोई भी शैली",
+    styleRiyaaz: "रियाज़ / अभ्यास",
+    styleBhajan: "भजन / भक्ति संगीत",
+    styleAccompaniment: "गायन संगत",
+    styleClassical: "शास्त्रीय संगीत",
+    catalogSortLabel: "क्रम से दिखाएँ",
+    sortFeatured: "विशेष",
+    sortPriceAsc: "कम से ज़्यादा कीमत",
+    sortPriceDesc: "ज़्यादा से कम कीमत",
+    sortAvailability: "उपलब्धता",
     collectionEyebrow: "आपके संगीत के लिए",
     collectionIntro: "उपलब्ध मॉडल, उसकी जानकारी और वाद्य की तस्वीरें देखें।",
+    productSpecsLabel: "मुख्य विशेषताएँ",
+    shippingAsk: "डिलीवरी के बारे में पूछें",
+    deliveryTitle: "डिलीवरी की जानकारी",
+    deliveryAsk: "डिलीवरी के बारे में पूछें",
+    deliveryShippingLabel: "शिपिंग शुल्क",
+    deliveryLocationsLabel: "डिलीवरी वाले स्थान",
+    deliveryDispatchLabel: "अनुमानित भेजने का समय",
+    deliveryPackagingLabel: "पैकेजिंग की जानकारी",
     filter_all: "सभी वाद्य",
     filter_string: "तार वाद्य",
     filter_percussion: "ताल वाद्य",
@@ -367,6 +449,7 @@ const translations = {
 const state = {
   cart: [],
   filter: "all",
+  catalogSort: "default",
   language: "en",
   customer: null,
   videos: [],
@@ -394,6 +477,7 @@ function notifyCustomerState() {
 
 const productGrid = document.getElementById("productGrid");
 const catalogFilters = document.getElementById("catalogFilters");
+const catalogSort = document.getElementById("catalogSort");
 const catalogTitle = document.getElementById("catalogTitle");
 const catalogIntro = document.getElementById("catalogIntro");
 const videosSectionTitle = document.getElementById("videosSectionTitle");
@@ -848,7 +932,6 @@ function applyLanguage(lang) {
     }
     element.textContent = t(key, element.dataset.i18nDefault);
   });
-
   if (langSwitcher) {
     langSwitcher.value = state.language;
   }
@@ -858,6 +941,68 @@ function applyLanguage(lang) {
   renderCustomerState();
   renderVideos();
   applyOfferOverrides();
+  renderAllDeliveryInfo();
+}
+
+const DELIVERY_INFO_FIELDS = [
+  ["deliveryShippingLabel", "shippingCharges"],
+  ["deliveryLocationsLabel", "serviceableLocations"],
+  ["deliveryDispatchLabel", "dispatchTime"],
+  ["deliveryPackagingLabel", "packagingDetails"]
+];
+
+function renderDeliveryInfo(container, compact = false) {
+  if (!container) return;
+  container.replaceChildren();
+  const list = document.createElement("dl");
+  list.className = "delivery-info-list";
+  DELIVERY_INFO_FIELDS.forEach(([labelKey, valueKey]) => {
+    const text = String(deliveryInfo[valueKey] || "").trim();
+    if (!text) return;
+    const row = document.createElement("div");
+    const label = document.createElement("dt");
+    const value = document.createElement("dd");
+    label.textContent = t(labelKey);
+    value.textContent = text;
+    row.append(label, value);
+    list.appendChild(row);
+  });
+  if (!list.childElementCount) {
+    container.hidden = true;
+    return;
+  }
+  container.hidden = false;
+  if (compact) {
+    const details = document.createElement("details");
+    const summary = document.createElement("summary");
+    summary.textContent = t("deliveryTitle");
+    details.append(summary, list);
+    container.appendChild(details);
+  } else {
+    container.appendChild(list);
+  }
+}
+
+function renderAllDeliveryInfo() {
+  document.querySelectorAll("[data-delivery-info]").forEach((container) => {
+    renderDeliveryInfo(container, container.dataset.deliveryInfo === "compact");
+  });
+}
+
+async function loadDeliveryInfo() {
+  if (!hasBackend) {
+    renderAllDeliveryInfo();
+    return;
+  }
+  try {
+    const response = await fetch("/api/delivery", { credentials: "same-origin" });
+    if (!response.ok) throw new Error("Could not load delivery information");
+    const data = await response.json();
+    deliveryInfo = data.delivery || {};
+  } catch (error) {
+    deliveryInfo = {};
+  }
+  renderAllDeliveryInfo();
 }
 
 function normalizePrice(value) {
@@ -902,8 +1047,16 @@ function resolveImage(product) {
 }
 
 function visibleProducts() {
-  if (state.filter === "all") return products;
-  return products.filter((p) => p.category === state.filter);
+  const filtered = products.filter((product) => {
+    const category = String(product.category || "").trim().toLocaleLowerCase();
+    if (state.filter !== "all" && category !== String(state.filter).toLocaleLowerCase()) return false;
+    return true;
+  });
+  const availabilityOrder = { available: 0, made_to_order: 1, out_of_stock: 2 };
+  if (state.catalogSort === "price-asc") filtered.sort((a, b) => Number(a.price || 0) - Number(b.price || 0));
+  if (state.catalogSort === "price-desc") filtered.sort((a, b) => Number(b.price || 0) - Number(a.price || 0));
+  if (state.catalogSort === "availability") filtered.sort((a, b) => (availabilityOrder[a.availability || "available"] ?? 3) - (availabilityOrder[b.availability || "available"] ?? 3));
+  return filtered;
 }
 
 function categoryDisplayName(value) {
@@ -969,6 +1122,13 @@ function renderProducts() {
     return;
   }
   const items = visibleProducts();
+  if (items.length === 0) {
+    const empty = document.createElement("p");
+    empty.className = "catalog-empty";
+    empty.textContent = t("noProductMatches");
+    productGrid.appendChild(empty);
+    return;
+  }
   items.forEach((product) => {
     const card = document.createElement("article");
     card.className = `product-card${isHarmoniumProduct(product) ? " harmonium-product-card" : ""}`;
@@ -983,7 +1143,10 @@ function renderProducts() {
     card.innerHTML = `
       ${productGalleryMarkup(product, image)}
       <h3>${product.name}</h3>
-      <p class="product-details">${product.details || ""}</p>
+      <div class="product-specs">
+        <strong>${t("productSpecsLabel")}</strong>
+        <p class="product-details">${product.details || ""}</p>
+      </div>
       <span class="availability-badge" data-store-availability="${product.availability || "available"}"></span>
       <div class="product-bottom">
         <div class="price-stack">
@@ -998,9 +1161,12 @@ function renderProducts() {
           </div>
           ${discountPct > 0 ? `<span class="price-savings">You save ${formatINR(savings)}</span>` : ""}
         </div>
+        <div class="delivery-info-product" data-delivery-info="compact" hidden></div>
+        <a class="shipping-link" href="https://wa.me/917020705968?text=${encodeURIComponent(`Hello, I have a question about delivery for ${product.name}.`)}" target="_blank" rel="noopener noreferrer">${t("shippingAsk")}</a>
         <button class="product-cta" data-id="${product.id}" ${product.availability === "out_of_stock" ? "disabled" : ""}><span>${product.availability === "out_of_stock" ? "Out of stock" : t("addToCart")}</span></button>
       </div>
     `;
+    renderDeliveryInfo(card.querySelector("[data-delivery-info]"), true);
     productGrid.appendChild(card);
   });
 
@@ -1160,8 +1326,12 @@ function openProductModal(product) {
     }</p>
     ${savings > 0 ? `<p class="modal-savings">${t("youSavedLabel")} ${formatINR(savings)}</p>` : ""}
     <p class="modal-category">${product.category || ""}</p>
+    <h3 class="modal-specs-title">${t("productSpecsLabel")}</h3>
     <p class="modal-desc"></p>
+    <div class="delivery-info-product" data-delivery-info="compact" hidden></div>
+    <a class="shipping-link" href="https://wa.me/917020705968?text=${encodeURIComponent(`Hello, I have a question about delivery for ${product.name}.`)}" target="_blank" rel="noopener noreferrer">${t("shippingAsk")}</a>
   `;
+  renderDeliveryInfo(detailCol.querySelector("[data-delivery-info]"), true);
   const descElement = detailCol.querySelector(".modal-desc");
   let typewriterTimer = null;
   const stopTypewriter = () => {
@@ -1871,7 +2041,7 @@ document.addEventListener("click", async (event) => {
       if (selected.availability === "out_of_stock") return;
       const existing = state.cart.find((item) => item.id === selected.id);
       if (existing) {
-        existing.qty = Number(existing.qty || 1) + 1;
+        existing.qty = Math.min(99, Number(existing.qty || 1) + 1);
       } else {
         state.cart.push({ ...selected, qty: 1 });
       }
@@ -1900,7 +2070,7 @@ document.addEventListener("click", async (event) => {
   if (incIndex !== null) {
     const idx = Number(incIndex);
     if (state.cart[idx]) {
-      state.cart[idx].qty = Number(state.cart[idx].qty || 1) + 1;
+      state.cart[idx].qty = Math.min(99, Number(state.cart[idx].qty || 1) + 1);
       renderCart();
     }
     return;
@@ -1989,7 +2159,7 @@ productModalAddToCart?.addEventListener("click", () => {
     if (selected.availability === "out_of_stock") return;
     const existing = state.cart.find((item) => item.id === selected.id);
     if (existing) {
-      existing.qty = Number(existing.qty || 1) + 1;
+      existing.qty = Math.min(99, Number(existing.qty || 1) + 1);
     } else {
       state.cart.push({ ...selected, qty: 1 });
     }
@@ -2266,7 +2436,8 @@ async function tryRazorpayCheckout() {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
-      items: state.cart.map((item) => ({ name: item.name, price: getCartItemFinalPrice(item) * (item.qty || 1) }))
+      items: state.cart.map((item) => ({ product_id: Number(item.id), quantity: Number(item.qty || 1) })),
+      coupon_code: state.coupon?.applied ? state.coupon.code : ""
     })
   });
 
@@ -2315,12 +2486,8 @@ async function fallbackWhatsAppCheckout() {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
-      items: state.cart.map((item) => ({
-        name: item.name,
-        price: getCartItemFinalPrice(item) * (item.qty || 1),
-        qty: item.qty || 1,
-        image: (item.images && item.images[0]) || ""
-      })),
+      items: state.cart.map((item) => ({ product_id: Number(item.id), quantity: Number(item.qty || 1) })),
+      coupon_code: state.coupon?.applied ? state.coupon.code : "",
       mobile,
       address
     })
@@ -2394,6 +2561,11 @@ catalogFilters?.addEventListener("click", (event) => {
   renderProducts();
 });
 
+catalogSort?.addEventListener("change", () => {
+  state.catalogSort = catalogSort.value;
+  renderProducts();
+});
+
 async function loadProducts() {
   productGrid.innerHTML = `<p>${t("loadingInstruments")}</p>`;
 
@@ -2425,6 +2597,7 @@ loadCartFromStorage();
 loadProducts();
 loadVideos();
 loadOffers();
+loadDeliveryInfo();
 renderCart();
 checkCustomerSession();
 initPasswordToggles();

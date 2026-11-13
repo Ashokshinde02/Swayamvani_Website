@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>स्वयंवाणी Admin</title>
-    <link rel="stylesheet" href="styles.css?v=20261113admindash2" />
+    <link rel="stylesheet" href="styles.css?v=20261113adminmobile1" />
   </head>
   <body class="admin-dashboard-page">
     <header class="site-header">
@@ -61,6 +61,7 @@
             <nav class="admin-sidebar-nav" aria-label="Admin menu">
               <a href="#adminOverview" data-admin-nav><span>⌂</span> Overview</a>
               <a href="#productsAdminSection" data-admin-nav><span>♫</span> Instruments</a>
+              <a href="#deliveryAdminSection" data-admin-nav><span>↗</span> Delivery details</a>
               <a href="#videosAdminSection" data-admin-nav><span>▷</span> Making videos</a>
               <a href="#inquiriesAdminSection" data-admin-nav><span>✉</span> Inquiries</a>
               <a href="#customersAdminSection" data-admin-nav><span>♙</span> Customers</a>
@@ -100,7 +101,7 @@
                     <option value="out_of_stock">Out of stock</option>
                   </select>
                 </label>
-                <label>Details <textarea id="pDetails" rows="3" required></textarea></label>
+                <label>Details <textarea id="pDetails" rows="3" required></textarea><small>For the playing-style filter, mention relevant terms in the description: riyaaz/practice, bhajan/devotional, accompaniment/sangat, or classical music.</small></label>
                 <label>Photo URL 1 <input id="pImage1" placeholder="assets/images/sitar.svg" required /></label>
                 <label>Photo URL 2 <input id="pImage2" placeholder="assets/images/tabla.svg" required /></label>
                 <label>Photo URL 3 <input id="pImage3" placeholder="assets/images/tanpura.svg" required /></label>
@@ -117,6 +118,18 @@
                 <div id="adminProducts"></div>
               </div>
             </div>
+          </section>
+
+          <section id="deliveryAdminSection" class="about-note admin-content-section">
+            <div class="admin-section-heading"><div><p class="admin-eyebrow">CUSTOMER INFORMATION</p><h2>Delivery &amp; packaging</h2></div><p>These details appear near products and in the cart. Leave a field blank if you need to confirm it with a customer.</p></div>
+            <form id="deliveryForm" class="inquiry-form delivery-admin-form">
+              <label>Shipping charges <textarea id="deliveryShippingCharges" rows="2" maxlength="1200" placeholder="Enter the shipping charge or how it is calculated"></textarea></label>
+              <label>Serviceable locations <textarea id="deliveryServiceableLocations" rows="2" maxlength="1200" placeholder="List locations, regions, or pin codes you serve"></textarea></label>
+              <label>Estimated dispatch time <textarea id="deliveryDispatchTime" rows="2" maxlength="1200" placeholder="For example: dispatch estimate after order confirmation"></textarea></label>
+              <label>Packaging details <textarea id="deliveryPackagingDetails" rows="2" maxlength="1200" placeholder="Describe protective packaging and handling details"></textarea></label>
+              <button type="submit">Save delivery details</button>
+              <p id="deliveryAdminStatus" class="form-status" aria-live="polite"></p>
+            </form>
           </section>
 
           <section id="videosAdminSection" class="about-note admin-content-section">
@@ -211,6 +224,6 @@
       </div>
     </div>
     <script src="offer/offers.js"></script>
-    <script src="admin.js?v=20261113admindash2"></script>
+    <script src="admin.js?v=20261113delivery1"></script>
   </body>
 </html>

@@ -4,6 +4,8 @@ const loginForm = document.getElementById("loginForm");
 const logoutBtn = document.getElementById("logoutBtn");
 const productForm = document.getElementById("productForm");
 const videoForm = document.getElementById("videoForm");
+const deliveryForm = document.getElementById("deliveryForm");
+const deliveryAdminStatus = document.getElementById("deliveryAdminStatus");
 const adminStatus = document.getElementById("adminStatus");
 const productsEl = document.getElementById("adminProducts");
 const instrumentTypesEl = document.getElementById("adminInstrumentTypes");
@@ -439,7 +441,7 @@ function buildOrdersHtml(orders = []) {
       const canInvoice = ["confirmed", "shipped", "delivered"].includes(o.status);
       const created = o.created_at ? new Date(o.created_at).toLocaleString("en-IN") : "—";
       const items = (o.items || [])
-        .map((it) => `${escapeHtml(it.name)} (${fmtINR(it.price)})`)
+        .map((it) => `${escapeHtml(it.name)} × ${Number(it.quantity || 1)} (${fmtINR(it.price)})`)
         .join(" · ");
       return `
         <div class="cart-item order-admin-card">
@@ -513,6 +515,7 @@ function renderInvoice(order) {
         <tr>
           <td style="padding:6px 8px;border:1px solid #e0d6ca;">${idx + 1}</td>
           <td style="padding:6px 8px;border:1px solid #e0d6ca;">${escapeHtml(it.name)}</td>
+          <td style="padding:6px 8px;border:1px solid #e0d6ca; text-align:center;">${Number(it.quantity || 1)}</td>
           <td style="padding:6px 8px;border:1px solid #e0d6ca; text-align:right;">${fmtINR(it.price)}</td>
         </tr>
       `
@@ -574,6 +577,7 @@ function renderInvoice(order) {
             <tr>
               <th style="width:40px;">#</th>
               <th>Product</th>
+              <th style="text-align:center;">Qty</th>
               <th style="text-align:right;">Price</th>
             </tr>
           </thead>
@@ -679,16 +683,22 @@ function renderVideos(videos) {
 }
 
 async function loadAdminData() {
-  const [productsData, videosData, inquiriesData, customersData] = await Promise.all([
+  const [productsData, videosData, inquiriesData, customersData, deliveryData] = await Promise.all([
     api("/api/admin/products"),
     api("/api/admin/videos"),
     api("/api/admin/inquiries"),
-    api("/api/admin/customers")
+    api("/api/admin/customers"),
+    api("/api/admin/delivery")
   ]);
   renderProducts(productsData.products || []);
   renderVideos(videosData.videos || []);
   renderInquiries(inquiriesData.inquiries || []);
   renderCustomers(customersData.customers || []);
+  const delivery = deliveryData.delivery || {};
+  document.getElementById("deliveryShippingCharges").value = delivery.shippingCharges || "";
+  document.getElementById("deliveryServiceableLocations").value = delivery.serviceableLocations || "";
+  document.getElementById("deliveryDispatchTime").value = delivery.dispatchTime || "";
+  document.getElementById("deliveryPackagingDetails").value = delivery.packagingDetails || "";
 }
 
 async function checkSession() {
@@ -799,6 +809,25 @@ productForm.addEventListener("submit", async (event) => {
     await loadAdminData();
   } catch (error) {
     adminStatus.textContent = error.message || "Failed to create product.";
+  }
+});
+
+deliveryForm?.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  deliveryAdminStatus.textContent = "Saving delivery details…";
+  try {
+    await api("/api/admin/delivery", {
+      method: "PUT",
+      body: JSON.stringify({
+        shippingCharges: document.getElementById("deliveryShippingCharges").value,
+        serviceableLocations: document.getElementById("deliveryServiceableLocations").value,
+        dispatchTime: document.getElementById("deliveryDispatchTime").value,
+        packagingDetails: document.getElementById("deliveryPackagingDetails").value
+      })
+    });
+    deliveryAdminStatus.textContent = "Delivery details saved and published.";
+  } catch (error) {
+    deliveryAdminStatus.textContent = error.message || "Failed to save delivery details.";
   }
 });
 
