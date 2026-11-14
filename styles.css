@@ -458,6 +458,7 @@ h3 {
 
 .customer-profile {
   padding: 3rem 0 1rem;
+  scroll-margin-top: 90px;
 }
 
 .profile-card {
@@ -510,6 +511,60 @@ h3 {
   border-radius: 999px;
   padding: 0.6rem 1.4rem;
   font-weight: 700;
+}
+
+@media (max-width: 600px) {
+  .customer-profile {
+    padding: 1.4rem 0 0.75rem;
+  }
+
+  .profile-card {
+    padding: 1.1rem;
+    gap: 0.85rem;
+  }
+
+  .profile-text h2 {
+    font-size: 1.55rem;
+  }
+
+  .profile-text p {
+    font-size: 0.95rem;
+  }
+
+  .profile-details {
+    gap: 0.8rem;
+  }
+
+  .profile-field {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    justify-content: start;
+    align-items: start;
+    gap: 0.12rem;
+    min-width: 0;
+    padding-bottom: 0.55rem;
+    border-bottom: 1px solid rgba(109, 81, 64, 0.12);
+  }
+
+  .profile-field span {
+    font-size: 0.88rem;
+  }
+
+  .profile-field strong {
+    display: block;
+    min-width: 0;
+    max-width: 100%;
+    font-size: 1rem;
+    line-height: 1.45;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+  }
+
+  .profile-edit-btn {
+    align-self: stretch;
+    min-height: 48px;
+    padding: 0.7rem 1rem;
+  }
 }
 
 .offers-section {
@@ -862,6 +917,16 @@ h3 {
   padding: 0.85rem;
   background: #fff;
   box-shadow: 0 10px 24px rgba(52, 26, 12, 0.08);
+  cursor: pointer;
+  transition: border-color 0.18s ease, box-shadow 0.18s ease, transform 0.18s ease;
+}
+
+.order-card:hover,
+.order-card:focus-visible {
+  border-color: #c98c50;
+  box-shadow: 0 12px 28px rgba(52, 26, 12, 0.14);
+  outline: none;
+  transform: translateY(-1px);
 }
 
 .order-card-head {
@@ -891,6 +956,57 @@ h3 {
 
 .order-items {
   margin: 0.35rem 0;
+}
+
+.order-item-list {
+  display: grid;
+  gap: 0.65rem;
+  margin: 0.75rem 0;
+}
+
+.order-item-row {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  min-width: 0;
+}
+
+.order-item-image {
+  width: 72px;
+  height: 72px;
+  flex: 0 0 72px;
+  border-radius: 10px;
+  border: 1px solid #ecd9c4;
+  object-fit: cover;
+  background: #fffaf3;
+}
+
+.order-item-info {
+  display: grid;
+  gap: 0.18rem;
+  min-width: 0;
+}
+
+.order-item-info strong {
+  overflow-wrap: anywhere;
+}
+
+.order-item-info span,
+.order-shipping,
+.order-card-hint {
+  color: #7f6248;
+  font-size: 0.92rem;
+}
+
+.order-shipping {
+  margin: 0.3rem 0;
+  overflow-wrap: anywhere;
+}
+
+.order-card-hint {
+  margin: 0.5rem 0 0;
+  font-weight: 700;
+  color: #8a4927;
 }
 
 .order-total {

@@ -27,6 +27,7 @@ const defaultVideos = [
 
 const translations = {
   en: {
+    dropdownMyProfile: "My Profile",
     navProducts: "Instruments",
     navAbout: "About",
     navContact: "Contact",
@@ -176,6 +177,7 @@ const translations = {
     couponUnavailable: "No coupon available right now."
   },
   mr: {
+    dropdownMyProfile: "माझे प्रोफाइल",
     navProducts: "वाद्ये",
     navAbout: "आमच्याबद्दल",
     navContact: "संपर्क",
@@ -316,6 +318,7 @@ const translations = {
     couponUnavailable: "सध्या कोणतेही कूपन नाही.",
   },
   hi: {
+    dropdownMyProfile: "मेरी प्रोफ़ाइल",
     navProducts: "वाद्य",
     navAbout: "हमारे बारे में",
     navContact: "संपर्क",
@@ -585,6 +588,7 @@ const customerProfileToggle = document.getElementById("customerProfileToggle");
 const profileMenu = document.getElementById("profileMenu");
 const profileDropdown = document.getElementById("profileDropdown");
 const dropdownOrders = document.getElementById("dropdownOrders");
+const dropdownProfile = document.getElementById("dropdownProfile");
 const dropdownLogout = document.getElementById("dropdownLogout");
 // Keep the menu outside the horizontally scrollable mobile header so it cannot be clipped.
 if (profileDropdown && profileDropdown.parentElement !== document.body) {
@@ -1874,6 +1878,43 @@ function openCartPanel() {
   cartPanel.setAttribute("aria-hidden", "false");
 }
 
+window.addOrderItemsToCart = function (orderItems = []) {
+  if (!productsLoaded) {
+    return { ok: false, message: "The product list is still loading. Please try again." };
+  }
+  const unavailable = [];
+  let added = 0;
+  for (const orderItem of orderItems) {
+    const productId = Number(orderItem.product_id) || 0;
+    const orderImage = String(orderItem.image || "");
+    const orderName = String(orderItem.name || "").trim().toLocaleLowerCase();
+    const product =
+      products.find((candidate) => productId > 0 && Number(candidate.id) === productId) ||
+      products.find((candidate) => orderImage && (candidate.images || []).includes(orderImage)) ||
+      products.find((candidate) => String(candidate.name || "").trim().toLocaleLowerCase() === orderName);
+    if (!product || String(product.availability || "").toLowerCase() === "out_of_stock") {
+      unavailable.push(orderItem.name || "Product");
+      continue;
+    }
+
+    const quantity = Math.max(1, Number(orderItem.quantity) || 1);
+    const existing = state.cart.find((item) => Number(item.id) === Number(product.id));
+    if (existing) {
+      existing.qty = Math.min(99, Number(existing.qty || 1) + quantity);
+    } else {
+      state.cart.push({ ...product, qty: Math.min(99, quantity) });
+    }
+    added += 1;
+  }
+
+  if (added === 0) {
+    return { ok: false, unavailable, message: "These products are no longer available in the catalog." };
+  }
+  renderCart();
+  openCartPanel();
+  return { ok: true, added, unavailable };
+};
+
 if (cartPanel) {
   cartPanel.addEventListener("click", (event) => {
     if (event.target === cartPanel) {
@@ -2289,19 +2330,22 @@ function closeProfileDropdown() {
   }
   customerProfileToggle?.setAttribute("aria-expanded", "false");
 }
-profileMenu?.addEventListener("mouseenter", () => {
-  if (profileDropdownTimeout) clearTimeout(profileDropdownTimeout);
-  openProfileDropdown();
-});
-profileMenu?.addEventListener("mouseleave", () => {
-  profileDropdownTimeout = setTimeout(closeProfileDropdown, 120);
-});
-profileDropdown?.addEventListener("mouseenter", () => {
-  if (profileDropdownTimeout) clearTimeout(profileDropdownTimeout);
-});
-profileDropdown?.addEventListener("mouseleave", () => {
-  profileDropdownTimeout = setTimeout(closeProfileDropdown, 120);
-});
+const profileSupportsHover = window.matchMedia("(hover: hover) and (pointer: fine)").matches;
+if (profileSupportsHover) {
+  profileMenu?.addEventListener("mouseenter", () => {
+    if (profileDropdownTimeout) clearTimeout(profileDropdownTimeout);
+    openProfileDropdown();
+  });
+  profileMenu?.addEventListener("mouseleave", () => {
+    profileDropdownTimeout = setTimeout(closeProfileDropdown, 120);
+  });
+  profileDropdown?.addEventListener("mouseenter", () => {
+    if (profileDropdownTimeout) clearTimeout(profileDropdownTimeout);
+  });
+  profileDropdown?.addEventListener("mouseleave", () => {
+    profileDropdownTimeout = setTimeout(closeProfileDropdown, 120);
+  });
+}
 customerProfileToggle?.addEventListener("click", (e) => {
   e.stopPropagation();
   if (profileMenu.classList.contains("open")) {
@@ -2326,6 +2370,16 @@ window.addEventListener("scroll", () => {
 dropdownOrders?.addEventListener("click", () => {
   closeProfileDropdown();
   if (typeof openOrdersModal === "function") openOrdersModal();
+});
+
+dropdownProfile?.addEventListener("click", () => {
+  closeProfileDropdown();
+  if (!state.customer) return;
+  isCustomerProfileVisible = true;
+  renderCustomerProfile();
+  requestAnimationFrame(() => {
+    customerProfileSection?.scrollIntoView({ behavior: "smooth", block: "start" });
+  });
 });
 
 dropdownLogout?.addEventListener("click", async () => {

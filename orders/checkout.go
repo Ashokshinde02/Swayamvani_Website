@@ -83,7 +83,7 @@ func CalculateCheckoutItems(lines []CheckoutLineItem, products []CheckoutProduct
 			return nil, 0, fmt.Errorf("%w: order total is too large", ErrInvalidCheckout)
 		}
 		priced = append(priced, pricedLine{
-			item:     Item{Name: product.Name, Image: product.Image, Quantity: line.Quantity},
+			item:     Item{ProductID: product.ID, Name: product.Name, Image: product.Image, Quantity: line.Quantity},
 			subtotal: lineTotal,
 		})
 	}

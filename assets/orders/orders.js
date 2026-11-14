@@ -11,6 +11,16 @@ function formatINR(value) {
   return new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 }).format(value);
 }
 
+function escapeOrderHTML(value) {
+  return String(value ?? "").replace(/[&<>"']/g, (char) => ({
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    '"': "&quot;",
+    "'": "&#39;"
+  })[char]);
+}
+
 async function loadOrders() {
   if (!ordersModal) return;
   if (ordersEmpty) ordersEmpty.textContent = "Loading your orders...";
@@ -43,24 +53,64 @@ function renderOrders(orders) {
   orders.forEach((order) => {
     const card = document.createElement("article");
     card.className = "order-card";
+    card.setAttribute("role", "button");
+    card.tabIndex = 0;
     const created = order.created_at ? new Date(order.created_at) : null;
     const dateText = created && !Number.isNaN(created.valueOf()) ? created.toLocaleDateString("en-IN") : "Pending date";
-    const itemsText = (order.items || [])
-      .map((it) => `${it.name} (${formatINR(it.price)})`)
-      .join(" · ");
     const orderNumber = Number(order.order_number) || order.id;
+    const itemsHTML = (order.items || []).map((item) => {
+      const quantity = Math.max(1, Number(item.quantity) || 1);
+      const image = escapeOrderHTML(item.image || "assets/images/harmonium.svg");
+      return `
+        <div class="order-item-row">
+          <img class="order-item-image" src="${image}" alt="${escapeOrderHTML(item.name)}" loading="lazy">
+          <div class="order-item-info">
+            <strong>${escapeOrderHTML(item.name || "Product")}</strong>
+            <span>Quantity: ${quantity}</span>
+            <span>Item total: ${formatINR(item.price || 0)}</span>
+          </div>
+        </div>`;
+    }).join("");
+    const addressHTML = escapeOrderHTML(order.address || "—").replace(/\n/g, "<br>");
     card.innerHTML = `
       <div class="order-card-head">
         <div>
           <p class="order-id">Order #${orderNumber || "new"}</p>
           <p class="order-date">${dateText}</p>
         </div>
-        <span class="order-status">${order.status || "pending"}</span>
+        <span class="order-status">${escapeOrderHTML(order.status || "pending")}</span>
       </div>
-      <p class="order-items">${itemsText}</p>
+      <div class="order-item-list">${itemsHTML}</div>
+      <p class="order-shipping"><strong>Delivery mobile:</strong> ${escapeOrderHTML(order.mobile || "—")}</p>
+      <p class="order-shipping"><strong>Shipping address:</strong><br>${addressHTML}</p>
+      ${order.payment_ref ? `<p class="order-ref">Payment reference: ${escapeOrderHTML(order.payment_ref)}</p>` : ""}
       <p class="order-total">Total: ${formatINR(order.total || 0)}</p>
-      ${order.payment_ref ? `<p class="order-ref">Payment Ref: ${order.payment_ref}</p>` : ""}
+      <p class="order-card-hint">Click to add these products to your cart</p>
     `;
+    card.setAttribute("aria-label", `Order reference ${orderNumber}. Open its products in the cart.`);
+    const openOrderInCart = () => {
+      const result = window.addOrderItemsToCart?.(order.items || []);
+      if (!result?.ok) {
+        alert(result?.message || "Could not open this order in the cart.");
+        return;
+      }
+      closeOrders();
+      if (result.unavailable?.length) {
+        alert(`Some products could not be added because they are no longer available: ${result.unavailable.join(", ")}`);
+      }
+    };
+    card.addEventListener("click", openOrderInCart);
+    card.addEventListener("keydown", (event) => {
+      if (event.key === "Enter" || event.key === " ") {
+        event.preventDefault();
+        openOrderInCart();
+      }
+    });
+    card.querySelectorAll(".order-item-image").forEach((image) => {
+      image.addEventListener("error", () => {
+        image.src = "assets/images/harmonium.svg";
+      }, { once: true });
+    });
     ordersList.appendChild(card);
   });
 }
