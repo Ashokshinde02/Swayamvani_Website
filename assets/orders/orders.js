@@ -85,25 +85,25 @@ function renderOrders(orders) {
       <p class="order-shipping"><strong>Shipping address:</strong><br>${addressHTML}</p>
       ${order.payment_ref ? `<p class="order-ref">Payment reference: ${escapeOrderHTML(order.payment_ref)}</p>` : ""}
       <p class="order-total">Total: ${formatINR(order.total || 0)}</p>
-      <p class="order-card-hint">Click to add these products to your cart</p>
     `;
-    card.setAttribute("aria-label", `Order reference ${orderNumber}. Open its products in the cart.`);
-    const openOrderInCart = () => {
-      const result = window.addOrderItemsToCart?.(order.items || []);
-      if (!result?.ok) {
-        alert(result?.message || "Could not open this order in the cart.");
+    card.setAttribute("aria-label", `Order reference ${orderNumber}. View its product in the Harmonium Collection.`);
+    const openOrderProduct = () => {
+      const firstItem = (order.items || [])[0];
+      if (!firstItem) {
+        alert("This order has no product details to open.");
         return;
       }
       closeOrders();
-      if (result.unavailable?.length) {
-        alert(`Some products could not be added because they are no longer available: ${result.unavailable.join(", ")}`);
+      const result = window.openOrderProductInCollection?.(firstItem);
+      if (!result?.ok) {
+        alert(result?.message || "Could not find this product in the Harmonium Collection.");
       }
     };
-    card.addEventListener("click", openOrderInCart);
+    card.addEventListener("click", openOrderProduct);
     card.addEventListener("keydown", (event) => {
       if (event.key === "Enter" || event.key === " ") {
         event.preventDefault();
-        openOrderInCart();
+        openOrderProduct();
       }
     });
     card.querySelectorAll(".order-item-image").forEach((image) => {

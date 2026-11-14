@@ -1877,42 +1877,36 @@ function openCartPanel() {
   cartPanel.classList.add("open");
   cartPanel.setAttribute("aria-hidden", "false");
 }
-
-window.addOrderItemsToCart = function (orderItems = []) {
+window.openOrderProductInCollection = function (orderItem = {}) {
   if (!productsLoaded) {
     return { ok: false, message: "The product list is still loading. Please try again." };
   }
-  const unavailable = [];
-  let added = 0;
-  for (const orderItem of orderItems) {
-    const productId = Number(orderItem.product_id) || 0;
-    const orderImage = String(orderItem.image || "");
-    const orderName = String(orderItem.name || "").trim().toLocaleLowerCase();
-    const product =
-      products.find((candidate) => productId > 0 && Number(candidate.id) === productId) ||
-      products.find((candidate) => orderImage && (candidate.images || []).includes(orderImage)) ||
-      products.find((candidate) => String(candidate.name || "").trim().toLocaleLowerCase() === orderName);
-    if (!product || String(product.availability || "").toLowerCase() === "out_of_stock") {
-      unavailable.push(orderItem.name || "Product");
-      continue;
-    }
-
-    const quantity = Math.max(1, Number(orderItem.quantity) || 1);
-    const existing = state.cart.find((item) => Number(item.id) === Number(product.id));
-    if (existing) {
-      existing.qty = Math.min(99, Number(existing.qty || 1) + quantity);
-    } else {
-      state.cart.push({ ...product, qty: Math.min(99, quantity) });
-    }
-    added += 1;
+  const productId = Number(orderItem.product_id) || 0;
+  const orderImage = String(orderItem.image || "");
+  const orderName = String(orderItem.name || "").trim().toLocaleLowerCase();
+  const product =
+    products.find((candidate) => productId > 0 && Number(candidate.id) === productId) ||
+    products.find((candidate) => orderImage && (candidate.images || []).includes(orderImage)) ||
+    products.find((candidate) => String(candidate.name || "").trim().toLocaleLowerCase() === orderName);
+  if (!product) {
+    return { ok: false, message: "This product is no longer listed in the Harmonium Collection." };
   }
 
-  if (added === 0) {
-    return { ok: false, unavailable, message: "These products are no longer available in the catalog." };
-  }
-  renderCart();
-  openCartPanel();
-  return { ok: true, added, unavailable };
+  state.filter = "all";
+  state.catalogSort = "default";
+  if (catalogSort) catalogSort.value = "default";
+  renderCatalogFilters();
+  renderProducts();
+
+  const collection = document.getElementById("products");
+  const productCard = [...(productGrid?.children || [])].find(
+    (card) => Number(card.dataset.productId) === Number(product.id)
+  );
+  requestAnimationFrame(() => {
+    (productCard || collection)?.scrollIntoView({ behavior: "smooth", block: productCard ? "center" : "start" });
+    window.setTimeout(() => openProductModal(product), 300);
+  });
+  return { ok: true, productName: product.name };
 };
 
 if (cartPanel) {
