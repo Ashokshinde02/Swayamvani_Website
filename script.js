@@ -52,7 +52,7 @@ const translations = {
     profileUpdateSuccess: "Profile updated.",
     profileUpdateError: "Unable to update profile.",
     profileMissingValue: "Not added yet",
-    featuredInstruments: "The Harmonium Collection",
+    featuredInstruments: "The Swayamvani Collection",
     allProductTitle: "Our Instruments",
     allProductIntro: "Browse the instruments currently available, with product details and photos.",
     catalogEmpty: "No instruments are listed right now.",
@@ -1889,7 +1889,7 @@ window.openOrderProductInCollection = function (orderItem = {}) {
     products.find((candidate) => orderImage && (candidate.images || []).includes(orderImage)) ||
     products.find((candidate) => String(candidate.name || "").trim().toLocaleLowerCase() === orderName);
   if (!product) {
-    return { ok: false, message: "This product is no longer listed in the Harmonium Collection." };
+    return { ok: false, message: "This product is no longer listed in the Swayamvani Collection." };
   }
 
   state.filter = "all";

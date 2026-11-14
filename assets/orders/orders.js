@@ -86,7 +86,7 @@ function renderOrders(orders) {
       ${order.payment_ref ? `<p class="order-ref">Payment reference: ${escapeOrderHTML(order.payment_ref)}</p>` : ""}
       <p class="order-total">Total: ${formatINR(order.total || 0)}</p>
     `;
-    card.setAttribute("aria-label", `Order reference ${orderNumber}. View its product in the Harmonium Collection.`);
+    card.setAttribute("aria-label", `Order reference ${orderNumber}. View its product in the Swayamvani Collection.`);
     const openOrderProduct = () => {
       const firstItem = (order.items || [])[0];
       if (!firstItem) {
@@ -96,7 +96,7 @@ function renderOrders(orders) {
       closeOrders();
       const result = window.openOrderProductInCollection?.(firstItem);
       if (!result?.ok) {
-        alert(result?.message || "Could not find this product in the Harmonium Collection.");
+        alert(result?.message || "Could not find this product in the Swayamvani Collection.");
       }
     };
     card.addEventListener("click", openOrderProduct);
