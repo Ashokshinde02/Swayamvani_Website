@@ -1,6 +1,7 @@
 package mailer
 
 import (
+	"bytes"
 	"crypto/aes"
 	"crypto/cipher"
 	"crypto/rand"
@@ -9,8 +10,12 @@ import (
 	"fmt"
 	"html"
 	"io"
+	"mime"
+	"mime/multipart"
 	"net"
 	"net/smtp"
+	"net/textproto"
+	"path/filepath"
 	"strconv"
 	"strings"
 
@@ -18,7 +23,19 @@ import (
 	"swayamvani/orders"
 )
 
-func SendMail(customerName string, receiptantMailId string, subject string, body string) (bool, error) {
+// Attachment is a file included with an email.
+type Attachment struct {
+	Filename    string
+	ContentType string
+	Data        []byte
+}
+
+func SendMail(customerName string, recipientEmail string, subject string, body string) (bool, error) {
+	return SendMailWithAttachments(customerName, recipientEmail, subject, body, nil)
+}
+
+// SendMailWithAttachments sends an HTML email with optional downloadable files.
+func SendMailWithAttachments(customerName string, recipientEmail string, subject string, body string, attachments []Attachment) (bool, error) {
 
 	fmt.Println("In Send Mail")
 	decryptedPassword, err := Decrypt(localConfig.EncryptedPassword, localConfig.DecriptionKey)
@@ -34,12 +51,10 @@ func SendMail(customerName string, receiptantMailId string, subject string, body
 	//smtpHost := "smtpout.secureserver.net"
 	//smtpPort := "465"
 
-	msg := "From: " + localConfig.From + "\r\n" +
-		"To: " + receiptantMailId + "\r\n" +
-		"Subject: " + subject + "\r\n" +
-		"MIME-version: 1.0;\r\n" +
-		"Content-Type: text/html; charset=\"UTF-8\";\r\n\r\n" +
-		body
+	msg, err := buildEmailMessage(recipientEmail, subject, body, attachments)
+	if err != nil {
+		return false, err
+	}
 	//fmt.Println("message" + msg)
 	// Set up TLS config
 	/*tlsconfig := &tls.Config{
@@ -89,7 +104,7 @@ func SendMail(customerName string, receiptantMailId string, subject string, body
 		return false, err
 	}
 	fmt.Println("set sender")
-	if err = c.Rcpt(receiptantMailId); err != nil {
+	if err = c.Rcpt(recipientEmail); err != nil {
 		fmt.Println("Rcpt Error:", err)
 		return false, err
 	}
@@ -115,6 +130,72 @@ func SendMail(customerName string, receiptantMailId string, subject string, body
 	c.Quit()
 	fmt.Println("Email sent successfully!")
 	return true, nil
+}
+
+func buildEmailMessage(recipientEmail, subject, body string, attachments []Attachment) ([]byte, error) {
+	var message bytes.Buffer
+	fmt.Fprintf(&message, "From: %s\r\nTo: %s\r\nSubject: %s\r\nMIME-Version: 1.0\r\n",
+		localConfig.From, recipientEmail, mime.QEncoding.Encode("UTF-8", subject))
+	if len(attachments) == 0 {
+		message.WriteString("Content-Type: text/html; charset=UTF-8\r\n\r\n")
+		message.WriteString(body)
+		return message.Bytes(), nil
+	}
+
+	multipartWriter := multipart.NewWriter(&message)
+	message.WriteString("Content-Type: multipart/mixed; boundary=\"" + multipartWriter.Boundary() + "\"\r\n\r\n")
+	bodyHeader := make(textproto.MIMEHeader)
+	bodyHeader.Set("Content-Type", "text/html; charset=UTF-8")
+	bodyHeader.Set("Content-Transfer-Encoding", "base64")
+	bodyPart, err := multipartWriter.CreatePart(bodyHeader)
+	if err != nil {
+		return nil, err
+	}
+	if err := writeBase64Part(bodyPart, []byte(body)); err != nil {
+		return nil, err
+	}
+
+	for _, attachment := range attachments {
+		filename := filepath.Base(strings.ReplaceAll(attachment.Filename, "\\", "/"))
+		filename = strings.NewReplacer("\r", "", "\n", "", `"`, "").Replace(filename)
+		if filename == "" || filename == "." {
+			return nil, fmt.Errorf("invalid email attachment filename")
+		}
+		contentType := attachment.ContentType
+		if contentType == "" {
+			contentType = "application/octet-stream"
+		}
+		header := make(textproto.MIMEHeader)
+		header.Set("Content-Type", contentType)
+		header.Set("Content-Disposition", `attachment; filename="`+filename+`"`)
+		header.Set("Content-Transfer-Encoding", "base64")
+		part, err := multipartWriter.CreatePart(header)
+		if err != nil {
+			return nil, err
+		}
+		if err := writeBase64Part(part, attachment.Data); err != nil {
+			return nil, err
+		}
+	}
+	if err := multipartWriter.Close(); err != nil {
+		return nil, err
+	}
+	return message.Bytes(), nil
+}
+
+func writeBase64Part(writer io.Writer, data []byte) error {
+	encoded := base64.StdEncoding.EncodeToString(data)
+	for len(encoded) > 76 {
+		if _, err := io.WriteString(writer, encoded[:76]+"\r\n"); err != nil {
+			return err
+		}
+		encoded = encoded[76:]
+	}
+	if encoded != "" {
+		_, err := io.WriteString(writer, encoded+"\r\n")
+		return err
+	}
+	return nil
 }
 
 // Encrypt text with a key
@@ -321,7 +402,7 @@ func CreateOrderInvoiceBody(swayamvaniLogo string, order orders.Order) string {
     <div style="color:#71351f;font-size:28px;font-weight:bold;text-align:center;margin-bottom:4px">Swayamvani</div>
     <div style="color:#705b4a;font-size:13px;letter-spacing:1px;text-align:center;margin:0 0 22px">Destination for every musical journey</div>
     <h2>Payment confirmed</h2>
-    <p>Your payment has been manually confirmed by Swayamvani. Here is your invoice.</p>
+    <p>Your payment has been manually confirmed by Swayamvani. You can download the attached invoice file.</p>
     <div style="background:#f1f8e9;border-radius:6px;padding:16px;margin:24px 0;font-size:14px;line-height:1.6">
       <p><strong>Order reference:</strong> #{{ORDER_REFERENCE}}</p>
       <p><strong>Date:</strong> {{ORDER_DATE}}</p>

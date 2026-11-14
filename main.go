@@ -1574,8 +1574,13 @@ func (s *Server) sendOrderInvoiceEmail(order orders.Order) error {
 	}
 	logoURL := "https://www.swayamvani.com/logo.jpeg"
 	body := mailer.CreateOrderInvoiceBody(logoURL, order)
-	_, err := mailer.SendMail(order.CustomerName, order.CustomerEmail,
-		fmt.Sprintf("Payment confirmed — order reference #%d", orderReference), body)
+	attachment := mailer.Attachment{
+		Filename:    fmt.Sprintf("invoice-%d.html", orderReference),
+		ContentType: "text/html; charset=UTF-8",
+		Data:        []byte(body),
+	}
+	_, err := mailer.SendMailWithAttachments(order.CustomerName, order.CustomerEmail,
+		fmt.Sprintf("Payment confirmed — order reference #%d", orderReference), body, []mailer.Attachment{attachment})
 	return err
 }
 
